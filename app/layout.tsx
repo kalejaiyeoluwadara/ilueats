@@ -2,9 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import NextTopLoader from "nextjs-toploader";
 import "./globals.css";
-import { AuthProvider } from "@/context/AuthContext";
-import { CartProvider } from "@/context/CartContext";
-import { ToastProvider } from "@/context/ToastContext";
+import { AppProviders } from "@/components/providers/AppProviders";
 
 const jakarta = Plus_Jakarta_Sans({
   variable: "--font-jakarta",
@@ -59,11 +57,7 @@ export default function RootLayout({
           showSpinner={false}
           shadow="0 0 10px #e8541a, 0 0 5px #e8541a"
         />
-        <ToastProvider>
-          <AuthProvider>
-            <CartProvider>{children}</CartProvider>
-          </AuthProvider>
-        </ToastProvider>
+        <AppProviders>{children}</AppProviders>
       </body>
     </html>
   );

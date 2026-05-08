@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useEffect, useState } from "react";
+import { createContext, useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   CheckCircleIcon,
@@ -24,7 +24,13 @@ interface ToastContextValue {
 
 export const ToastContext = createContext<ToastContextValue | null>(null);
 
-const DEFAULT_DURATION = 3200;
+/** Auto-dismiss after a few seconds (cart + default). */
+const DEFAULT_DURATION = 4000;
+
+function resolveToastDuration(ms: number | undefined): number {
+  if (typeof ms === "number" && Number.isFinite(ms) && ms > 0) return ms;
+  return DEFAULT_DURATION;
+}
 
 const variantStyles: Record<
   ToastVariant,
@@ -54,22 +60,41 @@ const variantStyles: Record<
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  const dismissTimers = useRef<Map<string, ReturnType<typeof window.setTimeout>>>(
+    new Map()
+  );
+
+  useEffect(
+    () => () => {
+      for (const t of dismissTimers.current.values()) window.clearTimeout(t);
+      dismissTimers.current.clear();
+    },
+    []
+  );
 
   const dismiss = useCallback((id: string) => {
+    const pending = dismissTimers.current.get(id);
+    if (pending !== undefined) {
+      window.clearTimeout(pending);
+      dismissTimers.current.delete(id);
+    }
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
-  const show = useCallback<ToastContextValue["show"]>((toast) => {
-    const id = shortId("t_");
-    const duration = toast.duration ?? DEFAULT_DURATION;
-    setToasts((prev) => [...prev, { id, ...toast }]);
-    if (duration > 0) {
-      window.setTimeout(() => {
-        setToasts((prev) => prev.filter((t) => t.id !== id));
-      }, duration);
-    }
-    return id;
-  }, []);
+  const show = useCallback<ToastContextValue["show"]>(
+    (toast) => {
+      const id = shortId("t_");
+      const duration = resolveToastDuration(toast.duration);
+      setToasts((prev) => [
+        ...prev,
+        { id, ...toast, duration },
+      ]);
+      const timerId = window.setTimeout(() => dismiss(id), duration);
+      dismissTimers.current.set(id, timerId);
+      return id;
+    },
+    [dismiss]
+  );
 
   const success: ToastContextValue["success"] = useCallback(
     (title, description) => show({ variant: "success", title, description }),

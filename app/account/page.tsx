@@ -21,10 +21,10 @@ import { cn } from "@/lib/utils";
 
 const links = [
   { href: "/orders", label: "Order history", icon: ClockIcon },
-  { href: "/account", label: "Saved addresses", icon: MapPinIcon },
-  { href: "/account", label: "Favourites", icon: HeartIcon },
-  { href: "/account", label: "Help & support", icon: QuestionMarkCircleIcon },
-  { href: "/account", label: "Privacy & terms", icon: ShieldCheckIcon },
+  { href: "/addresses", label: "Saved addresses", icon: MapPinIcon },
+  { href: "/favorites", label: "Favourites", icon: HeartIcon },
+  { href: "/help", label: "Help & support", icon: QuestionMarkCircleIcon },
+  { href: "/privacy", label: "Privacy & terms", icon: ShieldCheckIcon },
 ];
 
 type AuthMode = "signin" | "signup";

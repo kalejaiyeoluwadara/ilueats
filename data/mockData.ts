@@ -698,6 +698,10 @@ export function getProductBySlug(
   );
 }
 
+export function getProductById(productId: string): Product | undefined {
+  return products.find((p) => p.id === productId);
+}
+
 export function getStoresByCategory(category: string): Store[] {
   if (category === "all") return stores;
   return stores.filter((s) =>

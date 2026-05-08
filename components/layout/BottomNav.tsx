@@ -82,7 +82,7 @@ export function BottomNav() {
                       "h-[22px] w-[22px] transition-colors",
                       active
                         ? "text-[var(--color-primary)]"
-                        : "text-[var(--color-ink-soft)]"
+                        : "text-[var(--color-ink-soft)]",
                     )}
                   />
                   {it.href === "/cart" && count > 0 && (
@@ -96,7 +96,7 @@ export function BottomNav() {
                     "text-[10.5px] font-semibold tracking-tight transition-colors",
                     active
                       ? "text-[var(--color-primary)]"
-                      : "text-[var(--color-ink-soft)]"
+                      : "text-[var(--color-ink-soft)]",
                   )}
                 >
                   {it.label}

@@ -1,0 +1,97 @@
+"use client";
+
+import { useMemo } from "react";
+import Image from "next/image";
+import Link from "next/link";
+import { HeartIcon } from "@heroicons/react/24/outline";
+import { Navbar } from "@/components/layout/Navbar";
+import { BottomNav } from "@/components/layout/BottomNav";
+import { Button } from "@/components/ui/Button";
+import { FavoriteButton } from "@/components/favorites/FavoriteButton";
+import { useFavorites } from "@/hooks/useFavorites";
+import { getProductById, getStoreBySlug } from "@/data/mockData";
+import { formatPrice } from "@/lib/utils";
+
+export default function FavoritesPage() {
+  const { favoriteIds, ready } = useFavorites();
+
+  const items = useMemo(() => {
+    if (!ready) return [];
+    return favoriteIds
+      .map((id) => {
+        const product = getProductById(id);
+        if (!product) return null;
+        const store = getStoreBySlug(product.storeSlug);
+        return { product, store };
+      })
+      .filter(
+        (x): x is NonNullable<typeof x> => x !== null && x.store !== undefined
+      );
+  }, [favoriteIds, ready]);
+
+  return (
+    <div className="min-h-screen pb-24">
+      <Navbar variant="page" title="Favourites" showSearch={false} />
+      <main className="mx-auto max-w-2xl px-4 pt-4">
+        {!ready ? (
+          <p className="text-center text-[14px] text-[var(--color-ink-muted)]">
+            Loading…
+          </p>
+        ) : items.length === 0 ? (
+          <div className="flex flex-col items-center px-4 pt-14 text-center">
+            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[var(--color-primary-soft)]">
+              <HeartIcon className="h-9 w-9 text-[var(--color-primary)]" />
+            </div>
+            <h1 className="mt-5 text-[20px] font-extrabold tracking-tight">
+              No favourites yet
+            </h1>
+            <p className="mt-1.5 max-w-xs text-[13.5px] text-[var(--color-ink-muted)]">
+              Tap the heart on any dish to save it here for quick ordering later.
+            </p>
+            <Link href="/" className="mt-6">
+              <Button size="lg">Browse stores</Button>
+            </Link>
+          </div>
+        ) : (
+          <ul className="space-y-3">
+            {items.map(({ product, store }) => (
+              <li key={product.id}>
+                <Link
+                  href={`/${product.storeSlug}/${product.slug}`}
+                  className="flex items-stretch gap-3 rounded-2xl bg-white p-3 ring-1 ring-[var(--color-line)] transition-shadow hover:shadow-[0_4px_18px_rgba(0,0,0,0.06)]"
+                >
+                  <div className="relative h-[88px] w-[88px] shrink-0 overflow-hidden rounded-xl bg-[var(--color-line)]">
+                    <Image
+                      src={product.image}
+                      alt={product.name}
+                      fill
+                      sizes="88px"
+                      className="object-cover"
+                    />
+                    <FavoriteButton
+                      productId={product.id}
+                      size="sm"
+                      className="absolute right-1 top-1 z-10 scale-90"
+                    />
+                  </div>
+                  <div className="min-w-0 flex-1 py-0.5">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-primary)]">
+                      {store.name}
+                    </p>
+                    <h2 className="mt-0.5 line-clamp-2 text-[15px] font-bold leading-snug tracking-tight text-[var(--color-ink)]">
+                      {product.name}
+                    </h2>
+                    <p className="mt-2 text-[15px] font-extrabold text-[var(--color-primary)]">
+                      {formatPrice(product.price)}
+                    </p>
+                  </div>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </main>
+      <BottomNav />
+    </div>
+  );
+}

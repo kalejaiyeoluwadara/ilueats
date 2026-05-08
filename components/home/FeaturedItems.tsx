@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import { StarIcon } from "@heroicons/react/24/solid";
 import type { Product } from "@/types";
 import { formatPrice } from "@/lib/utils";
+import { FavoriteButton } from "@/components/favorites/FavoriteButton";
 
 interface FeaturedItemsProps {
   title: string;
@@ -51,6 +52,11 @@ export function FeaturedItems({ title, subtitle, items }: FeaturedItemsProps) {
                   fill
                   sizes="170px"
                   className="object-cover transition-transform duration-500 group-hover:scale-[1.05]"
+                />
+                <FavoriteButton
+                  productId={p.id}
+                  size="sm"
+                  className="absolute right-2 top-2 z-10"
                 />
                 {p.rating ? (
                   <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-white/95 px-2 py-1 text-[10.5px] font-bold text-[var(--color-ink)]">

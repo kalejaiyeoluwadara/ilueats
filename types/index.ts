@@ -109,3 +109,12 @@ export interface AuthUser {
   email: string;
   phone?: string;
 }
+
+/** Saved delivery address in browser storage. */
+export interface SavedAddress {
+  id: string;
+  label: string;
+  addressLine: string;
+  phone?: string;
+  isDefault: boolean;
+}

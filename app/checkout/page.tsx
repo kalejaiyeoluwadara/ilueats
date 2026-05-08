@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/Button";
 import { CartSummary } from "@/components/cart/CartSummary";
 import { useCart } from "@/hooks/useCart";
 import { useAuth } from "@/hooks/useAuth";
+import { useAddresses } from "@/hooks/useAddresses";
 import { useToast } from "@/hooks/useToast";
 import { getStoreBySlug } from "@/data/mockData";
 import { cn, formatPrice, shortId } from "@/lib/utils";
@@ -27,6 +28,7 @@ export default function CheckoutPage() {
   const router = useRouter();
   const { items, subtotal, count, storeSlug, clearCart } = useCart();
   const { user, ready: authReady } = useAuth();
+  const { addresses, defaultAddress, ready: addrReady } = useAddresses();
   const { success } = useToast();
 
   const store = storeSlug ? getStoreBySlug(storeSlug) : undefined;
@@ -53,6 +55,14 @@ export default function CheckoutPage() {
     setName((n) => (n.trim() === "" ? user.name : n));
     setPhone((p) => (p.trim() === "" && user.phone ? user.phone : p));
   }, [authReady, user]);
+
+  useEffect(() => {
+    if (!addrReady || !defaultAddress) return;
+    setAddress((a) => (a.trim() === "" ? defaultAddress.addressLine : a));
+    setPhone((p) =>
+      p.trim() === "" && defaultAddress.phone ? defaultAddress.phone : p
+    );
+  }, [addrReady, defaultAddress]);
 
   const canSubmit = useMemo(() => {
     return name.trim().length > 1 && phone.trim().length >= 7 && address.trim().length > 4;
@@ -86,6 +96,38 @@ export default function CheckoutPage() {
             title="Delivery details"
           />
           <div className="mt-3 space-y-3">
+            {addrReady && addresses.length > 0 && (
+              <div className="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+                {addresses.map((a) => {
+                  const matches = address.trim() === a.addressLine.trim();
+                  return (
+                    <button
+                      key={a.id}
+                      type="button"
+                      onClick={() => {
+                        setAddress(a.addressLine);
+                        if (a.phone) setPhone(a.phone);
+                      }}
+                      className={cn(
+                        "shrink-0 rounded-full px-3 py-1.5 text-[12px] font-semibold ring-1 transition-colors",
+                        matches
+                          ? "bg-[var(--color-primary-soft)] text-[var(--color-primary)] ring-[var(--color-primary)]/35"
+                          : "bg-[var(--color-bg)] text-[var(--color-ink)] ring-[var(--color-line)] hover:bg-black/[0.03]"
+                      )}
+                    >
+                      {a.label}
+                      {a.isDefault ? " · Default" : ""}
+                    </button>
+                  );
+                })}
+                <Link
+                  href="/addresses"
+                  className="shrink-0 self-center whitespace-nowrap py-1.5 text-[12px] font-bold text-[var(--color-primary)]"
+                >
+                  Manage
+                </Link>
+              </div>
+            )}
             <Field
               label="Full name"
               value={name}

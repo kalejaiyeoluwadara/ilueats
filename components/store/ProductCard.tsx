@@ -7,6 +7,7 @@ import { PlusIcon } from "@heroicons/react/24/solid";
 import type { Product, Store } from "@/types";
 import { Badge } from "@/components/ui/Badge";
 import { formatPrice } from "@/lib/utils";
+import { FavoriteButton } from "@/components/favorites/FavoriteButton";
 import { useCart } from "@/hooks/useCart";
 import { useToast } from "@/hooks/useToast";
 
@@ -79,6 +80,11 @@ export function ProductCard({ product, store, index = 0 }: ProductCardProps) {
         </div>
 
         <div className="relative h-24 w-24 flex-none">
+          <FavoriteButton
+            productId={product.id}
+            size="sm"
+            className="absolute -left-1 -top-1 z-10"
+          />
           <div className="relative h-full w-full overflow-hidden rounded-xl bg-[var(--color-line)]">
             <Image
               src={product.image}

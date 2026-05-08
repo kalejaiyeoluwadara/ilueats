@@ -5,6 +5,7 @@ import { notFound, useRouter } from "next/navigation";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import { CheckIcon, StarIcon } from "@heroicons/react/24/solid";
+import { FavoriteButton } from "@/components/favorites/FavoriteButton";
 import { Navbar } from "@/components/layout/Navbar";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -148,6 +149,10 @@ export default function ProductPage({ params }: PageProps) {
             {product.isPopular && <Badge tone="brand">Popular</Badge>}
             {product.isNew && <Badge tone="warning">New</Badge>}
           </div>
+          <FavoriteButton
+            productId={product.id}
+            className="absolute right-3 top-3 z-10"
+          />
         </div>
 
         {/* Title */}

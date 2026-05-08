@@ -76,7 +76,7 @@ export default function FavoritesPage() {
                   </div>
                   <div className="min-w-0 flex-1 py-0.5">
                     <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-primary)]">
-                      {store.name}
+                      {store?.name}
                     </p>
                     <h2 className="mt-0.5 line-clamp-2 text-[15px] font-bold leading-snug tracking-tight text-[var(--color-ink)]">
                       {product.name}

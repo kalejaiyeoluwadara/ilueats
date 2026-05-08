@@ -19,7 +19,7 @@ export function HeroBanner({ query, onQueryChange }: HeroBannerProps) {
       >
         <div>
           <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-[var(--color-primary)]">
-            Hey there 👋
+            Hey there
           </p>
           <h1 className="mt-1 text-[26px] font-extrabold leading-[1.1] tracking-tight text-[var(--color-ink)] sm:text-[30px]">
             What are you craving

@@ -151,7 +151,7 @@ export default function HomePage() {
           {filteredStores.length === 0 ? (
             <EmptyState query={query} category={category} />
           ) : (
-            <div className="grid grid-cols-1 gap-4">
+            <div className="grid grid-cols-1 gap-8">
               {filteredStores.map((s, idx) => (
                 <StoreCard key={s.id} store={s} index={idx} />
               ))}

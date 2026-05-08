@@ -34,7 +34,7 @@ export default function CartPage() {
   const belowMin = subtotal < minOrder;
 
   return (
-    <div className="min-h-screen pb-32">
+    <div className="min-h-screen pb-40">
       <Navbar variant="page" title="Your bag" showSearch={false} />
 
       <main className="mx-auto max-w-2xl">
@@ -109,7 +109,7 @@ export default function CartPage() {
       </main>
 
       {count > 0 && (
-        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-[var(--color-line)] bg-white px-4 pb-[calc(env(safe-area-inset-bottom,0px)+12px)] pt-3">
+        <div className="fixed inset-x-0 bottom-[68px] z-50 border-t border-[var(--color-line)] bg-white px-4 pb-3 pt-3 sm:bottom-[72px]">
           <div className="mx-auto max-w-2xl">
             {belowMin && (
               <p className="mb-2 rounded-xl bg-[var(--color-accent-soft)] px-3 py-2 text-[12px] font-semibold text-[#8a4f00]">

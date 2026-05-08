@@ -6,14 +6,14 @@ import type { AdSlide, Category, Product, Store } from "@/types";
 
 export const categories: Category[] = [
   { id: "all", name: "All", emoji: "🍽️" },
-  { id: "local", name: "Local", emoji: "🍲" },
-  { id: "pizza", name: "Pizza", emoji: "🍕" },
-  { id: "burgers", name: "Burgers", emoji: "🍔" },
-  { id: "shawarma", name: "Shawarma", emoji: "🌯" },
-  { id: "cakes", name: "Cakes", emoji: "🎂" },
-  { id: "snacks", name: "Snacks", emoji: "🥨" },
-  { id: "smoothies", name: "Smoothies", emoji: "🥤" },
-  { id: "drinks", name: "Drinks", emoji: "🧃" },
+  { id: "local", name: "Local", emoji: "" },
+  { id: "pizza", name: "Pizza", emoji: "" },
+  { id: "burgers", name: "Burgers", emoji: "" },
+  { id: "shawarma", name: "Shawarma", emoji: "" },
+  { id: "cakes", name: "Cakes", emoji: "" },
+  { id: "snacks", name: "Snacks", emoji: "" },
+  { id: "smoothies", name: "Smoothies", emoji: "" },
+  { id: "drinks", name: "Drinks", emoji: "" },
 ];
 
 /* -------------------------------------------------------------------------- */
@@ -29,7 +29,7 @@ export const stores: Store[] = [
     description:
       "A neighborhood favorite serving authentic Yoruba dishes the way mama makes them. Fresh, smoky, generous portions.",
     image:
-      "https://images.unsplash.com/photo-1604908554007-3a3da6d62a47?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1621996346565-e3dbc646d9a9?auto=format&fit=crop&w=800&q=80",
     cover:
       "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&w=1600&q=80",
     categories: ["local", "snacks"],
@@ -138,7 +138,7 @@ export const stores: Store[] = [
     description:
       "Smoothies and cold-pressed juices made to order. Real fruit, real ice, real refreshing.",
     image:
-      "https://images.unsplash.com/photo-1622597467836-f3e6707e1191?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1553530666-ba11a7da3888?auto=format&fit=crop&w=800&q=80",
     cover:
       "https://images.unsplash.com/photo-1546039907-7fa05f864c02?auto=format&fit=crop&w=1600&q=80",
     categories: ["smoothies", "drinks"],
@@ -170,7 +170,7 @@ export const products: Product[] = [
       "Slow-cooked party-style jollof with that signature smoky finish. Served with fried plantain.",
     price: 3500,
     image:
-      "https://images.unsplash.com/photo-1604908554007-3a3da6d62a47?auto=format&fit=crop&w=1200&q=80",
+      "https://images.unsplash.com/photo-1621996346565-e3dbc646d9a9?auto=format&fit=crop&w=1200&q=80",
     category: "local",
     isPopular: true,
     rating: 4.9,
@@ -208,7 +208,7 @@ export const products: Product[] = [
       "Rich palm-oil simmered spinach stew packed with assorted meat, served with smooth pounded yam.",
     price: 4200,
     image:
-      "https://images.unsplash.com/photo-1565895405137-61dd5ab98e64?auto=format&fit=crop&w=1200&q=80",
+      "https://images.unsplash.com/photo-1547592166-23ac45744acd?auto=format&fit=crop&w=1200&q=80",
     category: "local",
     isPopular: true,
     rating: 4.8,
@@ -235,7 +235,8 @@ export const products: Product[] = [
     storeSlug: "mama-tope",
     slug: "meat-pie",
     name: "Classic Meat Pie",
-    description: "Buttery pastry stuffed with seasoned mince beef and potatoes.",
+    description:
+      "Buttery pastry stuffed with seasoned mince beef and potatoes.",
     price: 800,
     image:
       "https://images.unsplash.com/photo-1568051243851-f9b136146e97?auto=format&fit=crop&w=1200&q=80",
@@ -267,9 +268,9 @@ export const products: Product[] = [
         name: "Size",
         required: true,
         choices: [
-          { id: "small", name: "Small (9\")", priceDelta: 0 },
-          { id: "medium", name: "Medium (12\")", priceDelta: 2500 },
-          { id: "large", name: "Large (14\")", priceDelta: 4500 },
+          { id: "small", name: 'Small (9")', priceDelta: 0 },
+          { id: "medium", name: 'Medium (12")', priceDelta: 2500 },
+          { id: "large", name: 'Large (14")', priceDelta: 4500 },
         ],
       },
       {
@@ -342,7 +343,7 @@ export const products: Product[] = [
       "Three layers of moist red velvet sponge with cream cheese frosting.",
     price: 18000,
     image:
-      "https://images.unsplash.com/photo-1586985288619-7d18f9846da2?auto=format&fit=crop&w=1200&q=80",
+      "https://images.unsplash.com/photo-1464349095431-e9a21285b5f3?auto=format&fit=crop&w=1200&q=80",
     category: "cakes",
     isPopular: true,
     rating: 4.9,
@@ -396,8 +397,7 @@ export const products: Product[] = [
     storeSlug: "sweet-layers",
     slug: "glazed-donuts",
     name: "Glazed Donuts (4 pack)",
-    description:
-      "Pillowy soft donuts dipped in vanilla sugar glaze.",
+    description: "Pillowy soft donuts dipped in vanilla sugar glaze.",
     price: 3500,
     image:
       "https://images.unsplash.com/photo-1551024601-bec78aea704b?auto=format&fit=crop&w=1200&q=80",
@@ -481,8 +481,7 @@ export const products: Product[] = [
     storeSlug: "burger-lab",
     slug: "vanilla-milkshake",
     name: "Vanilla Bean Milkshake",
-    description:
-      "Hand-spun thick vanilla milkshake topped with whipped cream.",
+    description: "Hand-spun thick vanilla milkshake topped with whipped cream.",
     price: 2800,
     image:
       "https://images.unsplash.com/photo-1572490122747-3968b75cc699?auto=format&fit=crop&w=1200&q=80",
@@ -586,7 +585,7 @@ export const products: Product[] = [
       "Ripe mango, banana, pineapple, and a hint of ginger blended with coconut milk.",
     price: 2500,
     image:
-      "https://images.unsplash.com/photo-1622597467836-f3e6707e1191?auto=format&fit=crop&w=1200&q=80",
+      "https://images.unsplash.com/photo-1596797038530-2c107229654b?auto=format&fit=crop&w=1200&q=80",
     category: "smoothies",
     isPopular: true,
     rating: 4.7,

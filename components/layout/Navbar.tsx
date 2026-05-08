@@ -124,10 +124,6 @@ export function Navbar({
 function Logo() {
   return (
     <div className="flex items-center gap-2">
-      <span className="relative flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--color-primary)] to-[#c0392b] text-white shadow-[0_3px_10px_rgba(232,84,26,0.4)]">
-        <span className="text-[14px] font-extrabold leading-none">il</span>
-        <span className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full bg-[var(--color-accent)] ring-2 ring-[var(--color-bg)]" />
-      </span>
       <span className="text-[17px] font-extrabold tracking-tight">
         ilu<span className="text-[var(--color-primary)]">Eats</span>
       </span>

@@ -11,6 +11,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { cn } from "@/lib/utils";
 import { useCart } from "@/hooks/useCart";
+import { useSearch } from "@/context/SearchContext";
 
 interface NavbarProps {
   variant?: "home" | "page";
@@ -31,93 +32,95 @@ export function Navbar({
   const router = useRouter();
   const pathname = usePathname();
   const { count, bump } = useCart();
+  const { openSearch } = useSearch();
 
   const isHome = variant === "home";
   const isCartPage = pathname === "/cart" || pathname === "/checkout";
 
   return (
     <header
-      className={cn(
-        "sticky top-0 z-40 w-full border-b border-transparent bg-[var(--color-bg)]/85 backdrop-blur-md",
-        "supports-[backdrop-filter]:bg-[var(--color-bg)]/70",
-        className
-      )}
-    >
-      <div className="mx-auto flex h-14 max-w-2xl items-center gap-3 px-4">
-        {isHome ? (
-          <Link
-            href="/"
-            className="flex items-center gap-2"
-            aria-label="IluEats home"
-          >
-            <Logo />
-          </Link>
-        ) : (
-          <button
-            type="button"
-            onClick={() => (onBack ? onBack() : router.back())}
-            aria-label="Go back"
-            className="flex h-10 w-10 items-center justify-center rounded-full text-[var(--color-ink)] hover:bg-black/5 active:bg-black/10"
-          >
-            <ArrowLeftIcon className="h-5 w-5" />
-          </button>
+        className={cn(
+          "sticky top-0 z-40 w-full border-b border-transparent bg-[var(--color-bg)]/85 backdrop-blur-md",
+          "supports-[backdrop-filter]:bg-[var(--color-bg)]/70",
+          className
         )}
-
-        {!isHome && title && (
-          <h1 className="flex-1 truncate text-[15px] font-bold tracking-tight">
-            {title}
-          </h1>
-        )}
-
-        {isHome && (
-          <div className="flex flex-1 items-center gap-1.5 text-[12px] font-medium text-[var(--color-ink-muted)]">
-            <MapPinIcon className="h-4 w-4 text-[var(--color-primary)]" />
-            <span>
-              Delivering to{" "}
-              <span className="font-bold text-[var(--color-ink)]">Ilisan</span>
-            </span>
-          </div>
-        )}
-
-        {showSearch && isHome && (
-          <Link
-            href="/"
-            aria-label="Search"
-            className="flex h-10 w-10 items-center justify-center rounded-full text-[var(--color-ink)] hover:bg-black/5 active:bg-black/10"
-          >
-            <MagnifyingGlassIcon className="h-5 w-5" />
-          </Link>
-        )}
-
-        {!isCartPage && (
-          <Link
-            href="/cart"
-            aria-label={`Cart, ${count} items`}
-            className="relative flex h-10 w-10 items-center justify-center rounded-full text-[var(--color-ink)] hover:bg-black/5 active:bg-black/10"
-          >
-            <motion.div
-              key={bump}
-              initial={{ scale: 0.6, rotate: -8 }}
-              animate={{ scale: 1, rotate: 0 }}
-              transition={{ type: "spring", stiffness: 480, damping: 18 }}
+      >
+        <div className="mx-auto flex h-14 max-w-2xl items-center gap-3 px-4">
+          {isHome ? (
+            <Link
+              href="/"
+              className="flex items-center gap-2"
+              aria-label="IluEats home"
             >
-              <ShoppingBagIcon className="h-5 w-5" />
-            </motion.div>
-            {count > 0 && (
-              <motion.span
-                key={`badge-${count}`}
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ type: "spring", stiffness: 500, damping: 22 }}
-                className="absolute -right-0.5 -top-0.5 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[var(--color-primary)] px-1 text-[10px] font-bold text-white ring-2 ring-[var(--color-bg)]"
+              <Logo />
+            </Link>
+          ) : (
+            <button
+              type="button"
+              onClick={() => (onBack ? onBack() : router.back())}
+              aria-label="Go back"
+              className="flex h-10 w-10 items-center justify-center rounded-full text-[var(--color-ink)] hover:bg-black/5 active:bg-black/10"
+            >
+              <ArrowLeftIcon className="h-5 w-5" />
+            </button>
+          )}
+
+          {!isHome && title && (
+            <h1 className="flex-1 truncate text-[15px] font-bold tracking-tight">
+              {title}
+            </h1>
+          )}
+
+          {isHome && (
+            <div className="flex flex-1 items-center gap-1.5 text-[12px] font-medium text-[var(--color-ink-muted)]">
+              <MapPinIcon className="h-4 w-4 text-[var(--color-primary)]" />
+              <span>
+                Delivering to{" "}
+                <span className="font-bold text-[var(--color-ink)]">Ilisan</span>
+              </span>
+            </div>
+          )}
+
+          {showSearch && (
+            <button
+              type="button"
+              onClick={() => openSearch()}
+              aria-label="Open search"
+              className="flex h-10 w-10 items-center justify-center rounded-full text-[var(--color-ink)] shadow-[0_1px_0_rgb(0_0_0/0.04)] ring-1 ring-[var(--color-line)] transition hover:bg-[var(--color-surface)] hover:ring-[var(--color-primary)]/20 active:scale-[0.97]"
+            >
+              <MagnifyingGlassIcon className="h-5 w-5" />
+            </button>
+          )}
+
+          {!isCartPage && (
+            <Link
+              href="/cart"
+              aria-label={`Cart, ${count} items`}
+              className="relative flex h-10 w-10 items-center justify-center rounded-full text-[var(--color-ink)] hover:bg-black/5 active:bg-black/10"
+            >
+              <motion.div
+                key={bump}
+                initial={{ scale: 0.6, rotate: -8 }}
+                animate={{ scale: 1, rotate: 0 }}
+                transition={{ type: "spring", stiffness: 480, damping: 18 }}
               >
-                {count > 99 ? "99+" : count}
-              </motion.span>
-            )}
-          </Link>
-        )}
-      </div>
-    </header>
+                <ShoppingBagIcon className="h-5 w-5" />
+              </motion.div>
+              {count > 0 && (
+                <motion.span
+                  key={`badge-${count}`}
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ type: "spring", stiffness: 500, damping: 22 }}
+                  className="absolute -right-0.5 -top-0.5 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[var(--color-primary)] px-1 text-[10px] font-bold text-white ring-2 ring-[var(--color-bg)]"
+                >
+                  {count > 99 ? "99+" : count}
+                </motion.span>
+              )}
+            </Link>
+          )}
+        </div>
+      </header>
   );
 }
 

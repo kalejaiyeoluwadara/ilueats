@@ -12,77 +12,40 @@ import {
   adSlides,
   getFeaturedProducts,
   getStoresByCategory,
-  products,
   stores,
 } from "@/data/mockData";
 import type { CategoryId } from "@/types";
 
 export default function HomePage() {
   const [category, setCategory] = useState<CategoryId>("all");
-  const [query, setQuery] = useState("");
 
   const featuredStores = useMemo(
     () => stores.filter((s) => s.isFeatured),
-    []
+    [],
   );
   const featuredProducts = useMemo(() => getFeaturedProducts(), []);
 
-  const filteredStores = useMemo(() => {
-    let list = getStoresByCategory(category);
-    const q = query.trim().toLowerCase();
-    if (q) {
-      list = list.filter((s) => {
-        if (
-          s.name.toLowerCase().includes(q) ||
-          s.tagline.toLowerCase().includes(q) ||
-          s.tags?.some((t) => t.toLowerCase().includes(q))
-        ) {
-          return true;
-        }
-        // search products inside the store too
-        return products.some(
-          (p) =>
-            p.storeId === s.id &&
-            (p.name.toLowerCase().includes(q) ||
-              p.description.toLowerCase().includes(q))
-        );
-      });
-    }
-    return list;
-  }, [category, query]);
-
-  const matchingProducts = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return [];
-    return products
-      .filter(
-        (p) =>
-          p.name.toLowerCase().includes(q) ||
-          p.description.toLowerCase().includes(q)
-      )
-      .slice(0, 8);
-  }, [query]);
-
-  const isSearching = query.trim().length > 0;
+  const filteredStores = useMemo(
+    () => getStoresByCategory(category),
+    [category],
+  );
 
   return (
     <div className="min-h-screen pb-24">
       <Navbar variant="home" />
 
       <main className="mx-auto max-w-2xl">
-        <HeroBanner query={query} onQueryChange={setQuery} />
+        <HeroBanner />
 
-        {!isSearching && (
-          <div className="pt-1 pb-2">
-            <AdBanner slides={adSlides} />
-          </div>
-        )}
+        <div className="pt-1 pb-2">
+          <AdBanner slides={adSlides} />
+        </div>
 
         <div className="pt-2">
           <CategoryPills active={category} onChange={setCategory} />
         </div>
 
-        {!isSearching && featuredProducts.length > 0 && (
+        {featuredProducts.length > 0 && (
           <div className="pt-4">
             <FeaturedItems
               title="Fresh from your ìlú"
@@ -92,7 +55,7 @@ export default function HomePage() {
           </div>
         )}
 
-        {!isSearching && featuredStores.length > 0 && (
+        {featuredStores.length > 0 && (
           <section className="px-4 pt-5">
             <div className="mb-3 flex items-end justify-between">
               <div>
@@ -114,42 +77,22 @@ export default function HomePage() {
           </section>
         )}
 
-        {isSearching && matchingProducts.length > 0 && (
-          <section className="px-4 pt-5">
-            <h2 className="mb-2 text-[16px] font-extrabold tracking-tight">
-              Matching dishes
-            </h2>
-            <FeaturedItems
-              title=""
-              items={matchingProducts}
-            />
-          </section>
-        )}
-
         <section className="px-4 pt-5">
-          <div className="mb-3 flex items-end justify-between">
-            <div>
+          <div className="mb-3 flex items-end justify-between gap-3">
+            <div className="min-w-0">
               <h2 className="text-[18px] font-extrabold tracking-tight text-[var(--color-ink)]">
-                {isSearching
-                  ? `Results${
-                      filteredStores.length > 0
-                        ? ` (${filteredStores.length})`
-                        : ""
-                    }`
-                  : "All stores nearby"}
+                All stores nearby
               </h2>
-              {!isSearching && (
-                <p className="text-[12.5px] text-[var(--color-ink-muted)]">
-                  {category === "all"
-                    ? "Everywhere worth eating"
-                    : "Filtered by your craving"}
-                </p>
-              )}
+              <p className="mt-0.5 text-[12.5px] text-[var(--color-ink-muted)]">
+                {category === "all"
+                  ? "Everywhere worth eating"
+                  : "Filtered by your craving"}
+              </p>
             </div>
           </div>
 
           {filteredStores.length === 0 ? (
-            <EmptyState query={query} category={category} />
+            <EmptyState category={category} />
           ) : (
             <div className="grid grid-cols-1 gap-8">
               {filteredStores.map((s, idx) => (
@@ -171,25 +114,21 @@ export default function HomePage() {
   );
 }
 
-function EmptyState({
-  query,
-  category,
-}: {
-  query: string;
-  category: CategoryId;
-}) {
+function EmptyState({ category }: { category: CategoryId }) {
   return (
-    <div className="rounded-2xl bg-white p-6 text-center ring-1 ring-[var(--color-line)]">
-      <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-[var(--color-primary-soft)] text-2xl">
+    <div className="relative overflow-hidden rounded-[1.35rem] border border-[var(--color-line)] bg-gradient-to-b from-[var(--color-surface)] to-[var(--color-bg)] p-6 text-center shadow-crisp">
+      <div
+        className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-[var(--color-primary)]/[0.07] blur-2xl"
+        aria-hidden
+      />
+      <div className="relative mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--color-primary-soft)] text-2xl shadow-[inset_0_1px_0_rgb(255_255_255/0.65)] ring-1 ring-[var(--color-primary)]/10">
         🍽️
       </div>
-      <h3 className="text-[15px] font-bold tracking-tight">
+      <h3 className="relative text-[16px] font-extrabold tracking-tight text-[var(--color-ink)]">
         Nothing here yet
       </h3>
-      <p className="mt-1 text-[13px] text-[var(--color-ink-muted)]">
-        {query
-          ? `No stores match “${query}”. Try a different word.`
-          : `No stores yet for the ${category} category. Check back soon.`}
+      <p className="relative mt-2 text-[13px] leading-relaxed text-[var(--color-ink-muted)]">
+        No stores yet for the {category} category. Check back soon.
       </p>
     </div>
   );

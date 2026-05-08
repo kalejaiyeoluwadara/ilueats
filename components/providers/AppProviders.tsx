@@ -4,6 +4,7 @@ import { AddressesProvider } from "@/context/AddressesContext";
 import { AuthProvider } from "@/context/AuthContext";
 import { CartProvider } from "@/context/CartContext";
 import { FavoritesProvider } from "@/context/FavoritesContext";
+import { SearchProvider } from "@/context/SearchContext";
 import { ToastProvider } from "@/context/ToastContext";
 
 /**
@@ -13,13 +14,15 @@ import { ToastProvider } from "@/context/ToastContext";
 export function AppProviders({ children }: { children: React.ReactNode }) {
   return (
     <ToastProvider>
-      <AuthProvider>
-        <FavoritesProvider>
-          <AddressesProvider>
-            <CartProvider>{children}</CartProvider>
-          </AddressesProvider>
-        </FavoritesProvider>
-      </AuthProvider>
+      <SearchProvider>
+        <AuthProvider>
+          <FavoritesProvider>
+            <AddressesProvider>
+              <CartProvider>{children}</CartProvider>
+            </AddressesProvider>
+          </FavoritesProvider>
+        </AuthProvider>
+      </SearchProvider>
     </ToastProvider>
   );
 }

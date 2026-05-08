@@ -12,27 +12,41 @@ interface FeaturedItemsProps {
   title: string;
   subtitle?: string;
   items: Product[];
+  /** When false, horizontal scroller aligns flush (e.g. inside a padded card). */
+  padX?: boolean;
 }
 
-export function FeaturedItems({ title, subtitle, items }: FeaturedItemsProps) {
+export function FeaturedItems({
+  title,
+  subtitle,
+  items,
+  padX = true,
+}: FeaturedItemsProps) {
   if (items.length === 0) return null;
+
+  const showHeader = Boolean(title || subtitle);
+  const gutter = padX ? "px-4" : "px-0";
 
   return (
     <section>
-      <div className="mb-3 flex items-end justify-between gap-3 px-4">
-        <div>
-          <h2 className="text-[18px] font-extrabold tracking-tight text-[var(--color-ink)]">
-            {title}
-          </h2>
-          {subtitle && (
-            <p className="text-[12.5px] text-[var(--color-ink-muted)]">
-              {subtitle}
-            </p>
-          )}
+      {showHeader && (
+        <div className={`mb-3 flex items-end justify-between gap-3 ${gutter}`}>
+          <div>
+            <h2 className="text-[18px] font-extrabold tracking-tight text-[var(--color-ink)]">
+              {title}
+            </h2>
+            {subtitle && (
+              <p className="text-[12.5px] text-[var(--color-ink-muted)]">
+                {subtitle}
+              </p>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
-      <div className="no-scrollbar fade-right-mask flex gap-3 overflow-x-auto px-4 pb-2">
+      <div
+        className={`no-scrollbar fade-right-mask flex gap-3 overflow-x-auto pb-2 ${gutter}`}
+      >
         {items.map((p, idx) => (
           <motion.div
             key={p.id}

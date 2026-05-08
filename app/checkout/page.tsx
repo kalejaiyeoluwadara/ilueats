@@ -9,6 +9,8 @@ import {
   CreditCardIcon,
   BanknotesIcon,
   DevicePhoneMobileIcon,
+  FlagIcon,
+  HomeIcon,
   MapPinIcon,
   PencilSquareIcon,
 } from "@heroicons/react/24/outline";
@@ -19,10 +21,11 @@ import { useCart } from "@/hooks/useCart";
 import { useAuth } from "@/hooks/useAuth";
 import { useAddresses } from "@/hooks/useAddresses";
 import { useToast } from "@/hooks/useToast";
-import { getStoreBySlug } from "@/data/mockData";
+import { getStoreBySlug, pickupLandmarks } from "@/data/mockData";
 import { cn, formatPrice, shortId } from "@/lib/utils";
 
 type PayMethod = "card" | "transfer" | "cash";
+type DeliveryMode = "door" | "landmark";
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -39,6 +42,8 @@ export default function CheckoutPage() {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
+  const [deliveryMode, setDeliveryMode] = useState<DeliveryMode>("door");
+  const [landmarkId, setLandmarkId] = useState<string | null>(null);
   const [notes, setNotes] = useState("");
   const [method, setMethod] = useState<PayMethod>("card");
   const [orderId, setOrderId] = useState<string>("");
@@ -58,15 +63,25 @@ export default function CheckoutPage() {
 
   useEffect(() => {
     if (!addrReady || !defaultAddress) return;
-    setAddress((a) => (a.trim() === "" ? defaultAddress.addressLine : a));
     setPhone((p) =>
       p.trim() === "" && defaultAddress.phone ? defaultAddress.phone : p
     );
   }, [addrReady, defaultAddress]);
 
+  useEffect(() => {
+    if (!addrReady || !defaultAddress || deliveryMode !== "door") return;
+    setAddress((a) => (a.trim() === "" ? defaultAddress.addressLine : a));
+  }, [addrReady, defaultAddress, deliveryMode]);
+
   const canSubmit = useMemo(() => {
-    return name.trim().length > 1 && phone.trim().length >= 7 && address.trim().length > 4;
-  }, [name, phone, address]);
+    const contactOk =
+      name.trim().length > 1 && phone.trim().length >= 7;
+    if (!contactOk) return false;
+    if (deliveryMode === "door") {
+      return address.trim().length > 4;
+    }
+    return landmarkId !== null;
+  }, [name, phone, address, deliveryMode, landmarkId]);
 
   const submit = async () => {
     if (!canSubmit) return;
@@ -96,7 +111,24 @@ export default function CheckoutPage() {
             title="Delivery details"
           />
           <div className="mt-3 space-y-3">
-            {addrReady && addresses.length > 0 && (
+            <div className="grid gap-2">
+              <PaymentOption
+                active={deliveryMode === "door"}
+                icon={<HomeIcon className="h-5 w-5" />}
+                title="Door delivery"
+                subtitle="We bring it to your full street address"
+                onClick={() => setDeliveryMode("door")}
+              />
+              <PaymentOption
+                active={deliveryMode === "landmark"}
+                icon={<FlagIcon className="h-5 w-5" />}
+                title="Meet at landmark"
+                subtitle="Pick a public spot nearby — rider meets you there"
+                onClick={() => setDeliveryMode("landmark")}
+              />
+            </div>
+
+            {addrReady && addresses.length > 0 && deliveryMode === "door" && (
               <div className="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
                 {addresses.map((a) => {
                   const matches = address.trim() === a.addressLine.trim();
@@ -142,13 +174,50 @@ export default function CheckoutPage() {
               type="tel"
               inputMode="tel"
             />
-            <Field
-              label="Delivery address"
-              value={address}
-              onChange={setAddress}
-              placeholder="House no, street, landmark, Ilisan"
-              multiline
-            />
+
+            {deliveryMode === "door" ? (
+              <Field
+                label="Delivery address"
+                value={address}
+                onChange={setAddress}
+                placeholder="House no, street, landmark, Ilisan"
+                multiline
+              />
+            ) : (
+              <div>
+                <span className="flex items-center gap-1 text-[12px] font-semibold text-[var(--color-ink-muted)]">
+                  Pickup landmark
+                </span>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {pickupLandmarks.map((lm) => {
+                    const selected = landmarkId === lm.id;
+                    return (
+                      <button
+                        key={lm.id}
+                        type="button"
+                        onClick={() => setLandmarkId(lm.id)}
+                        className={cn(
+                          "rounded-full px-3 py-2 text-left text-[12px] font-semibold leading-snug ring-1 transition-colors",
+                          selected
+                            ? "bg-[var(--color-primary-soft)] text-[var(--color-primary)] ring-[var(--color-primary)]/35"
+                            : "bg-[var(--color-bg)] text-[var(--color-ink)] ring-[var(--color-line)] hover:bg-black/[0.03]"
+                        )}
+                      >
+                        {lm.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                {landmarkId && (
+                  <p className="mt-2 text-[12px] text-[var(--color-ink-muted)]">
+                    {
+                      pickupLandmarks.find((l) => l.id === landmarkId)
+                        ?.detail
+                    }
+                  </p>
+                )}
+              </div>
+            )}
             <Field
               label="Notes for the rider (optional)"
               value={notes}
@@ -168,13 +237,6 @@ export default function CheckoutPage() {
             subtitle="Simulated for demo — no real charge."
           />
           <div className="mt-3 grid gap-2">
-            <PaymentOption
-              active={method === "card"}
-              icon={<CreditCardIcon className="h-5 w-5" />}
-              title="Card"
-              subtitle="Pay with debit / credit card"
-              onClick={() => setMethod("card")}
-            />
             <PaymentOption
               active={method === "transfer"}
               icon={<DevicePhoneMobileIcon className="h-5 w-5" />}

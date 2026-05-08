@@ -7,13 +7,15 @@ import { cn } from "@/lib/utils";
 type ButtonVariant = "primary" | "secondary" | "ghost" | "outline" | "danger";
 type ButtonSize = "sm" | "md" | "lg";
 
-export interface ButtonProps extends HTMLMotionProps<"button"> {
+export interface ButtonProps
+  extends Omit<HTMLMotionProps<"button">, "children"> {
   variant?: ButtonVariant;
   size?: ButtonSize;
   fullWidth?: boolean;
   loading?: boolean;
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
+  children?: React.ReactNode;
 }
 
 const base =

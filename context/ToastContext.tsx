@@ -60,9 +60,7 @@ const variantStyles: Record<
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
-  const dismissTimers = useRef<Map<string, ReturnType<typeof window.setTimeout>>>(
-    new Map()
-  );
+  const dismissTimers = useRef<Map<string, number>>(new Map());
 
   useEffect(
     () => () => {

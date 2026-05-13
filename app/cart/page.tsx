@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/Button";
 import { CartItem } from "@/components/cart/CartItem";
 import { CartSummary } from "@/components/cart/CartSummary";
 import { useCatalog } from "@/context/CatalogContext";
+import { useCart } from "@/hooks/useCart";
 import { formatPrice } from "@/lib/utils";
 
 export default function CartPage() {

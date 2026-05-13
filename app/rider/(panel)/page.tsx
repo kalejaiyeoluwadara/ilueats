@@ -82,10 +82,10 @@ export default function RiderTodayPage() {
       {!isOnline ? (
         <section className="rounded-[1.25rem] border border-dashed border-[var(--color-line)] bg-[var(--color-surface)] p-6 text-center shadow-crisp">
           <p className="text-[15px] font-extrabold text-[var(--color-ink)]">
-            You're offline
+            {"You're offline"}
           </p>
           <p className="mt-2 text-[13px] text-[var(--color-ink-muted)]">
-            Turn on when you're ready to browse and accept offers.
+            {"Turn on when you're ready to browse and accept offers."}
           </p>
         </section>
       ) : availableOffers.length > 0 ? (
@@ -161,7 +161,9 @@ export default function RiderTodayPage() {
             No open offers right now
           </p>
           <p className="mt-2 text-[13px] text-[var(--color-ink-muted)]">
-            You're caught up — check your active deliveries or check back soon.
+            {
+              "You're caught up — check your active deliveries or check back soon."
+            }
           </p>
         </section>
       )}

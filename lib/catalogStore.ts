@@ -75,7 +75,7 @@ export function resetCatalogToSeed() {
 }
 
 function ensureUniqueStoreSlug(base: string, excludeId?: string): string {
-  let s = slugify(base) || "store";
+  const s = slugify(base) || "store";
   const taken = (x: string) =>
     snapshot.stores.some((st) => st.slug === x && st.id !== excludeId);
   if (!taken(s)) return s;
@@ -89,7 +89,7 @@ function ensureUniqueProductSlug(
   base: string,
   excludeProductId?: string
 ): string {
-  let s = slugify(base) || "item";
+  const s = slugify(base) || "item";
   const taken = (x: string) =>
     snapshot.products.some(
       (p) => p.storeId === storeId && p.slug === x && p.id !== excludeProductId

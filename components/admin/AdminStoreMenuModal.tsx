@@ -6,7 +6,6 @@ import Image from "next/image";
 import {
   ChevronDownIcon,
   ChevronRightIcon,
-  PlusIcon,
   TrashIcon,
 } from "@heroicons/react/24/outline";
 import { Modal } from "@/components/ui/Modal";
@@ -94,7 +93,7 @@ function optionsToDraft(groups: ProductOptionGroup[] | undefined): DraftGroupRow
 function uniqueSlugInSet(baseRaw: string, used: Set<string>): string {
   const base =
     slugify(baseRaw.trim()) || shortId("id_").replace(/^_/, "id");
-  let s = base;
+  const s = base;
   if (!used.has(s)) {
     used.add(s);
     return s;

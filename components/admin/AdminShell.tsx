@@ -8,6 +8,7 @@ import {
   BuildingStorefrontIcon,
   ChartPieIcon,
   Cog6ToothIcon,
+  PhotoIcon,
   ShoppingBagIcon,
   XMarkIcon,
 } from "@heroicons/react/24/outline";
@@ -20,6 +21,7 @@ const nav = [
   { href: "/admin", label: "Overview", icon: ChartPieIcon, end: true },
   { href: "/admin/orders", label: "Orders", icon: ShoppingBagIcon },
   { href: "/admin/stores", label: "Stores", icon: BuildingStorefrontIcon },
+  { href: "/admin/banners", label: "Banners", icon: PhotoIcon },
   { href: "/admin/settings", label: "Settings", icon: Cog6ToothIcon },
 ] as const;
 

@@ -8,16 +8,14 @@ import { CategoryPills } from "@/components/home/CategoryPills";
 import { AdBanner } from "@/components/home/AdBanner";
 import { FeaturedItems } from "@/components/home/FeaturedItems";
 import { StoreCard } from "@/components/home/StoreCard";
-import {
-  adSlides,
-  getFeaturedProducts,
-  getStoresByCategory,
-} from "@/data/mockData";
+import { getFeaturedProducts, getStoresByCategory } from "@/data/mockData";
+import { useBanners } from "@/context/BannersContext";
 import type { CategoryId } from "@/types";
 import { useCatalog } from "@/context/CatalogContext";
 
 export default function HomePage() {
   const { stores } = useCatalog();
+  const { banners } = useBanners();
   const [category, setCategory] = useState<CategoryId>("all");
 
   const featuredStores = useMemo(
@@ -39,7 +37,7 @@ export default function HomePage() {
         <HeroBanner />
 
         <div className="pt-1 pb-2">
-          <AdBanner slides={adSlides} />
+          <AdBanner slides={banners} />
         </div>
 
         <div className="pt-2">

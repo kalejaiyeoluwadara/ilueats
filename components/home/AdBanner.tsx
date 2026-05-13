@@ -45,6 +45,10 @@ export function AdBanner({ slides, intervalMs = 4500 }: AdBannerProps) {
               sizes="(max-width: 640px) 100vw, 600px"
               className="object-cover"
               priority
+              unoptimized={
+                current.image.startsWith("data:") ||
+                current.image.startsWith("blob:")
+              }
             />
             <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-black/15" />
           </motion.div>

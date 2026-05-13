@@ -1,27 +1,200 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { PlusIcon } from "@heroicons/react/24/outline";
+import {
+  ChevronDownIcon,
+  ChevronRightIcon,
+  PlusIcon,
+  TrashIcon,
+} from "@heroicons/react/24/outline";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { categories } from "@/data/mockData";
 import type { MenuItemPayload } from "@/lib/catalogStore";
-import { cn, formatPrice } from "@/lib/utils";
-import type { CategoryId, Product, Store } from "@/types";
+import { cn, formatPrice, shortId, slugify } from "@/lib/utils";
+import type {
+  CategoryId,
+  Product,
+  ProductOptionChoice,
+  ProductOptionGroup,
+  Store,
+} from "@/types";
 
 const selectable = categories.filter((c) => c.id !== "all");
 
 const field =
   "h-11 w-full rounded-2xl border border-[var(--color-line)] bg-[var(--color-bg)] px-3.5 text-[13px] font-medium text-[var(--color-ink)] outline-none focus:border-[var(--color-primary)]/35 focus:ring-2 focus:ring-[var(--color-primary)]/18";
 
-function tryParseOptions(json: string): Product["options"] | undefined {
+function tryParseOptions(json: string): ProductOptionGroup[] | undefined {
   const t = json.trim();
   if (!t) return undefined;
   const parsed = JSON.parse(t) as unknown;
   if (!Array.isArray(parsed)) throw new Error("Options must be a JSON array");
-  return parsed as Product["options"];
+  return parsed as ProductOptionGroup[];
+}
+
+/** Row identities for controlled lists (not persisted). */
+type DraftChoiceRow = {
+  key: string;
+  choiceId: string;
+  title: string;
+  deltaRaw: string;
+};
+
+type DraftGroupRow = {
+  key: string;
+  groupId: string;
+  title: string;
+  required: boolean;
+  multi: boolean;
+  choices: DraftChoiceRow[];
+};
+
+function newChoiceRow(initial?: Partial<DraftChoiceRow>): DraftChoiceRow {
+  return {
+    key: shortId("c_"),
+    choiceId: initial?.choiceId ?? "",
+    title: initial?.title ?? "",
+    deltaRaw: initial?.deltaRaw ?? "0",
+  };
+}
+
+function newGroupRow(initial?: Partial<DraftGroupRow>): DraftGroupRow {
+  return {
+    key: shortId("g_"),
+    groupId: initial?.groupId ?? "",
+    title: initial?.title ?? "",
+    required: initial?.required ?? true,
+    multi: initial?.multi ?? false,
+    choices: initial?.choices?.length ? initial!.choices : [newChoiceRow()],
+  };
+}
+
+function optionsToDraft(groups: ProductOptionGroup[] | undefined): DraftGroupRow[] {
+  if (!groups?.length) return [];
+  return groups.map((g) =>
+    newGroupRow({
+      groupId: g.id,
+      title: g.name,
+      required: !!g.required,
+      multi: !!g.multi,
+      choices: g.choices.map((c) =>
+        newChoiceRow({
+          choiceId: c.id,
+          title: c.name,
+          deltaRaw: String(c.priceDelta ?? 0),
+        })
+      ),
+    })
+  );
+}
+
+function uniqueSlugInSet(baseRaw: string, used: Set<string>): string {
+  const base =
+    slugify(baseRaw.trim()) || shortId("id_").replace(/^_/, "id");
+  let s = base;
+  if (!used.has(s)) {
+    used.add(s);
+    return s;
+  }
+  let n = 2;
+  while (used.has(`${s}-${n}`)) n += 1;
+  const out = `${s}-${n}`;
+  used.add(out);
+  return out;
+}
+
+/** Build persisted option groups — mirrors mock items like Babrite pepperoni. */
+function buildOptionsFromDraft(
+  drafts: DraftGroupRow[]
+): ProductOptionGroup[] | undefined {
+  const out: ProductOptionGroup[] = [];
+  const usedGroupIds = new Set<string>();
+
+  for (const g of drafts) {
+    const gTitle = g.title.trim();
+    if (!gTitle) continue;
+
+    const gid =
+      g.groupId.trim().length > 0
+        ? uniqueSlugInSet(g.groupId.trim(), usedGroupIds)
+        : uniqueSlugInSet(gTitle, usedGroupIds);
+
+    const choices: ProductOptionChoice[] = [];
+    const usedChoiceIds = new Set<string>();
+    for (const row of g.choices) {
+      const nm = row.title.trim();
+      if (!nm) continue;
+      const cid =
+        row.choiceId.trim().length > 0
+          ? uniqueSlugInSet(row.choiceId.trim(), usedChoiceIds)
+          : uniqueSlugInSet(nm, usedChoiceIds);
+
+      let deltaNum = Number(String(row.deltaRaw).replace(/,/g, ""));
+      if (!Number.isFinite(deltaNum)) deltaNum = 0;
+      deltaNum = Math.round(deltaNum);
+
+      const choice: ProductOptionChoice = { id: cid, name: nm };
+      if (deltaNum !== 0) choice.priceDelta = deltaNum;
+      choices.push(choice);
+    }
+
+    if (choices.length === 0) continue;
+
+    const group: ProductOptionGroup = {
+      id: gid,
+      name: gTitle,
+      choices,
+    };
+    if (g.required) group.required = true;
+    if (g.multi) group.multi = true;
+    out.push(group);
+  }
+  return out.length ? out : undefined;
+}
+
+/** Preset similar to `/babrite/pepperoni`: two required single-select tiers with price deltas. */
+function presetPizzaStyleRows(): DraftGroupRow[] {
+  return [
+    newGroupRow({
+      title: "Size",
+      required: true,
+      multi: false,
+      choices: [
+        newChoiceRow({ title: 'Small (9")', deltaRaw: "0" }),
+        newChoiceRow({ title: 'Medium (12")', deltaRaw: "2500" }),
+        newChoiceRow({ title: 'Large (14")', deltaRaw: "4500" }),
+      ],
+    }),
+    newGroupRow({
+      title: "Crust",
+      required: true,
+      multi: false,
+      choices: [
+        newChoiceRow({ title: "Thin Crust", deltaRaw: "0" }),
+        newChoiceRow({ title: "Hand-tossed", deltaRaw: "0" }),
+        newChoiceRow({ title: "Cheese-stuffed", deltaRaw: "1500" }),
+      ],
+    }),
+  ];
+}
+
+/** Optional multi-select add-ons — like Mama Tope extras. */
+function presetExtrasAddonRows(): DraftGroupRow[] {
+  return [
+    newGroupRow({
+      title: "Extras",
+      required: false,
+      multi: true,
+      choices: [
+        newChoiceRow({ title: "Extra Plantain", deltaRaw: "500" }),
+        newChoiceRow({ title: "Moi Moi", deltaRaw: "700" }),
+        newChoiceRow({ title: "Coleslaw", deltaRaw: "600" }),
+      ],
+    }),
+  ];
 }
 
 function defaultCategoryForStore(store: Store): Exclude<CategoryId, "all"> {
@@ -66,11 +239,21 @@ export function AdminMenuItemModal({
   const [isNew, setIsNew] = useState(false);
   const [rating, setRating] = useState("");
   const [reviews, setReviews] = useState("");
-  const [optionsJson, setOptionsJson] = useState("");
+  const [optionDrafts, setOptionDrafts] = useState<DraftGroupRow[]>([]);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [advancedJson, setAdvancedJson] = useState("");
   const [err, setErr] = useState<string | null>(null);
+  const prevAdvancedOpen = useRef(false);
+
+  const jsonMirror = useMemo(
+    () =>
+      JSON.stringify(buildOptionsFromDraft(optionDrafts) ?? [], null, 2),
+    [optionDrafts]
+  );
 
   useEffect(() => {
     if (!open) return;
+    setAdvancedOpen(false);
     setErr(null);
     if (mode === "edit" && product) {
       setName(product.name);
@@ -90,11 +273,7 @@ export function AdminMenuItemModal({
       setReviews(
         typeof product.reviews === "number" ? String(product.reviews) : ""
       );
-      setOptionsJson(
-        product.options && product.options.length
-          ? JSON.stringify(product.options, null, 2)
-          : ""
-      );
+      setOptionDrafts(optionsToDraft(product.options));
       return;
     }
     setName("");
@@ -110,8 +289,19 @@ export function AdminMenuItemModal({
     setIsNew(false);
     setRating("");
     setReviews("");
-    setOptionsJson("");
+    setOptionDrafts([]);
   }, [open, mode, product, store]);
+
+  useEffect(() => {
+    if (advancedOpen && !prevAdvancedOpen.current && open) {
+      setAdvancedJson(jsonMirror);
+    }
+    prevAdvancedOpen.current = advancedOpen;
+  }, [advancedOpen, open, jsonMirror]);
+
+  useEffect(() => {
+    if (!open) prevAdvancedOpen.current = false;
+  }, [open]);
 
   const canSave =
     name.trim().length > 0 &&
@@ -140,7 +330,7 @@ export function AdminMenuItemModal({
     e.preventDefault();
     if (!canSave) return;
     try {
-      const options = tryParseOptions(optionsJson);
+      const options = buildOptionsFromDraft(optionDrafts);
       const priceNum = Number(String(price).replace(/,/g, ""));
       onSave({
         name: name.trim(),
@@ -162,7 +352,7 @@ export function AdminMenuItemModal({
       });
       onClose();
     } catch {
-      setErr("Invalid JSON in customisation field, or bad numbers.");
+      setErr("Something went wrong — check modifiers and prices.");
     }
   };
 
@@ -173,7 +363,7 @@ export function AdminMenuItemModal({
       title={mode === "add" ? "Add menu item" : "Edit menu item"}
       description={`Attached to ${store.name}.`}
       variant="dialog"
-      className="sm:max-w-xl"
+      className="sm:max-w-2xl"
       footer={footer}
     >
       <form id="admin-menu-item-form" className="space-y-3.5" onSubmit={onSubmit}>
@@ -317,19 +507,329 @@ export function AdminMenuItemModal({
             New badge
           </label>
         </div>
-        <div>
-          <label className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-[var(--color-ink-soft)]">
-            Customisation JSON (advanced)
-          </label>
-          <textarea
-            className={cn(
-              field,
-              "min-h-[140px] resize-y py-2.5 font-mono text-[12px]"
+
+        <section className="rounded-2xl border border-[var(--color-line)] bg-[var(--color-bg)]/70 p-3.5 sm:p-4">
+          <div className="flex flex-col gap-1">
+            <p className="text-[12px] font-extrabold uppercase tracking-wide text-[var(--color-ink-soft)]">
+              Choice steps (optional)
+            </p>
+            <p className="text-[12.5px] leading-relaxed text-[var(--color-ink-muted)]">
+              Mirrors live products — e.g.{" "}
+              <span className="font-semibold text-[var(--color-ink)]">
+                Babrite pepperoni
+              </span>
+              : <strong>Required</strong> single-select tiers (size, crust) with extra ₦
+              on larger sizes / stuffed crust, plus separate{" "}
+              <strong>Optional + multi-select</strong> baskets for toppings or sides.
+            </p>
+          </div>
+
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-9"
+              onClick={() => setOptionDrafts([])}
+            >
+              Clear all
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-9"
+              onClick={() => setOptionDrafts(presetPizzaStyleRows())}
+            >
+              Pizza-style preset
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-9"
+              onClick={() => setOptionDrafts(presetExtrasAddonRows())}
+            >
+              Multi extras preset
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              className="h-9 gap-1.5 !px-3"
+              onClick={() =>
+                setOptionDrafts((d) => [...d, newGroupRow()])
+              }
+            >
+              Add empty step
+            </Button>
+          </div>
+
+          {optionDrafts.length === 0 ? (
+            <p className="mt-4 rounded-xl px-3 py-2 text-[13px] text-[var(--color-ink-muted)] ring-1 ring-[var(--color-line)] ring-dashed">
+              No extras — diner only sees quantity (like BBQ Chicken Margherita with no modifiers).
+              Use presets or add your own tiers.
+            </p>
+          ) : (
+            <ul className="mt-4 space-y-4">
+              {optionDrafts.map((g, gi) => (
+                <li
+                  key={g.key}
+                  className="rounded-2xl border border-[var(--color-line)] bg-[var(--color-surface)] p-3.5 shadow-sm"
+                >
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="min-w-0 flex-1 space-y-2">
+                      <div>
+                        <label className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-[var(--color-ink-soft)]">
+                          Step title (e.g. Size, Protein, Crust)
+                        </label>
+                        <input
+                          className={cn(field, "text-[13px]")}
+                          value={g.title}
+                          onChange={(e) =>
+                            setOptionDrafts((rows) =>
+                              rows.map((row) =>
+                                row.key === g.key
+                                  ? { ...row, title: e.target.value }
+                                  : row
+                              )
+                            )
+                          }
+                          placeholder={`Step ${gi + 1}`}
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-[var(--color-ink-soft)]">
+                          Step id slug (optional)
+                        </label>
+                        <input
+                          className={cn(field, "font-mono text-[12px]")}
+                          value={g.groupId}
+                          onChange={(e) =>
+                            setOptionDrafts((rows) =>
+                              rows.map((row) =>
+                                row.key === g.key
+                                  ? { ...row, groupId: e.target.value }
+                                  : row
+                              )
+                            )
+                          }
+                          placeholder="auto from step title"
+                        />
+                      </div>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="mt-2 h-10 shrink-0 text-red-600 hover:bg-red-50 sm:mt-0"
+                      aria-label={`Remove ${g.title.trim() || "step"}`}
+                      onClick={() =>
+                        setOptionDrafts((rows) =>
+                          rows.filter((row) => row.key !== g.key)
+                        )
+                      }
+                    >
+                      <TrashIcon className="h-5 w-5" />
+                    </Button>
+                  </div>
+
+                  <div className="mt-3 flex flex-wrap gap-4">
+                    <label className="flex items-center gap-2 text-[12.5px] font-semibold text-[var(--color-ink)]">
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 rounded border-[var(--color-line)]"
+                        checked={g.required}
+                        onChange={(e) =>
+                          setOptionDrafts((rows) =>
+                            rows.map((row) =>
+                              row.key === g.key
+                                ? { ...row, required: e.target.checked }
+                                : row
+                            )
+                          )
+                        }
+                      />
+                      Must pick something
+                      <span className="sr-only">
+                        Marks this group required on PDP
+                      </span>
+                    </label>
+                    <label className="flex items-center gap-2 text-[12.5px] font-semibold text-[var(--color-ink)]">
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 rounded border-[var(--color-line)]"
+                        checked={g.multi}
+                        onChange={(e) =>
+                          setOptionDrafts((rows) =>
+                            rows.map((row) =>
+                              row.key === g.key
+                                ? { ...row, multi: e.target.checked }
+                                : row
+                            )
+                          )
+                        }
+                      />
+                      Allow multiple picks
+                      <span className="sr-only">
+                        Checkbox-style choices on PDP
+                      </span>
+                    </label>
+                  </div>
+
+                  <div className="mt-4">
+                    <p className="mb-2 text-[10px] font-bold uppercase tracking-wide text-[var(--color-ink-soft)]">
+                      Choices (+₦ stacks on dish base price)
+                    </p>
+                    <p className="mb-3 text-[11px] leading-relaxed text-[var(--color-ink-muted)]">
+                      Use <strong>0</strong> for Included; higher sizes/crust premiums match live pepperoni (e.g. +{formatPrice(2500)}, +{formatPrice(4500)}).
+                    </p>
+                    <ul className="space-y-2">
+                      {g.choices.map((c) => (
+                        <li
+                          key={c.key}
+                          className="grid gap-2 sm:grid-cols-[1fr_1fr_auto] sm:items-end"
+                        >
+                          <input
+                            className={cn(field)}
+                            placeholder="Displayed name"
+                            value={c.title}
+                            onChange={(e) =>
+                              setOptionDrafts((rows) =>
+                                rows.map((row) =>
+                                  row.key !== g.key
+                                    ? row
+                                    : {
+                                        ...row,
+                                        choices: row.choices.map((ch) =>
+                                          ch.key === c.key
+                                            ? { ...ch, title: e.target.value }
+                                            : ch
+                                        ),
+                                      }
+                                )
+                              )
+                            }
+                          />
+                          <input
+                            className={cn(field, "font-mono text-[12px]")}
+                            placeholder="Slug (optional)"
+                            value={c.choiceId}
+                            onChange={(e) =>
+                              setOptionDrafts((rows) =>
+                                rows.map((row) =>
+                                  row.key !== g.key
+                                    ? row
+                                    : {
+                                        ...row,
+                                        choices: row.choices.map((ch) =>
+                                          ch.key === c.key
+                                            ? {
+                                                ...ch,
+                                                choiceId: e.target.value,
+                                              }
+                                            : ch
+                                        ),
+                                      }
+                                )
+                              )
+                            }
+                          />
+                        </li>
+                      ))}
+                    </ul>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="mt-2 h-9 gap-1 text-[12px]"
+                      onClick={() =>
+                        setOptionDrafts((rows) =>
+                          rows.map((row) =>
+                            row.key === g.key
+                              ? {
+                                  ...row,
+                                  choices: [...row.choices, newChoiceRow()],
+                                }
+                              : row
+                          )
+                        )
+                      }
+                    >
+                      Add choice
+                    </Button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        <div className="rounded-2xl border border-[var(--color-line)] bg-[var(--color-surface)] p-3">
+          <button
+            type="button"
+            className="flex w-full items-center justify-between gap-2 text-left"
+            onClick={() => setAdvancedOpen((x) => !x)}
+          >
+            <span className="text-[13px] font-bold text-[var(--color-ink)]">
+              Advanced JSON
+            </span>
+            {advancedOpen ? (
+              <ChevronDownIcon className="h-5 w-5 shrink-0 text-[var(--color-ink-soft)]" />
+            ) : (
+              <ChevronRightIcon className="h-5 w-5 shrink-0 text-[var(--color-ink-soft)]" />
             )}
-            placeholder='[] or [{"id":"size","name":"Size","required":true,"choices":[{"id":"m","name":"M","priceDelta":0}]}]'
-            value={optionsJson}
-            onChange={(e) => setOptionsJson(e.target.value)}
-          />
+          </button>
+          <p className="mt-1 text-[11.5px] text-[var(--color-ink-muted)]">
+            Paste complex trees from mocks or backends — applies into the builder above on success.
+          </p>
+          {advancedOpen ? (
+            <div className="mt-3 space-y-2">
+              <textarea
+                className={cn(
+                  field,
+                  "min-h-[160px] resize-y py-2.5 font-mono text-[12px]"
+                )}
+                spellCheck={false}
+                value={advancedJson}
+                onChange={(e) => setAdvancedJson(e.target.value)}
+              />
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-9"
+                  onClick={() => setAdvancedJson(jsonMirror)}
+                >
+                  Sync from builder
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  className="h-9"
+                  onClick={() => {
+                    try {
+                      const trimmed = advancedJson.trim();
+                      if (!trimmed) {
+                        setOptionDrafts([]);
+                        setErr(null);
+                        return;
+                      }
+                      const parsed = tryParseOptions(trimmed);
+                      setOptionDrafts(optionsToDraft(parsed ?? []));
+                      setErr(null);
+                    } catch {
+                      setErr("Invalid option JSON.");
+                    }
+                  }}
+                >
+                  Apply JSON → builder
+                </Button>
+              </div>
+            </div>
+          ) : null}
         </div>
       </form>
     </Modal>
@@ -391,7 +891,8 @@ export function AdminStoreMenuModal({
             </Link>
             <Button
               type="button"
-              className="flex-1 flex gap-2"
+              variant="primary"
+              className="flex-1 gap-2"
               onClick={() => setItemFlow("add")}
             >
               Add dish

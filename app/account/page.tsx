@@ -46,7 +46,7 @@ export default function AccountPage() {
     setBusy(true);
     try {
       if (mode === "signin") {
-        const r = signIn(email, password);
+        const r = signIn(email, password, { allowedRoles: ["customer"] });
         if (!r.ok) toastError("Sign in failed", r.error);
         else {
           success("Welcome back", "You're signed in on this device.");
@@ -171,6 +171,16 @@ export default function AccountPage() {
             <p className="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-[11.5px] font-medium text-amber-900/90 ring-1 ring-amber-200/80">
               Demo only: sign-in is stored in this browser. No server or real security yet.
             </p>
+            <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11.5px] font-semibold text-[var(--color-ink-soft)]">
+              <span>Try portals:</span>
+              <Link href="/admin/login" className="text-[var(--color-primary)] hover:underline">
+                Admin
+              </Link>
+              <span aria-hidden>·</span>
+              <Link href="/rider/login" className="text-emerald-700 hover:underline">
+                Rider
+              </Link>
+            </p>
           </>
         ) : (
           <section className="rounded-2xl bg-white p-4 ring-1 ring-[var(--color-line)]">
@@ -255,6 +265,16 @@ export default function AccountPage() {
             </form>
             <p className="mt-3 text-center text-[11px] font-medium text-[var(--color-ink-soft)]">
               Local demo auth — passwords stay in browser storage only.
+            </p>
+            <p className="mt-2 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[11px] font-semibold text-[var(--color-ink-soft)]">
+              <span>Operators:</span>
+              <Link href="/admin/login" className="text-[var(--color-primary)] hover:underline">
+                Admin
+              </Link>
+              <span aria-hidden>·</span>
+              <Link href="/rider/login" className="text-emerald-700 hover:underline">
+                Rider
+              </Link>
             </p>
           </section>
         )}

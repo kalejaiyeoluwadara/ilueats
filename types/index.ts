@@ -102,12 +102,17 @@ export interface ToastMessage {
   duration?: number;
 }
 
+/** Built-in roles for client-side demo auth (localStorage). */
+export type UserRole = "customer" | "admin" | "rider";
+
 /** Client-only session user (no password); persisted accounts live in localStorage. */
 export interface AuthUser {
   id: string;
   name: string;
   email: string;
   phone?: string;
+  /** Present for all accounts after migration; defaults to customer when missing in storage. */
+  role: UserRole;
 }
 
 /** Saved delivery address in browser storage. */

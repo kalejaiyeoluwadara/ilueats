@@ -7,6 +7,7 @@ import { HeartIcon } from "@heroicons/react/24/outline";
 import { Navbar } from "@/components/layout/Navbar";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { Button } from "@/components/ui/Button";
+import { ContentLoader } from "@/components/ui/Loaders";
 import { FavoriteButton } from "@/components/favorites/FavoriteButton";
 import { useFavorites } from "@/hooks/useFavorites";
 import { getProductById, getStoreBySlug } from "@/data/mockData";
@@ -34,9 +35,7 @@ export default function FavoritesPage() {
       <Navbar variant="page" title="Favourites" showSearch={false} />
       <main className="mx-auto max-w-2xl px-4 pt-4">
         {!ready ? (
-          <p className="text-center text-[14px] text-[var(--color-ink-muted)]">
-            Loading…
-          </p>
+          <ContentLoader message="Loading favourites…" className="py-16" />
         ) : items.length === 0 ? (
           <div className="flex flex-col items-center px-4 pt-14 text-center">
             <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[var(--color-primary-soft)]">

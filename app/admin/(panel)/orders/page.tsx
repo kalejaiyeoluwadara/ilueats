@@ -1,12 +1,17 @@
+"use client";
+
+import { useMemo } from "react";
 import {
   FunnelIcon,
   MagnifyingGlassIcon,
 } from "@heroicons/react/24/outline";
+import { Pagination } from "@/components/ui/Pagination";
+import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { cn, formatPrice } from "@/lib/utils";
 
 type OrderStatus = "new" | "preparing" | "out" | "delivered";
 
-const rows: {
+const rowsSource: {
   id: string;
   customer: string;
   store: string;
@@ -46,7 +51,73 @@ const rows: {
     status: "delivered",
     placed: "Yesterday",
   },
+  {
+    id: "ILU-9K2I",
+    customer: "Bola E.",
+    store: "Mama Put Palace",
+    total: 6200,
+    status: "preparing",
+    placed: "32 min ago",
+  },
+  {
+    id: "ILU-9K2H",
+    customer: "Sade R.",
+    store: "Crisp Bites",
+    total: 3800,
+    status: "out",
+    placed: "45 min ago",
+  },
+  {
+    id: "ILU-9K2G",
+    customer: "Yomi P.",
+    store: "Slice House",
+    total: 19200,
+    status: "delivered",
+    placed: "2h ago",
+  },
+  {
+    id: "ILU-9K2F",
+    customer: "Ngozi T.",
+    store: "Campus Chow",
+    total: 2100,
+    status: "new",
+    placed: "3 min ago",
+  },
+  {
+    id: "ILU-9K2E",
+    customer: "Femi K.",
+    store: "SmoothCity",
+    total: 1500,
+    status: "delivered",
+    placed: "3h ago",
+  },
+  {
+    id: "ILU-9K2D",
+    customer: "Amaka U.",
+    store: "Mama Put Palace",
+    total: 8900,
+    status: "preparing",
+    placed: "1h ago",
+  },
+  {
+    id: "ILU-9K2C",
+    customer: "Tunde B.",
+    store: "Coastal Grill",
+    total: 14500,
+    status: "out",
+    placed: "20 min ago",
+  },
+  {
+    id: "ILU-9K2B",
+    customer: "Ada W.",
+    store: "Crisp Bites",
+    total: 4100,
+    status: "delivered",
+    placed: "Saturday",
+  },
 ];
+
+const ORDER_PAGE_SIZE = 5;
 
 const statusStyles: Record<
   OrderStatus,
@@ -73,6 +144,16 @@ const statusStyles: Record<
 };
 
 export default function AdminOrdersPage() {
+  const rows = useMemo(() => rowsSource, []);
+  const {
+    page,
+    setPage,
+    pageCount,
+    pageItems: pagedRows,
+    total: orderTotal,
+    pageSize,
+  } = usePaginatedList(rows, ORDER_PAGE_SIZE);
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -113,9 +194,6 @@ export default function AdminOrdersPage() {
               aria-readonly="true"
             />
           </div>
-          <p className="text-[12px] font-semibold text-[var(--color-ink-muted)]">
-            Showing {rows.length} orders
-          </p>
         </div>
 
         <div className="overflow-x-auto">
@@ -131,7 +209,7 @@ export default function AdminOrdersPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--color-line)]">
-              {rows.map((r) => (
+              {pagedRows.map((r) => (
                 <tr
                   key={r.id}
                   className="bg-white transition hover:bg-[var(--color-bg)]/50"
@@ -165,6 +243,16 @@ export default function AdminOrdersPage() {
               ))}
             </tbody>
           </table>
+        </div>
+
+        <div className="border-t border-[var(--color-line)] p-4">
+          <Pagination
+            page={page}
+            pageCount={pageCount}
+            totalItems={orderTotal}
+            pageSize={pageSize}
+            onPageChange={setPage}
+          />
         </div>
       </div>
     </div>

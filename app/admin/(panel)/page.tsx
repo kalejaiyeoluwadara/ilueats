@@ -1,10 +1,15 @@
+"use client";
+
 import Link from "next/link";
+import { useMemo } from "react";
 import {
   ArrowTrendingUpIcon,
   ClockIcon,
   ShoppingBagIcon,
   UsersIcon,
 } from "@heroicons/react/24/outline";
+import { Pagination } from "@/components/ui/Pagination";
+import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { cn, formatPrice } from "@/lib/utils";
 
 const kpis = [
@@ -38,14 +43,49 @@ const kpis = [
   },
 ];
 
-const activity = [
+const activitySource = [
   { id: "1", title: "New order", meta: "ILU-9K2M · Mama Put Palace", time: "2m" },
   { id: "2", title: "Store went live", meta: "Crisp Bites", time: "18m" },
   { id: "3", title: "Payout sent", meta: "₦340,000 · 4 stores", time: "1h" },
-  { id: "4", title: "Refund approved", meta: "ILU-8JFL · Customer request", time: "2h" },
+  {
+    id: "4",
+    title: "Refund approved",
+    meta: "ILU-8JFL · Customer request",
+    time: "2h",
+  },
+  {
+    id: "5",
+    title: "Rider check-in spike",
+    meta: "Peak window · Campus ring",
+    time: "3h",
+  },
+  {
+    id: "6",
+    title: "Menu published",
+    meta: "SmoothCity · Drinks specials",
+    time: "4h",
+  },
+  {
+    id: "7",
+    title: "Zone fee updated",
+    meta: "Ilisan extended +5%",
+    time: "5h",
+  },
 ];
 
+const ACTIVITY_PAGE_SIZE = 3;
+
 export default function AdminDashboardPage() {
+  const activityItems = useMemo(() => activitySource, []);
+  const {
+    page: activityPage,
+    setPage: setActivityPage,
+    pageCount: activityPageCount,
+    pageItems: activityPageItems,
+    total: activityTotal,
+    pageSize: activityPageSize,
+  } = usePaginatedList(activityItems, ACTIVITY_PAGE_SIZE);
+
   return (
     <div className="space-y-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -54,8 +94,8 @@ export default function AdminDashboardPage() {
             Overview
           </h1>
           <p className="mt-1 max-w-xl text-[13px] leading-relaxed text-[var(--color-ink-muted)]">
-            Snapshot of IluEats operations — numbers are illustrative until backend
-            wiring is in place.
+            Snapshot of IluEats operations — numbers are illustrative until
+            backend wiring is in place.
           </p>
         </div>
         <Link
@@ -147,7 +187,7 @@ export default function AdminDashboardPage() {
             Recent events (mock)
           </p>
           <ul className="mt-4 space-y-3">
-            {activity.map((a) => (
+            {activityPageItems.map((a) => (
               <li
                 key={a.id}
                 className="flex gap-3 rounded-2xl border border-[var(--color-line)] bg-[var(--color-bg)]/60 px-3 py-3"
@@ -166,6 +206,15 @@ export default function AdminDashboardPage() {
               </li>
             ))}
           </ul>
+          <div className="mt-4">
+            <Pagination
+              page={activityPage}
+              pageCount={activityPageCount}
+              totalItems={activityTotal}
+              pageSize={activityPageSize}
+              onPageChange={setActivityPage}
+            />
+          </div>
         </section>
       </div>
     </div>

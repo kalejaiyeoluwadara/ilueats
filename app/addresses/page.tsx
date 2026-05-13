@@ -7,6 +7,7 @@ import { StarIcon as StarSolid } from "@heroicons/react/24/solid";
 import { Navbar } from "@/components/layout/Navbar";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { Button } from "@/components/ui/Button";
+import { ContentLoader } from "@/components/ui/Loaders";
 import { useAddresses } from "@/hooks/useAddresses";
 import { useToast } from "@/hooks/useToast";
 import { cn } from "@/lib/utils";
@@ -103,9 +104,7 @@ export default function AddressesPage() {
       <Navbar variant="page" title="Saved addresses" showSearch={false} />
       <main className="mx-auto max-w-2xl px-4 pt-4">
         {!ready ? (
-          <p className="text-center text-[14px] text-[var(--color-ink-muted)]">
-            Loading…
-          </p>
+          <ContentLoader message="Loading your addresses…" className="py-12" />
         ) : (
           <>
             {formOpen && (

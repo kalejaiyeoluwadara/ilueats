@@ -1,4 +1,9 @@
-import { PlusIcon, EllipsisHorizontalIcon } from "@heroicons/react/24/outline";
+"use client";
+
+import { useMemo } from "react";
+import { EllipsisHorizontalIcon, PlusIcon } from "@heroicons/react/24/outline";
+import { Pagination } from "@/components/ui/Pagination";
+import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { cn } from "@/lib/utils";
 
 type StoreRow = {
@@ -9,7 +14,7 @@ type StoreRow = {
   rating: string;
 };
 
-const stores: StoreRow[] = [
+const storesRaw: StoreRow[] = [
   {
     name: "Mama Put Palace",
     category: "Local & African",
@@ -38,9 +43,57 @@ const stores: StoreRow[] = [
     orders7d: 418,
     rating: "4.9",
   },
+  {
+    name: "Campus Chow",
+    category: "Fast food",
+    live: true,
+    orders7d: 156,
+    rating: "4.5",
+  },
+  {
+    name: "Coastal Grill",
+    category: "Seafood",
+    live: true,
+    orders7d: 289,
+    rating: "4.7",
+  },
+  {
+    name: "Breakfast Club",
+    category: "Café",
+    live: false,
+    orders7d: 41,
+    rating: "4.2",
+  },
+  {
+    name: "Naija Spice Box",
+    category: "Local & African",
+    live: true,
+    orders7d: 376,
+    rating: "4.8",
+  },
+  {
+    name: "Fruit Hive",
+    category: "Drinks",
+    live: true,
+    orders7d: 98,
+    rating: "4.4",
+  },
 ];
 
+const STORES_PAGE_SIZE = 6;
+
 export default function AdminStoresPage() {
+  const stores = useMemo(() => storesRaw, []);
+
+  const {
+    page,
+    setPage,
+    pageCount,
+    pageItems,
+    total: storeTotal,
+    pageSize,
+  } = usePaginatedList(stores, STORES_PAGE_SIZE);
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -61,8 +114,8 @@ export default function AdminStoresPage() {
         </button>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {stores.map((s) => (
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        {pageItems.map((s) => (
           <article
             key={s.name}
             className="rounded-[1.25rem] bg-[var(--color-surface)] p-5 shadow-crisp ring-1 ring-[var(--color-line)]"
@@ -124,6 +177,14 @@ export default function AdminStoresPage() {
           </article>
         ))}
       </div>
+
+      <Pagination
+        page={page}
+        pageCount={pageCount}
+        totalItems={storeTotal}
+        pageSize={pageSize}
+        onPageChange={setPage}
+      />
     </div>
   );
 }

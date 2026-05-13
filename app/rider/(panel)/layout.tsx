@@ -1,5 +1,6 @@
 import { ConsoleRoleGate } from "@/components/auth/ConsoleRoleGate";
 import { RiderShell } from "@/components/rider/RiderShell";
+import { RiderConsoleProvider } from "@/context/RiderConsoleContext";
 
 export default function RiderPanelLayout({
   children,
@@ -8,7 +9,9 @@ export default function RiderPanelLayout({
 }>) {
   return (
     <ConsoleRoleGate role="rider" loginHref="/rider/login">
-      <RiderShell>{children}</RiderShell>
+      <RiderShell>
+        <RiderConsoleProvider>{children}</RiderConsoleProvider>
+      </RiderShell>
     </ConsoleRoleGate>
   );
 }

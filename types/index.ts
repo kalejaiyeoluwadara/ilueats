@@ -115,6 +115,31 @@ export interface AuthUser {
   role: UserRole;
 }
 
+/** Rider console job (client-persisted demo state). */
+export type RiderJobStatus = "pickup" | "en_route" | "done";
+
+export interface RiderJob {
+  id: string;
+  store: string;
+  customer: string;
+  address: string;
+  payout: number;
+  status: RiderJobStatus;
+  /** Local Nigerian-style number for tel: links */
+  phone: string;
+}
+
+/** Incoming offer shown on the Today screen. */
+export interface RiderOffer {
+  id: string;
+  store: string;
+  customer: string;
+  drop: string;
+  pay: number;
+  etaMin: number;
+  phone: string;
+}
+
 /** Saved delivery address in browser storage. */
 export interface SavedAddress {
   id: string;

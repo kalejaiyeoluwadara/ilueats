@@ -15,6 +15,7 @@ import {
 import { Navbar } from "@/components/layout/Navbar";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { Button } from "@/components/ui/Button";
+import { ContentLoader } from "@/components/ui/Loaders";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/useToast";
 import { cn } from "@/lib/utils";
@@ -84,9 +85,7 @@ export default function AccountPage() {
       <main className="mx-auto max-w-2xl px-4 pt-4">
         {!ready ? (
           <section className="rounded-2xl bg-white p-6 ring-1 ring-[var(--color-line)]">
-            <p className="text-center text-[14px] text-[var(--color-ink-muted)]">
-              Loading…
-            </p>
+            <ContentLoader message="Loading your account…" />
           </section>
         ) : user ? (
           <>

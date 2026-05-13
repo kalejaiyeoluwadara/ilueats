@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { PageLoader } from "@/components/ui/Loaders";
 import { useAuth } from "@/hooks/useAuth";
 import type { UserRole } from "@/types";
 
@@ -25,11 +26,7 @@ export function ConsoleRoleGate({
   }, [ready, user, role, loginHref, router]);
 
   if (!ready) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-[var(--color-bg)] text-[14px] font-medium text-[var(--color-ink-muted)]">
-        Loading…
-      </div>
-    );
+    return <PageLoader message="Checking your session…" />;
   }
 
   if (!user || user.role !== role) {

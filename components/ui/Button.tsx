@@ -2,6 +2,11 @@
 
 import { forwardRef } from "react";
 import { motion, type HTMLMotionProps } from "framer-motion";
+import {
+  buttonLoaderSize,
+  buttonLoaderTone,
+  InlineLoader,
+} from "@/components/ui/Loaders";
 import { cn } from "@/lib/utils";
 
 type ButtonVariant = "primary" | "secondary" | "ghost" | "outline" | "danger";
@@ -72,7 +77,11 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       {...props}
     >
       {loading ? (
-        <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-r-transparent" />
+        <InlineLoader
+          size={buttonLoaderSize(size)}
+          tone={buttonLoaderTone(variant)}
+          label={typeof children === "string" ? children : "Loading"}
+        />
       ) : (
         leftIcon
       )}

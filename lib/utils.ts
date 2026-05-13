@@ -76,3 +76,11 @@ export function shortId(prefix = "") {
   const t = Date.now().toString(36).slice(-4);
   return `${prefix}${r}${t}`;
 }
+
+/** Nigerian-style mobile → tel: href (demo). */
+export function phoneToTelHref(phone: string): string {
+  const d = phone.replace(/\D/g, "");
+  if (d.startsWith("234")) return `tel:+${d}`;
+  if (d.startsWith("0") && d.length >= 10) return `tel:+234${d.slice(1)}`;
+  return `tel:${phone}`;
+}

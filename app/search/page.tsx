@@ -17,6 +17,7 @@ import { BottomNav } from "@/components/layout/BottomNav";
 import { StoreCard } from "@/components/home/StoreCard";
 import { useCatalog } from "@/context/CatalogContext";
 import { formatDeliveryTime, formatPrice } from "@/lib/utils";
+import type { Store } from "@/types";
 
 type Tab = "all" | "stores" | "dishes";
 
@@ -191,6 +192,7 @@ function SearchPageInner() {
       <main className="mx-auto max-w-2xl px-4 pt-4">
         {!isSearching ? (
           <EmptyLanding
+            stores={stores}
             onPick={(t) =>
               router.replace(`/search?q=${encodeURIComponent(t)}`)
             }
@@ -306,7 +308,13 @@ function SectionHeader({
   );
 }
 
-function EmptyLanding({ onPick }: { onPick: (term: string) => void }) {
+function EmptyLanding({
+  stores,
+  onPick,
+}: {
+  stores: Store[];
+  onPick: (term: string) => void;
+}) {
   return (
     <div className="space-y-6 pt-2">
       <div className="rounded-[1.35rem] border border-[var(--color-line)] bg-gradient-to-br from-[var(--color-surface)] to-[var(--color-primary-soft)]/50 p-5">

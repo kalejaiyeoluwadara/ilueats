@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
@@ -21,7 +21,8 @@ import { useCart } from "@/hooks/useCart";
 import { useAuth } from "@/hooks/useAuth";
 import { useAddresses } from "@/hooks/useAddresses";
 import { useToast } from "@/hooks/useToast";
-import { getStoreBySlug, pickupLandmarks } from "@/data/mockData";
+import { useCatalog } from "@/context/CatalogContext";
+import { pickupLandmarks } from "@/data/mockData";
 import { cn, formatPrice, shortId } from "@/lib/utils";
 
 type PayMethod = "card" | "transfer" | "cash";
@@ -33,8 +34,12 @@ export default function CheckoutPage() {
   const { user, ready: authReady } = useAuth();
   const { addresses, defaultAddress, ready: addrReady } = useAddresses();
   const { success } = useToast();
+  const { stores } = useCatalog();
 
-  const store = storeSlug ? getStoreBySlug(storeSlug) : undefined;
+  const store = useMemo(
+    () => (storeSlug ? stores.find((s) => s.slug === storeSlug) : undefined),
+    [storeSlug, stores]
+  );
   const deliveryFee = store?.deliveryFee ?? 0;
   const total = subtotal + deliveryFee;
 

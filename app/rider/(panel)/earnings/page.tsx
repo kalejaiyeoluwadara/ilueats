@@ -5,6 +5,9 @@ import { BanknotesIcon, CalendarDaysIcon, MapPinIcon } from "@heroicons/react/24
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { Pagination } from "@/components/ui/Pagination";
+import {
+  RiderOrderBagSummary,
+} from "@/components/rider/RiderOrderBag";
 import { useRiderConsole } from "@/context/RiderConsoleContext";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { useToast } from "@/hooks/useToast";
@@ -119,6 +122,7 @@ export default function RiderEarningsPage() {
                 <MapPinIcon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-600/90" />
                 {j.customer} · {j.address}
               </p>
+              <RiderOrderBagSummary items={j.lineItems} className="mt-2 border-t border-[var(--color-line)] pt-2" />
             </li>
           ))}
         </ul>

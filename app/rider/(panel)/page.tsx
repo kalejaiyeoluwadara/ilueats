@@ -4,12 +4,17 @@ import Link from "next/link";
 import { useState } from "react";
 import {
   BoltIcon,
+  ClipboardDocumentListIcon,
   ClockIcon,
   MapPinIcon,
 } from "@heroicons/react/24/outline";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { Pagination } from "@/components/ui/Pagination";
+import {
+  RiderOrderBagDetails,
+  RiderOrderBagSummary,
+} from "@/components/rider/RiderOrderBag";
 import { useRiderConsole } from "@/context/RiderConsoleContext";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { useToast } from "@/hooks/useToast";
@@ -30,6 +35,7 @@ export default function RiderTodayPage() {
   } = useRiderConsole();
   const { success, info } = useToast();
   const [confirmOffer, setConfirmOffer] = useState<RiderOffer | null>(null);
+  const [offerBagModal, setOfferBagModal] = useState<RiderOffer | null>(null);
 
   const {
     page: offersPage,
@@ -110,6 +116,15 @@ export default function RiderTodayPage() {
                     <p className="mt-1 text-[12.5px] font-semibold text-[var(--color-ink)]">
                       {o.customer}
                     </p>
+                    <RiderOrderBagSummary items={o.lineItems} className="mt-2" />
+                    <button
+                      type="button"
+                      onClick={() => setOfferBagModal(o)}
+                      className="mt-2 inline-flex h-8 items-center gap-1 rounded-full bg-emerald-50 px-3 text-[11px] font-bold text-emerald-900 ring-1 ring-emerald-200/80"
+                    >
+                      <ClipboardDocumentListIcon className="h-4 w-4" />
+                      View basket
+                    </button>
                   </div>
                 </div>
                 <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -199,31 +214,60 @@ export default function RiderTodayPage() {
         }
       >
         {confirmOffer && (
-          <ul className="space-y-2 text-[13px] text-[var(--color-ink-muted)]">
-            <li>
-              <span className="font-semibold text-[var(--color-ink)]">
-                Customer:{" "}
-              </span>
-              {confirmOffer.customer}
-            </li>
-            <li className="flex items-start gap-1.5">
-              <MapPinIcon className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
-              <span>{confirmOffer.drop}</span>
-            </li>
-            <li>
-              <span className="font-semibold text-[var(--color-ink)]">
-                Est. payout:{" "}
-              </span>
-              {formatPrice(confirmOffer.pay)}
-            </li>
-            <li>
-              <span className="font-semibold text-[var(--color-ink)]">
-                Pickup window:{" "}
-              </span>
-              ~{confirmOffer.etaMin} min
-            </li>
-          </ul>
+          <div className="space-y-4">
+            <ul className="space-y-2 text-[13px] text-[var(--color-ink-muted)]">
+              <li>
+                <span className="font-semibold text-[var(--color-ink)]">
+                  Customer:{" "}
+                </span>
+                {confirmOffer.customer}
+              </li>
+              <li className="flex items-start gap-1.5">
+                <MapPinIcon className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+                <span>{confirmOffer.drop}</span>
+              </li>
+              <li>
+                <span className="font-semibold text-[var(--color-ink)]">
+                  Est. payout:{" "}
+                </span>
+                {formatPrice(confirmOffer.pay)}
+              </li>
+              <li>
+                <span className="font-semibold text-[var(--color-ink)]">
+                  Pickup window:{" "}
+                </span>
+                ~{confirmOffer.etaMin} min
+              </li>
+            </ul>
+            <RiderOrderBagDetails
+              items={confirmOffer.lineItems}
+              caption="You'll carry this bag once you accept — check it matches the store receipt."
+            />
+          </div>
         )}
+      </Modal>
+
+      <Modal
+        open={!!offerBagModal}
+        onClose={() => setOfferBagModal(null)}
+        title="Offer basket"
+        description={
+          offerBagModal
+            ? `${offerBagModal.id} · ${offerBagModal.store}`
+            : undefined
+        }
+        footer={
+          <Button type="button" fullWidth size="md" onClick={() => setOfferBagModal(null)}>
+            Close
+          </Button>
+        }
+      >
+        {offerBagModal ? (
+          <RiderOrderBagDetails
+            items={offerBagModal.lineItems}
+            caption={`Drop-off · ${offerBagModal.drop}`}
+          />
+        ) : null}
       </Modal>
     </div>
   );

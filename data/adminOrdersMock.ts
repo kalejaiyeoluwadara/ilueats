@@ -1,0 +1,343 @@
+export type AdminOrderStatus = "new" | "preparing" | "out" | "delivered";
+
+export type AdminOrderLineItem = {
+  name: string;
+  qty: number;
+  unitPrice: number;
+  modifiers?: string[];
+};
+
+export type AdminOrderRow = {
+  id: string;
+  customer: string;
+  customerPhone: string;
+  deliveryAddress: string;
+  store: string;
+  storeAddress: string;
+  paymentLabel: string;
+  total: number;
+  deliveryFee: number;
+  serviceFee: number;
+  status: AdminOrderStatus;
+  placed: string;
+  lineItems: AdminOrderLineItem[];
+};
+
+export function adminOrderLinesSubtotal(items: AdminOrderLineItem[]): number {
+  return items.reduce((sum, i) => sum + i.qty * i.unitPrice, 0);
+}
+
+export const adminOrderStatusBadge: Record<
+  AdminOrderStatus,
+  { label: string; className: string }
+> = {
+  new: {
+    label: "New",
+    className:
+      "bg-[var(--color-primary-soft)] text-[var(--color-primary)] ring-[var(--color-primary)]/20",
+  },
+  preparing: {
+    label: "Preparing",
+    className: "bg-amber-50 text-amber-800 ring-amber-200/80",
+  },
+  out: {
+    label: "Out for delivery",
+    className: "bg-sky-50 text-sky-800 ring-sky-200/80",
+  },
+  delivered: {
+    label: "Delivered",
+    className:
+      "bg-[var(--color-success-soft)] text-[var(--color-success)] ring-emerald-200/80",
+  },
+};
+
+export const ADMIN_ORDERS_MOCK: AdminOrderRow[] = [
+  {
+    id: "ILU-9K2M",
+    customer: "Temi A.",
+    customerPhone: "08031110001",
+    deliveryAddress: "Opic Estate — Block C12, Ilisan",
+    store: "Mama Put Palace",
+    storeAddress: "Shop 4, Ilisan market row",
+    paymentLabel: "Pay on delivery",
+    total: 5200,
+    deliveryFee: 600,
+    serviceFee: 250,
+    status: "new",
+    placed: "2 min ago",
+    lineItems: [
+      {
+        name: "Party jollof rice",
+        qty: 2,
+        unitPrice: 1400,
+        modifiers: ["Extra goat meat", "Medium spice"],
+      },
+      { name: "Moi moi wrap", qty: 2, unitPrice: 450 },
+      { name: "Zobo drink (75cl)", qty: 1, unitPrice: 650 },
+    ],
+  },
+  {
+    id: "ILU-9K2L",
+    customer: "Chidi O.",
+    customerPhone: "08031110002",
+    deliveryAddress: "Babcock faculty lodge gate",
+    store: "Crisp Bites",
+    storeAddress: "Ring road plaza, Ilisan",
+    paymentLabel: "Card — **** 4412",
+    total: 11800,
+    deliveryFee: 700,
+    serviceFee: 350,
+    status: "preparing",
+    placed: "8 min ago",
+    lineItems: [
+      {
+        name: "Crunch chicken bucket (8 pcs)",
+        qty: 1,
+        unitPrice: 6950,
+        modifiers: ["Honey glaze"],
+      },
+      {
+        name: "Spicy fries",
+        qty: 3,
+        unitPrice: 790,
+      },
+      { name: "Mango chill smoothie", qty: 2, unitPrice: 855 },
+    ],
+  },
+  {
+    id: "ILU-9K2K",
+    customer: "Anita I.",
+    customerPhone: "08031110003",
+    deliveryAddress: "ATM island — campus roundabout",
+    store: "SmoothCity",
+    storeAddress: "Drive-through bay, Ilisan",
+    paymentLabel: "Bank transfer (verified)",
+    total: 4500,
+    deliveryFee: 500,
+    serviceFee: 200,
+    status: "out",
+    placed: "14 min ago",
+    lineItems: [
+      {
+        name: "Tropical fusion bowl",
+        qty: 1,
+        unitPrice: 1500,
+        modifiers: ["No ginger", "Extra chia"],
+      },
+      {
+        name: "Cold-pressed orange",
+        qty: 2,
+        unitPrice: 850,
+      },
+      { name: "Protein muffin", qty: 2, unitPrice: 250 },
+    ],
+  },
+  {
+    id: "ILU-9K2J",
+    customer: "Kunle M.",
+    customerPhone: "08031110004",
+    deliveryAddress: "Slice House — curbside pickup dock",
+    store: "Slice House",
+    storeAddress: "Campus extension road",
+    paymentLabel: "Wallet",
+    total: 23620,
+    deliveryFee: 0,
+    serviceFee: 800,
+    status: "delivered",
+    placed: "Yesterday",
+    lineItems: [
+      {
+        name: "Meat feast large",
+        qty: 2,
+        unitPrice: 6980,
+        modifiers: ["Thin crust", "Extra cheese"],
+      },
+      {
+        name: "Garlic dough balls",
+        qty: 4,
+        unitPrice: 1150,
+      },
+      {
+        name: "Tiramisu slice",
+        qty: 3,
+        unitPrice: 1420,
+      },
+    ],
+  },
+  {
+    id: "ILU-9K2I",
+    customer: "Bola E.",
+    customerPhone: "08031110005",
+    deliveryAddress: "Greenfield annex — Apt 3B",
+    store: "Mama Put Palace",
+    storeAddress: "Shop 4, Ilisan market row",
+    paymentLabel: "Pay on delivery",
+    total: 6200,
+    deliveryFee: 600,
+    serviceFee: 300,
+    status: "preparing",
+    placed: "32 min ago",
+    lineItems: [
+      {
+        name: "Ofada rice & ayamase",
+        qty: 2,
+        unitPrice: 1900,
+        modifiers: ["Assorted meat"],
+      },
+      { name: "Plantain (fried)", qty: 3, unitPrice: 400 },
+      { name: "Chapman (1L)", qty: 1, unitPrice: 900 },
+    ],
+  },
+  {
+    id: "ILU-9K2H",
+    customer: "Sade R.",
+    customerPhone: "08031110006",
+    deliveryAddress: "OPIC — Cedar Close gatehouse",
+    store: "Crisp Bites",
+    storeAddress: "Ring road plaza, Ilisan",
+    paymentLabel: "Card — **** 9081",
+    total: 3800,
+    deliveryFee: 650,
+    serviceFee: 200,
+    status: "out",
+    placed: "45 min ago",
+    lineItems: [
+      {
+        name: "Double smash burger",
+        qty: 2,
+        unitPrice: 975,
+        modifiers: ["No pickles", "Bacon"],
+      },
+      { name: "Onion rings", qty: 1, unitPrice: 450 },
+      { name: "Vanilla milkshake", qty: 1, unitPrice: 550 },
+    ],
+  },
+  {
+    id: "ILU-9K2G",
+    customer: "Yomi P.",
+    customerPhone: "08031110007",
+    deliveryAddress: "Post office lane — blue gate",
+    store: "Slice House",
+    storeAddress: "Campus extension road",
+    paymentLabel: "Card — **** 1120",
+    total: 19200,
+    deliveryFee: 700,
+    serviceFee: 600,
+    status: "delivered",
+    placed: "2h ago",
+    lineItems: [
+      {
+        name: "Veggie supreme (medium)",
+        qty: 2,
+        unitPrice: 6100,
+        modifiers: ["Stuffed crust"],
+      },
+      { name: "Buffalo wings (6)", qty: 2, unitPrice: 2400 },
+      { name: "Coke 1.5L", qty: 1, unitPrice: 900 },
+    ],
+  },
+  {
+    id: "ILU-9K2F",
+    customer: "Ngozi T.",
+    customerPhone: "08031110008",
+    deliveryAddress: "Student village — Block D",
+    store: "Campus Chow",
+    storeAddress: "Behind main cafeteria",
+    paymentLabel: "Pay on delivery",
+    total: 2100,
+    deliveryFee: 450,
+    serviceFee: 150,
+    status: "new",
+    placed: "3 min ago",
+    lineItems: [
+      { name: "Jollof & chicken lunchbox", qty: 1, unitPrice: 1200 },
+      { name: "Spring roll (2)", qty: 1, unitPrice: 300 },
+    ],
+  },
+  {
+    id: "ILU-9K2E",
+    customer: "Femi K.",
+    customerPhone: "08031110009",
+    deliveryAddress: "SmoothCity — pickup counter",
+    store: "SmoothCity",
+    storeAddress: "Drive-through bay, Ilisan",
+    paymentLabel: "Wallet",
+    total: 1500,
+    deliveryFee: 0,
+    serviceFee: 100,
+    status: "delivered",
+    placed: "3h ago",
+    lineItems: [{ name: "Acai power blend", qty: 1, unitPrice: 1400 }],
+  },
+  {
+    id: "ILU-9K2D",
+    customer: "Amaka U.",
+    customerPhone: "08031110010",
+    deliveryAddress: "Mama Put — eat-in table 2 (runner)",
+    store: "Mama Put Palace",
+    storeAddress: "Shop 4, Ilisan market row",
+    paymentLabel: "POS — terminal 3",
+    total: 8900,
+    deliveryFee: 0,
+    serviceFee: 400,
+    status: "preparing",
+    placed: "1h ago",
+    lineItems: [
+      {
+        name: "Seafood okro",
+        qty: 1,
+        unitPrice: 4500,
+        modifiers: ["Extra prawns"],
+      },
+      { name: "Pounded yam (2 wraps)", qty: 1, unitPrice: 1800 },
+      { name: "Chapman", qty: 3, unitPrice: 900 },
+    ],
+  },
+  {
+    id: "ILU-9K2C",
+    customer: "Tunde B.",
+    customerPhone: "08031110011",
+    deliveryAddress: "Lakeside flats — reception",
+    store: "Coastal Grill",
+    storeAddress: "Waterfront complex",
+    paymentLabel: "Card — **** 7734",
+    total: 14500,
+    deliveryFee: 900,
+    serviceFee: 450,
+    status: "out",
+    placed: "20 min ago",
+    lineItems: [
+      {
+        name: "Grilled barracuda platter",
+        qty: 1,
+        unitPrice: 8500,
+        modifiers: ["Yam fries side"],
+      },
+      { name: "Pepper soup (goat)", qty: 1, unitPrice: 3200 },
+      { name: "Chapman", qty: 2, unitPrice: 725 },
+    ],
+  },
+  {
+    id: "ILU-9K2B",
+    customer: "Ada W.",
+    customerPhone: "08031110012",
+    deliveryAddress: "Crisp Bites lobby pickup",
+    store: "Crisp Bites",
+    storeAddress: "Ring road plaza, Ilisan",
+    paymentLabel: "Card — **** 2201",
+    total: 4100,
+    deliveryFee: 500,
+    serviceFee: 200,
+    status: "delivered",
+    placed: "Saturday",
+    lineItems: [
+      {
+        name: "Family rice box",
+        qty: 1,
+        unitPrice: 2600,
+        modifiers: ["Mixed protein"],
+      },
+      { name: "Coleslaw tub", qty: 1, unitPrice: 800 },
+    ],
+  },
+];

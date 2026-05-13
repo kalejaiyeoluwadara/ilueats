@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ArrowTrendingUpIcon,
   ClockIcon,
+  MagnifyingGlassIcon,
   ShoppingBagIcon,
   UsersIcon,
 } from "@heroicons/react/24/outline";
@@ -43,40 +44,164 @@ const kpis = [
   },
 ];
 
-const activitySource = [
-  { id: "1", title: "New order", meta: "ILU-9K2M · Mama Put Palace", time: "2m" },
-  { id: "2", title: "Store went live", meta: "Crisp Bites", time: "18m" },
-  { id: "3", title: "Payout sent", meta: "₦340,000 · 4 stores", time: "1h" },
+type ActivitySegment = "orders" | "stores" | "finance" | "platform";
+
+type ActivityItem = {
+  id: string;
+  title: string;
+  meta: string;
+  time: string;
+  segment: ActivitySegment;
+};
+
+const ACTIVITY_SEGMENT_CHIPS: { id: ActivitySegment | "all"; label: string }[] =
+  [
+    { id: "all", label: "All" },
+    { id: "orders", label: "Orders" },
+    { id: "stores", label: "Stores" },
+    { id: "finance", label: "Finance" },
+    { id: "platform", label: "Platform" },
+  ];
+
+const activitySource: ActivityItem[] = [
+  {
+    id: "1",
+    title: "New order",
+    meta: "ILU-9K2M · Mama Put Palace",
+    time: "2m",
+    segment: "orders",
+  },
+  {
+    id: "2",
+    title: "Store went live",
+    meta: "Crisp Bites",
+    time: "18m",
+    segment: "stores",
+  },
+  {
+    id: "3",
+    title: "Payout sent",
+    meta: "₦340,000 · 4 stores",
+    time: "1h",
+    segment: "finance",
+  },
   {
     id: "4",
     title: "Refund approved",
     meta: "ILU-8JFL · Customer request",
     time: "2h",
+    segment: "orders",
   },
   {
     id: "5",
     title: "Rider check-in spike",
     meta: "Peak window · Campus ring",
     time: "3h",
+    segment: "platform",
   },
   {
     id: "6",
     title: "Menu published",
     meta: "SmoothCity · Drinks specials",
     time: "4h",
+    segment: "stores",
   },
   {
     id: "7",
     title: "Zone fee updated",
     meta: "Ilisan extended +5%",
     time: "5h",
+    segment: "platform",
+  },
+  {
+    id: "8",
+    title: "Batch settlement",
+    meta: "Morning rail · Auto-debit queued",
+    time: "6h",
+    segment: "finance",
+  },
+  {
+    id: "9",
+    title: "SLA breach alert",
+    meta: "Three orders · Crisp Bites",
+    time: "7h",
+    segment: "orders",
+  },
+  {
+    id: "10",
+    title: "Hygiene checklist",
+    meta: "Slice House · Photo approved",
+    time: "8h",
+    segment: "stores",
+  },
+  {
+    id: "11",
+    title: "Feature flag flip",
+    meta: "Referral tier B · 50% cohort",
+    time: "9h",
+    segment: "platform",
+  },
+  {
+    id: "12",
+    title: "Chargeback notice",
+    meta: "Issuer · ILU-7QPL",
+    time: "10h",
+    segment: "finance",
+  },
+  {
+    id: "13",
+    title: "Reorder surge",
+    meta: "Breakfast Club · Lunch bundle",
+    time: "11h",
+    segment: "orders",
+  },
+  {
+    id: "14",
+    title: "Store hours edit",
+    meta: "Fruit Hive · Sun closed",
+    time: "12h",
+    segment: "stores",
   },
 ];
 
-const ACTIVITY_PAGE_SIZE = 3;
+function applyActivitySegment(
+  items: ActivityItem[],
+  segment: ActivitySegment | "all"
+): ActivityItem[] {
+  if (segment === "all") return items;
+  return items.filter((a) => a.segment === segment);
+}
+
+function applyActivitySearch(items: ActivityItem[], q: string): ActivityItem[] {
+  const needle = q.trim().toLowerCase();
+  if (!needle) return items;
+  return items.filter(
+    (a) =>
+      a.title.toLowerCase().includes(needle) ||
+      a.meta.toLowerCase().includes(needle)
+  );
+}
+
+function applySegmentCount(
+  items: readonly ActivityItem[],
+  segment: ActivitySegment | "all"
+): number {
+  return applyActivitySegment([...items], segment).length;
+}
+
+const ACTIVITY_PAGE_SIZE = 4;
 
 export default function AdminDashboardPage() {
   const activityItems = useMemo(() => activitySource, []);
+
+  const [activitySearch, setActivitySearch] = useState("");
+  const [segment, setSegment] = useState<ActivitySegment | "all">("all");
+
+  const filteredActivity = useMemo(() => {
+    const bySeg = applyActivitySegment(activityItems, segment);
+    return applyActivitySearch(bySeg, activitySearch);
+  }, [activityItems, segment, activitySearch]);
+
   const {
     page: activityPage,
     setPage: setActivityPage,
@@ -84,7 +209,19 @@ export default function AdminDashboardPage() {
     pageItems: activityPageItems,
     total: activityTotal,
     pageSize: activityPageSize,
-  } = usePaginatedList(activityItems, ACTIVITY_PAGE_SIZE);
+  } = usePaginatedList(filteredActivity, ACTIVITY_PAGE_SIZE);
+
+  useEffect(() => {
+    setActivityPage(1);
+  }, [activitySearch, segment, setActivityPage]);
+
+  const segmentCounts = useMemo(() => {
+    const m = new Map<ActivitySegment | "all", number>();
+    for (const chip of ACTIVITY_SEGMENT_CHIPS) {
+      m.set(chip.id, applySegmentCount(activityItems, chip.id));
+    }
+    return m;
+  }, [activityItems]);
 
   return (
     <div className="space-y-8">
@@ -184,8 +321,58 @@ export default function AdminDashboardPage() {
             Activity
           </h2>
           <p className="mt-0.5 text-[12.5px] text-[var(--color-ink-muted)]">
-            Recent events (mock)
+            Recent events (mock stream)
           </p>
+
+          <div className="mt-4 space-y-3">
+            <div className="relative">
+              <MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-ink-soft)]" />
+              <input
+                type="search"
+                value={activitySearch}
+                onChange={(e) => setActivitySearch(e.target.value)}
+                placeholder="Search title or details…"
+                className="h-10 w-full rounded-xl border border-[var(--color-line)] bg-[var(--color-bg)] pl-10 pr-3 text-[13px] font-medium outline-none focus:border-[var(--color-primary)]/35 focus:ring-2 focus:ring-[var(--color-primary)]/15"
+              />
+            </div>
+            <div className="-mx-0.5 flex flex-wrap gap-1.5" role="tablist" aria-label="Activity segments">
+              {ACTIVITY_SEGMENT_CHIPS.map((chip) => {
+                const sel = segment === chip.id;
+                const c = segmentCounts.get(chip.id) ?? 0;
+                return (
+                  <button
+                    key={chip.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={sel}
+                    onClick={() => setSegment(chip.id)}
+                    className={cn(
+                      "inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold",
+                      sel
+                        ? "bg-[var(--color-ink)] text-white"
+                        : "bg-white text-[var(--color-ink)] ring-1 ring-inset ring-[var(--color-line)]"
+                    )}
+                  >
+                    {chip.label}
+                    <span
+                      className={cn(
+                        "tabular-nums",
+                        sel ? "opacity-95" : "text-[var(--color-ink-muted)]"
+                      )}
+                    >
+                      {c}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {activityTotal === 0 ? (
+            <div className="mt-6 rounded-2xl border border-dashed border-[var(--color-line)] px-4 py-8 text-center text-[13px] font-medium text-[var(--color-ink-muted)]">
+              Nothing in this slice — widen the segment filter or clear search.
+            </div>
+          ) : (
           <ul className="mt-4 space-y-3">
             {activityPageItems.map((a) => (
               <li
@@ -206,15 +393,18 @@ export default function AdminDashboardPage() {
               </li>
             ))}
           </ul>
-          <div className="mt-4">
-            <Pagination
-              page={activityPage}
-              pageCount={activityPageCount}
-              totalItems={activityTotal}
-              pageSize={activityPageSize}
-              onPageChange={setActivityPage}
-            />
-          </div>
+          )}
+          {activityTotal > 0 ? (
+            <div className="mt-4">
+              <Pagination
+                page={activityPage}
+                pageCount={activityPageCount}
+                totalItems={activityTotal}
+                pageSize={activityPageSize}
+                onPageChange={setActivityPage}
+              />
+            </div>
+          ) : null}
         </section>
       </div>
     </div>

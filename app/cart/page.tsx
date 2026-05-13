@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useMemo } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowRightIcon,
@@ -12,8 +13,7 @@ import { BottomNav } from "@/components/layout/BottomNav";
 import { Button } from "@/components/ui/Button";
 import { CartItem } from "@/components/cart/CartItem";
 import { CartSummary } from "@/components/cart/CartSummary";
-import { useCart } from "@/hooks/useCart";
-import { getStoreBySlug } from "@/data/mockData";
+import { useCatalog } from "@/context/CatalogContext";
 import { formatPrice } from "@/lib/utils";
 
 export default function CartPage() {
@@ -28,7 +28,12 @@ export default function CartPage() {
     clearCart,
   } = useCart();
 
-  const store = storeSlug ? getStoreBySlug(storeSlug) : undefined;
+  const { stores } = useCatalog();
+
+  const store = useMemo(
+    () => (storeSlug ? stores.find((s) => s.slug === storeSlug) : undefined),
+    [storeSlug, stores]
+  );
   const deliveryFee = store?.deliveryFee ?? 0;
   const minOrder = store?.minOrder ?? 0;
   const belowMin = subtotal < minOrder;

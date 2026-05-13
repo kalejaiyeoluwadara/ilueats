@@ -8,6 +8,7 @@ import {
   useState,
 } from "react";
 import type { RiderJob, RiderOffer } from "@/types";
+import { normalizeStoredRiderJob } from "@/lib/riderOrderBag";
 import { readLocalStorage, writeLocalStorage } from "@/lib/utils";
 
 const STORAGE_KEY = "ilueats:rider_console:v1";
@@ -21,6 +22,15 @@ const OFFER_POOL: RiderOffer[] = [
     pay: 850,
     etaMin: 6,
     phone: "08021112222",
+    lineItems: [
+      {
+        name: "Party jollof rice",
+        qty: 1,
+        modifiers: ["Extra goat meat"],
+      },
+      { name: "Moi moi", qty: 2 },
+      { name: "Zobo (75cl)", qty: 2 },
+    ],
   },
   {
     id: "ILU-9K2N",
@@ -30,6 +40,11 @@ const OFFER_POOL: RiderOffer[] = [
     pay: 920,
     etaMin: 8,
     phone: "08032223333",
+    lineItems: [
+      { name: "Crunch duo box", qty: 1, modifiers: ["Mild spice"] },
+      { name: "Spicy fries", qty: 1, modifiers: ["Cheese dust"] },
+      { name: "Oreo shake", qty: 1 },
+    ],
   },
   {
     id: "ILU-9K2P",
@@ -39,6 +54,10 @@ const OFFER_POOL: RiderOffer[] = [
     pay: 640,
     etaMin: 5,
     phone: "08043334444",
+    lineItems: [
+      { name: "Green detox", qty: 1 },
+      { name: "Ginger blast shot", qty: 2 },
+    ],
   },
   {
     id: "ILU-9K2Q",
@@ -48,6 +67,14 @@ const OFFER_POOL: RiderOffer[] = [
     pay: 1100,
     etaMin: 10,
     phone: "08054445555",
+    lineItems: [
+      {
+        name: "Pepperoni medium",
+        qty: 1,
+        modifiers: ["Stuffed crust", "Extra dip"],
+      },
+      { name: "Garlic bread", qty: 1 },
+    ],
   },
 ];
 
@@ -60,6 +87,15 @@ const INITIAL_JOBS: RiderJob[] = [
     payout: 520,
     status: "pickup",
     phone: "08031110001",
+    lineItems: [
+      {
+        name: "Double smash burger",
+        qty: 2,
+        modifiers: ["No pickles", "Bacon"],
+      },
+      { name: "Onion rings", qty: 1 },
+      { name: "Coke Zero 50cl", qty: 2 },
+    ],
   },
   {
     id: "ILU-9K2H",
@@ -69,6 +105,15 @@ const INITIAL_JOBS: RiderJob[] = [
     payout: 480,
     status: "en_route",
     phone: "08031110002",
+    lineItems: [
+      {
+        name: "Tropical fusion bowl",
+        qty: 1,
+        modifiers: ["No ginger"],
+      },
+      { name: "Cold-pressed orange", qty: 2 },
+      { name: "Protein muffin", qty: 2 },
+    ],
   },
   {
     id: "ILU-9K2G",
@@ -78,6 +123,15 @@ const INITIAL_JOBS: RiderJob[] = [
     payout: 610,
     status: "done",
     phone: "08031110003",
+    lineItems: [
+      {
+        name: "Veggie supreme (medium)",
+        qty: 1,
+        modifiers: ["Thin crust"],
+      },
+      { name: "Buffalo wings (6)", qty: 1 },
+      { name: "Coke 1.5L", qty: 1 },
+    ],
   },
 ];
 
@@ -105,7 +159,9 @@ function loadPersisted(): PersistedShape {
   if (!raw || !Array.isArray(raw.jobs)) return fallback;
   return {
     isOnline: typeof raw.isOnline === "boolean" ? raw.isOnline : true,
-    jobs: raw.jobs.length ? raw.jobs : fallback.jobs,
+    jobs: raw.jobs.length
+      ? (raw.jobs as RiderJob[]).map(normalizeStoredRiderJob)
+      : fallback.jobs,
     offerCursor:
       typeof raw.offerCursor === "number"
         ? Math.abs(raw.offerCursor) % OFFER_POOL.length
@@ -208,6 +264,7 @@ export function RiderConsoleProvider({
         payout: o.pay,
         status: "pickup",
         phone: o.phone,
+        lineItems: o.lineItems,
       };
       const nextJobs = [
         ...jobs.filter((j) => !(j.id === o.id && j.status === "done")),

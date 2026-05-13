@@ -10,25 +10,26 @@ import { Button } from "@/components/ui/Button";
 import { ContentLoader } from "@/components/ui/Loaders";
 import { FavoriteButton } from "@/components/favorites/FavoriteButton";
 import { useFavorites } from "@/hooks/useFavorites";
-import { getProductById, getStoreBySlug } from "@/data/mockData";
+import { useCatalog } from "@/context/CatalogContext";
 import { formatPrice } from "@/lib/utils";
 
 export default function FavoritesPage() {
   const { favoriteIds, ready } = useFavorites();
+  const { stores, products } = useCatalog();
 
   const items = useMemo(() => {
     if (!ready) return [];
     return favoriteIds
       .map((id) => {
-        const product = getProductById(id);
+        const product = products.find((p) => p.id === id);
         if (!product) return null;
-        const store = getStoreBySlug(product.storeSlug);
+        const store = stores.find((s) => s.slug === product.storeSlug);
         return { product, store };
       })
       .filter(
         (x): x is NonNullable<typeof x> => x !== null && x.store !== undefined
       );
-  }, [favoriteIds, ready]);
+  }, [favoriteIds, ready, products, stores]);
 
   return (
     <div className="min-h-screen pb-24">

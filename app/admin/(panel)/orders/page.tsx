@@ -1,150 +1,84 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
-  FunnelIcon,
+  EllipsisHorizontalIcon,
   MagnifyingGlassIcon,
 } from "@heroicons/react/24/outline";
+import { AdminOrderDetailModal } from "@/components/admin/AdminOrderDetailModal";
 import { Pagination } from "@/components/ui/Pagination";
+import {
+  ADMIN_ORDERS_MOCK,
+  adminOrderStatusBadge,
+  type AdminOrderRow,
+  type AdminOrderStatus,
+} from "@/data/adminOrdersMock";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { cn, formatPrice } from "@/lib/utils";
 
-type OrderStatus = "new" | "preparing" | "out" | "delivered";
+const ORDER_PAGE_SIZE = 10;
 
-const rowsSource: {
-  id: string;
-  customer: string;
-  store: string;
-  total: number;
-  status: OrderStatus;
-  placed: string;
-}[] = [
-  {
-    id: "ILU-9K2M",
-    customer: "Temi A.",
-    store: "Mama Put Palace",
-    total: 5200,
-    status: "new",
-    placed: "2 min ago",
-  },
-  {
-    id: "ILU-9K2L",
-    customer: "Chidi O.",
-    store: "Crisp Bites",
-    total: 11800,
-    status: "preparing",
-    placed: "8 min ago",
-  },
-  {
-    id: "ILU-9K2K",
-    customer: "Anita I.",
-    store: "SmoothCity",
-    total: 4500,
-    status: "out",
-    placed: "14 min ago",
-  },
-  {
-    id: "ILU-9K2J",
-    customer: "Kunle M.",
-    store: "Slice House",
-    total: 24000,
-    status: "delivered",
-    placed: "Yesterday",
-  },
-  {
-    id: "ILU-9K2I",
-    customer: "Bola E.",
-    store: "Mama Put Palace",
-    total: 6200,
-    status: "preparing",
-    placed: "32 min ago",
-  },
-  {
-    id: "ILU-9K2H",
-    customer: "Sade R.",
-    store: "Crisp Bites",
-    total: 3800,
-    status: "out",
-    placed: "45 min ago",
-  },
-  {
-    id: "ILU-9K2G",
-    customer: "Yomi P.",
-    store: "Slice House",
-    total: 19200,
-    status: "delivered",
-    placed: "2h ago",
-  },
-  {
-    id: "ILU-9K2F",
-    customer: "Ngozi T.",
-    store: "Campus Chow",
-    total: 2100,
-    status: "new",
-    placed: "3 min ago",
-  },
-  {
-    id: "ILU-9K2E",
-    customer: "Femi K.",
-    store: "SmoothCity",
-    total: 1500,
-    status: "delivered",
-    placed: "3h ago",
-  },
-  {
-    id: "ILU-9K2D",
-    customer: "Amaka U.",
-    store: "Mama Put Palace",
-    total: 8900,
-    status: "preparing",
-    placed: "1h ago",
-  },
-  {
-    id: "ILU-9K2C",
-    customer: "Tunde B.",
-    store: "Coastal Grill",
-    total: 14500,
-    status: "out",
-    placed: "20 min ago",
-  },
-  {
-    id: "ILU-9K2B",
-    customer: "Ada W.",
-    store: "Crisp Bites",
-    total: 4100,
-    status: "delivered",
-    placed: "Saturday",
-  },
+type OrdersFilter = "all" | "open" | AdminOrderStatus;
+
+const ORDER_FILTER_CHIPS: { id: OrdersFilter; label: string }[] = [
+  { id: "all", label: "All" },
+  { id: "open", label: "Open" },
+  { id: "new", label: "New" },
+  { id: "preparing", label: "Preparing" },
+  { id: "out", label: "Out" },
+  { id: "delivered", label: "Delivered" },
 ];
 
-const ORDER_PAGE_SIZE = 5;
+function applyOrderStatusFilter(
+  rows: AdminOrderRow[],
+  filter: OrdersFilter
+): AdminOrderRow[] {
+  if (filter === "all") return rows;
+  if (filter === "open") {
+    return rows.filter((r) => r.status !== "delivered");
+  }
+  return rows.filter((r) => r.status === filter);
+}
 
-const statusStyles: Record<
-  OrderStatus,
-  { label: string; className: string }
-> = {
-  new: {
-    label: "New",
-    className:
-      "bg-[var(--color-primary-soft)] text-[var(--color-primary)] ring-[var(--color-primary)]/20",
-  },
-  preparing: {
-    label: "Preparing",
-    className: "bg-amber-50 text-amber-800 ring-amber-200/80",
-  },
-  out: {
-    label: "Out for delivery",
-    className: "bg-sky-50 text-sky-800 ring-sky-200/80",
-  },
-  delivered: {
-    label: "Delivered",
-    className:
-      "bg-[var(--color-success-soft)] text-[var(--color-success)] ring-emerald-200/80",
-  },
-};
+function applyOrderSearch(rows: AdminOrderRow[], q: string): AdminOrderRow[] {
+  const needle = q.trim().toLowerCase();
+  if (!needle) return rows;
+  return rows.filter((r) => {
+    if (
+      r.id.toLowerCase().includes(needle) ||
+      r.customer.toLowerCase().includes(needle) ||
+      r.store.toLowerCase().includes(needle) ||
+      r.deliveryAddress.toLowerCase().includes(needle)
+    ) {
+      return true;
+    }
+    return r.lineItems.some(
+      (line) =>
+        line.name.toLowerCase().includes(needle) ||
+        line.modifiers?.some((m) => m.toLowerCase().includes(needle))
+    );
+  });
+}
+
+function countOrdersMatchingFilter(
+  rows: readonly AdminOrderRow[],
+  filter: OrdersFilter
+): number {
+  return applyOrderStatusFilter([...rows], filter).length;
+}
 
 export default function AdminOrdersPage() {
-  const rows = useMemo(() => rowsSource, []);
+  const rows = useMemo(() => ADMIN_ORDERS_MOCK, []);
+
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<OrdersFilter>("all");
+  const [detailOrder, setDetailOrder] = useState<AdminOrderRow | null>(null);
+
+  const filteredRows = useMemo(() => {
+    const byStatus = applyOrderStatusFilter(rows, statusFilter);
+    return applyOrderSearch(byStatus, search);
+  }, [rows, statusFilter, search]);
+
   const {
     page,
     setPage,
@@ -152,7 +86,19 @@ export default function AdminOrdersPage() {
     pageItems: pagedRows,
     total: orderTotal,
     pageSize,
-  } = usePaginatedList(rows, ORDER_PAGE_SIZE);
+  } = usePaginatedList(filteredRows, ORDER_PAGE_SIZE);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, statusFilter, setPage]);
+
+  const chipCounts = useMemo(() => {
+    const map = new Map<OrdersFilter, number>();
+    for (const chip of ORDER_FILTER_CHIPS) {
+      map.set(chip.id, countOrdersMatchingFilter(rows, chip.id));
+    }
+    return map;
+  }, [rows]);
 
   return (
     <div className="space-y-6">
@@ -162,37 +108,72 @@ export default function AdminOrdersPage() {
             Orders
           </h1>
           <p className="mt-1 text-[13px] text-[var(--color-ink-muted)]">
-            Triaging board — filters and actions are UI-only for now.
+            Filter by fulfilment stage and search the mock board below.
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            className="inline-flex h-10 items-center gap-2 rounded-full bg-white px-4 text-[13px] font-semibold text-[var(--color-ink)] ring-1 ring-inset ring-[var(--color-line)]"
-          >
-            <FunnelIcon className="h-4 w-4 text-[var(--color-ink-muted)]" />
-            Filters
-          </button>
-          <button
-            type="button"
-            className="inline-flex h-10 items-center gap-2 rounded-full bg-[var(--color-ink)] px-4 text-[13px] font-semibold text-white"
-          >
-            Export CSV
-          </button>
-        </div>
+        <button
+          type="button"
+          className="inline-flex h-10 items-center rounded-full bg-[var(--color-ink)] px-4 text-[13px] font-semibold text-white"
+        >
+          Export CSV
+        </button>
       </div>
 
       <div className="rounded-[1.25rem] bg-[var(--color-surface)] shadow-crisp ring-1 ring-[var(--color-line)]">
-        <div className="flex flex-col gap-3 border-b border-[var(--color-line)] p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="space-y-4 border-b border-[var(--color-line)] p-4">
           <div className="relative max-w-md flex-1">
             <MagnifyingGlassIcon className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-ink-soft)]" />
             <input
               type="search"
-              placeholder="Search by order id or customer…"
+              placeholder="Search order id, customer, store, address, or dish…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
               className="h-11 w-full rounded-full border border-[var(--color-line)] bg-[var(--color-bg)] pl-10 pr-4 text-[13px] font-medium text-[var(--color-ink)] outline-none ring-[var(--color-primary)]/0 transition placeholder:text-[var(--color-ink-soft)] focus:border-[var(--color-primary)]/35 focus:ring-2 focus:ring-[var(--color-primary)]/20"
-              readOnly
-              aria-readonly="true"
+              autoComplete="off"
             />
+          </div>
+
+          <div className="-mx-0.5">
+            <p className="mb-2 px-0.5 text-[11px] font-bold uppercase tracking-wide text-[var(--color-ink-soft)]">
+              Status
+            </p>
+            <div
+              className="flex flex-wrap gap-2"
+              role="tablist"
+              aria-label="Filter orders by status"
+            >
+              {ORDER_FILTER_CHIPS.map((chip) => {
+                const selected = statusFilter === chip.id;
+                const count = chipCounts.get(chip.id) ?? 0;
+                return (
+                  <button
+                    key={chip.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={selected}
+                    onClick={() => setStatusFilter(chip.id)}
+                    className={cn(
+                      "inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-[12px] font-bold transition-colors",
+                      selected
+                        ? "bg-[var(--color-ink)] text-white"
+                        : "bg-white text-[var(--color-ink)] ring-1 ring-inset ring-[var(--color-line)] hover:bg-black/[0.03]"
+                    )}
+                  >
+                    {chip.label}
+                    <span
+                      className={cn(
+                        "min-w-[1.25rem] rounded-md px-1 py-0.5 text-center text-[11px] font-extrabold tabular-nums",
+                        selected
+                          ? "bg-white/20 text-white"
+                          : "bg-[var(--color-bg)] text-[var(--color-ink-muted)]"
+                      )}
+                    >
+                      {count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
 
@@ -206,55 +187,91 @@ export default function AdminOrdersPage() {
                 <th className="px-4 py-3 font-bold">Total</th>
                 <th className="px-4 py-3 font-bold">Status</th>
                 <th className="px-4 py-3 font-bold text-right">Placed</th>
+                <th className="w-14 px-2 py-3 text-center font-bold">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--color-line)]">
-              {pagedRows.map((r) => (
-                <tr
-                  key={r.id}
-                  className="bg-white transition hover:bg-[var(--color-bg)]/50"
-                >
-                  <td className="px-4 py-3.5 font-mono text-[12px] font-bold text-[var(--color-ink)]">
-                    {r.id}
-                  </td>
-                  <td className="px-4 py-3.5 font-semibold text-[var(--color-ink)]">
-                    {r.customer}
-                  </td>
-                  <td className="px-4 py-3.5 text-[var(--color-ink-muted)]">
-                    {r.store}
-                  </td>
-                  <td className="px-4 py-3.5 font-bold text-[var(--color-ink)]">
-                    {formatPrice(r.total)}
-                  </td>
-                  <td className="px-4 py-3.5">
-                    <span
-                      className={cn(
-                        "inline-flex rounded-full px-2.5 py-1 text-[11px] font-bold ring-1 ring-inset",
-                        statusStyles[r.status].className
-                      )}
-                    >
-                      {statusStyles[r.status].label}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3.5 text-right text-[12px] font-medium text-[var(--color-ink-muted)]">
-                    {r.placed}
+              {pagedRows.length === 0 ? (
+                <tr>
+                  <td
+                    className="px-4 py-10 text-center text-[13px] font-medium text-[var(--color-ink-muted)]"
+                    colSpan={7}
+                  >
+                    No orders match your filters — try widening the status or
+                    clearing search.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                pagedRows.map((r) => {
+                  const badge = adminOrderStatusBadge[r.status];
+                  return (
+                    <tr
+                      key={r.id}
+                      className="bg-white transition hover:bg-[var(--color-bg)]/50"
+                    >
+                      <td className="px-4 py-3.5 font-mono text-[12px] font-bold text-[var(--color-ink)]">
+                        {r.id}
+                      </td>
+                      <td className="px-4 py-3.5 font-semibold text-[var(--color-ink)]">
+                        {r.customer}
+                      </td>
+                      <td className="px-4 py-3.5 text-[var(--color-ink-muted)]">
+                        {r.store}
+                      </td>
+                      <td className="px-4 py-3.5 font-bold text-[var(--color-ink)]">
+                        {formatPrice(r.total)}
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <span
+                          className={cn(
+                            "inline-flex rounded-full px-2.5 py-1 text-[11px] font-bold ring-1 ring-inset",
+                            badge.className
+                          )}
+                        >
+                          {badge.label}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3.5 text-right text-[12px] font-medium text-[var(--color-ink-muted)]">
+                        {r.placed}
+                      </td>
+                      <td className="px-2 py-3.5 text-center">
+                        <button
+                          type="button"
+                          onClick={() => setDetailOrder(r)}
+                          className="inline-flex h-9 w-9 items-center justify-center rounded-full text-[var(--color-ink-muted)] outline-none ring-[var(--color-ink)]/0 transition hover:bg-black/[0.05] hover:text-[var(--color-ink)] focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/35"
+                          aria-label={`Full details for ${r.id}`}
+                        >
+                          <EllipsisHorizontalIcon className="h-5 w-5" />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>
 
-        <div className="border-t border-[var(--color-line)] p-4">
-          <Pagination
-            page={page}
-            pageCount={pageCount}
-            totalItems={orderTotal}
-            pageSize={pageSize}
-            onPageChange={setPage}
-          />
-        </div>
+        {orderTotal > 0 ? (
+          <div className="border-t border-[var(--color-line)] p-4">
+            <Pagination
+              page={page}
+              pageCount={pageCount}
+              totalItems={orderTotal}
+              pageSize={pageSize}
+              onPageChange={setPage}
+            />
+          </div>
+        ) : null}
       </div>
+
+      <AdminOrderDetailModal
+        open={!!detailOrder}
+        order={detailOrder}
+        onClose={() => setDetailOrder(null)}
+      />
     </div>
   );
 }

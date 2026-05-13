@@ -11,28 +11,24 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { QuantityStepper } from "@/components/cart/CartItem";
 import { Modal } from "@/components/ui/Modal";
-import {
-  getProductBySlug,
-  getStoreBySlug,
-} from "@/data/mockData";
+import { useCatalog } from "@/context/CatalogContext";
+import { getProductBySlug, getStoreBySlug } from "@/data/mockData";
 import { cn, formatPrice } from "@/lib/utils";
 import { useCart } from "@/hooks/useCart";
 import { useToast } from "@/hooks/useToast";
-import type { ProductOptionChoice } from "@/types";
+import type { Product, ProductOptionChoice, Store } from "@/types";
 
 interface PageProps {
   params: Promise<{ store: string; product: string }>;
 }
 
-export default function ProductPage({ params }: PageProps) {
-  const { store: storeSlug, product: productSlug } = use(params);
-  const store = getStoreBySlug(storeSlug);
-  const product = getProductBySlug(storeSlug, productSlug);
-
-  if (!store || !product) {
-    notFound();
-  }
-
+function ProductPageContent({
+  store,
+  product,
+}: {
+  store: Store;
+  product: Product;
+}) {
   const router = useRouter();
   const { addItem, storeId, clearCart } = useCart();
   const { cart: cartToast, error: errorToast } = useToast();
@@ -126,7 +122,6 @@ export default function ProductPage({ params }: PageProps) {
   const handleReplaceCart = () => {
     clearCart();
     setConflictOpen(false);
-    // Re-run on next tick so the cart clears first
     window.setTimeout(performAdd, 50);
   };
 
@@ -184,7 +179,7 @@ export default function ProductPage({ params }: PageProps) {
           </p>
           <div className="mt-3 flex items-baseline gap-2">
             <span className="text-[20px] font-extrabold tracking-tight text-[var(--color-primary)]">
-              {formatPrice(product.price)}
+              {formatPrice(unitPrice)}
             </span>
             {product.oldPrice && (
               <span className="text-[13px] font-medium text-[var(--color-ink-soft)] line-through">
@@ -292,7 +287,6 @@ export default function ProductPage({ params }: PageProps) {
         </div>
       </main>
 
-      {/* Sticky add-to-cart footer */}
       <div className="fixed inset-x-0 bottom-0 z-30 border-t border-[var(--color-line)] bg-white px-4 pb-[calc(env(safe-area-inset-bottom,0px)+12px)] pt-3">
         <div className="mx-auto flex max-w-2xl items-center gap-3">
           <div className="leading-tight">
@@ -346,4 +340,25 @@ export default function ProductPage({ params }: PageProps) {
       </Modal>
     </div>
   );
+}
+
+export default function ProductPage({ params }: PageProps) {
+  const { store: storeSlug, product: productSlug } = use(params);
+  const { stores, products } = useCatalog();
+
+  const store = useMemo(
+    () => getStoreBySlug(storeSlug),
+    [stores, storeSlug]
+  );
+
+  const product = useMemo(
+    () => getProductBySlug(storeSlug, productSlug),
+    [products, storeSlug, productSlug]
+  );
+
+  if (!store || !product) {
+    notFound();
+  }
+
+  return <ProductPageContent store={store} product={product} />;
 }

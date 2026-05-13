@@ -34,6 +34,8 @@ export interface Store {
   isNew?: boolean;
   location: string;
   tags?: string[];
+  /** Client-persisted admin metric (catalog demo); optional on seed stores. */
+  orders7d?: number;
 }
 
 export interface Product {
@@ -115,6 +117,13 @@ export interface AuthUser {
   role: UserRole;
 }
 
+/** Rider-visible order lines (picked up bag) — qty + mods to avoid wrong handoff. */
+export interface RiderOrderLineItem {
+  name: string;
+  qty: number;
+  modifiers?: string[];
+}
+
 /** Rider console job (client-persisted demo state). */
 export type RiderJobStatus = "pickup" | "en_route" | "done";
 
@@ -127,6 +136,8 @@ export interface RiderJob {
   status: RiderJobStatus;
   /** Local Nigerian-style number for tel: links */
   phone: string;
+  /** What the customer ordered — always confirm at pickup vs label. */
+  lineItems: RiderOrderLineItem[];
 }
 
 /** Incoming offer shown on the Today screen. */
@@ -138,6 +149,7 @@ export interface RiderOffer {
   pay: number;
   etaMin: number;
   phone: string;
+  lineItems: RiderOrderLineItem[];
 }
 
 /** Saved delivery address in browser storage. */

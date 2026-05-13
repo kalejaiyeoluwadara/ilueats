@@ -62,8 +62,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const { signOut } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const linkActive = (href: string, end?: boolean) => {
-    if (end) return pathname === href;
+  const linkActive = (href: string) => {
     return pathname === href || pathname.startsWith(`${href}/`);
   };
 
@@ -81,7 +80,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         </div>
         <nav className="flex flex-1 flex-col gap-1 p-3">
           {nav.map((item) => {
-            const active = linkActive(item.href, item.end);
+            const active = linkActive(item.href);
             const Icon = item.icon;
             return (
               <Link
@@ -124,7 +123,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* Mobile header */}
-      <div className="flex min-h-screen min-w-0 flex-col lg:min-h-0">
+      <div className="flex min-h-screen min-w-0 flex-col lg:min-h-0 flex-1">
         <header className="sticky top-0 z-30 flex h-14 items-center justify-between gap-3 border-b border-[var(--color-line)] bg-[var(--color-bg)]/90 px-4 backdrop-blur-md lg:hidden">
           <AdminLogo variant="light" />
           <button
@@ -168,7 +167,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                 </div>
                 <nav className="flex flex-1 flex-col gap-1 p-3">
                   {nav.map((item) => {
-                    const active = linkActive(item.href, item.end);
+                    const active = linkActive(item.href);
                     const Icon = item.icon;
                     return (
                       <Link

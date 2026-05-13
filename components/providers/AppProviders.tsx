@@ -2,6 +2,7 @@
 
 import { AddressesProvider } from "@/context/AddressesContext";
 import { AuthProvider } from "@/context/AuthContext";
+import { CatalogProvider } from "@/context/CatalogContext";
 import { CartProvider } from "@/context/CartContext";
 import { FavoritesProvider } from "@/context/FavoritesContext";
 import { SearchProvider } from "@/context/SearchContext";
@@ -14,15 +15,18 @@ import { ToastProvider } from "@/context/ToastContext";
 export function AppProviders({ children }: { children: React.ReactNode }) {
   return (
     <ToastProvider>
-      <SearchProvider>
-        <AuthProvider>
-          <FavoritesProvider>
-            <AddressesProvider>
-              <CartProvider>{children}</CartProvider>
-            </AddressesProvider>
-          </FavoritesProvider>
-        </AuthProvider>
-      </SearchProvider>
+      <AuthProvider>
+        {/* Catalog must wrap SearchProvider so SearchModal (sibling to pages) sees the same snapshot. */}
+        <CatalogProvider>
+          <SearchProvider>
+            <FavoritesProvider>
+              <AddressesProvider>
+                <CartProvider>{children}</CartProvider>
+              </AddressesProvider>
+            </FavoritesProvider>
+          </SearchProvider>
+        </CatalogProvider>
+      </AuthProvider>
     </ToastProvider>
   );
 }

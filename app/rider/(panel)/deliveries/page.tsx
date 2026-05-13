@@ -1,10 +1,18 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { MapPinIcon, PhoneIcon } from "@heroicons/react/24/outline";
+import {
+  ClipboardDocumentListIcon,
+  MapPinIcon,
+  PhoneIcon,
+} from "@heroicons/react/24/outline";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { Pagination } from "@/components/ui/Pagination";
+import {
+  RiderOrderBagDetails,
+  RiderOrderBagSummary,
+} from "@/components/rider/RiderOrderBag";
 import { useRiderConsole } from "@/context/RiderConsoleContext";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { useToast } from "@/hooks/useToast";
@@ -103,6 +111,7 @@ export default function RiderDeliveriesPage() {
 
   const [pickupModal, setPickupModal] = useState<RiderJob | null>(null);
   const [completeModal, setCompleteModal] = useState<RiderJob | null>(null);
+  const [bagModal, setBagModal] = useState<RiderJob | null>(null);
 
   const onPrimary = (j: RiderJob) => {
     if (j.status === "pickup") {
@@ -228,6 +237,17 @@ export default function RiderDeliveriesPage() {
               <MapPinIcon className="mt-0.5 h-4 w-4 shrink-0 text-[var(--color-ink-muted)]" />
               {j.address}
             </p>
+            <RiderOrderBagSummary items={j.lineItems} className="mt-2" />
+            <div className="mt-2">
+              <button
+                type="button"
+                onClick={() => setBagModal(j)}
+                className="inline-flex h-9 items-center gap-1.5 rounded-full bg-white px-3 text-[12px] font-bold text-emerald-900 ring-1 ring-inset ring-emerald-200/90 active:bg-emerald-50"
+              >
+                <ClipboardDocumentListIcon className="h-4 w-4" />
+                Full basket
+              </button>
+            </div>
             <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
               <p className="text-[14px] font-extrabold text-[var(--color-ink)]">
                 {formatPrice(j.payout)}
@@ -308,23 +328,29 @@ export default function RiderDeliveriesPage() {
         }
       >
         {pickupModal && (
-          <div className="space-y-2 text-[13px] text-[var(--color-ink-muted)]">
-            <p>
-              <span className="font-semibold text-[var(--color-ink)]">
-                Order:{" "}
-              </span>
-              <span className="font-mono">{pickupModal.id}</span>
-            </p>
-            <p>
-              <span className="font-semibold text-[var(--color-ink)]">
-                Customer:{" "}
-              </span>
-              {pickupModal.customer}
-            </p>
-            <p className="flex items-start gap-1.5">
-              <MapPinIcon className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
-              <span>Next stop: {pickupModal.address}</span>
-            </p>
+          <div className="space-y-4 text-[13px] text-[var(--color-ink-muted)]">
+            <div className="space-y-2">
+              <p>
+                <span className="font-semibold text-[var(--color-ink)]">
+                  Order:{" "}
+                </span>
+                <span className="font-mono">{pickupModal.id}</span>
+              </p>
+              <p>
+                <span className="font-semibold text-[var(--color-ink)]">
+                  Customer:{" "}
+                </span>
+                {pickupModal.customer}
+              </p>
+              <p className="flex items-start gap-1.5">
+                <MapPinIcon className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+                <span>Next stop: {pickupModal.address}</span>
+              </p>
+            </div>
+            <RiderOrderBagDetails
+              items={pickupModal.lineItems}
+              caption="Verify this matches the ticket and bags from the store."
+            />
           </div>
         )}
       </Modal>
@@ -356,21 +382,50 @@ export default function RiderDeliveriesPage() {
         }
       >
         {completeModal && (
-          <div className="space-y-2 text-[13px] text-[var(--color-ink-muted)]">
-            <p>
-              <span className="font-semibold text-[var(--color-ink)]">
-                Drop-off:{" "}
-              </span>
-              {completeModal.address}
-            </p>
-            <p>
-              <span className="font-semibold text-[var(--color-ink)]">
-                Payout:{" "}
-              </span>
-              {formatPrice(completeModal.payout)}
-            </p>
+          <div className="space-y-4 text-[13px] text-[var(--color-ink-muted)]">
+            <div className="space-y-2">
+              <p>
+                <span className="font-semibold text-[var(--color-ink)]">
+                  Drop-off:{" "}
+                </span>
+                {completeModal.address}
+              </p>
+              <p>
+                <span className="font-semibold text-[var(--color-ink)]">
+                  Payout:{" "}
+                </span>
+                {formatPrice(completeModal.payout)}
+              </p>
+            </div>
+            <RiderOrderBagDetails
+              items={completeModal.lineItems}
+              caption="Confirm the customer gets everything before you mark delivered."
+            />
           </div>
         )}
+      </Modal>
+
+      <Modal
+        open={!!bagModal}
+        onClose={() => setBagModal(null)}
+        title="Order basket"
+        description={
+          bagModal
+            ? `${bagModal.id} · ${bagModal.store} · ${bagModal.customer}`
+            : undefined
+        }
+        footer={
+          <Button type="button" fullWidth size="md" onClick={() => setBagModal(null)}>
+            Done
+          </Button>
+        }
+      >
+        {bagModal ? (
+          <RiderOrderBagDetails
+            items={bagModal.lineItems}
+            caption="Use this list at pickup and again at the door."
+          />
+        ) : null}
       </Modal>
     </div>
   );

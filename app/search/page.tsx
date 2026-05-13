@@ -15,7 +15,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { StoreCard } from "@/components/home/StoreCard";
-import { products, stores } from "@/data/mockData";
+import { useCatalog } from "@/context/CatalogContext";
 import { formatDeliveryTime, formatPrice } from "@/lib/utils";
 
 type Tab = "all" | "stores" | "dishes";
@@ -38,6 +38,7 @@ export default function SearchPage() {
 
 function SearchPageInner() {
   const router = useRouter();
+  const { stores, products } = useCatalog();
   const params = useSearchParams();
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -60,7 +61,7 @@ function SearchPageInner() {
         p.name.toLowerCase().includes(q) ||
         p.description.toLowerCase().includes(q)
     );
-  }, [trimmed, isSearching]);
+  }, [trimmed, isSearching, products]);
 
   const matchingStores = useMemo(() => {
     if (!isSearching) return [];
@@ -77,7 +78,7 @@ function SearchPageInner() {
               p.description.toLowerCase().includes(q))
         )
     );
-  }, [trimmed, isSearching]);
+  }, [trimmed, isSearching, products, stores]);
 
   const totalResults = matchingProducts.length + matchingStores.length;
 

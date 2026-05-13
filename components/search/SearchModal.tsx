@@ -13,7 +13,8 @@ import {
   Squares2X2Icon,
   XMarkIcon,
 } from "@heroicons/react/24/outline";
-import { categories, products, stores } from "@/data/mockData";
+import { categories } from "@/data/mockData";
+import { useCatalog } from "@/context/CatalogContext";
 import { formatDeliveryTime, formatPrice, readLocalStorage, writeLocalStorage } from "@/lib/utils";
 
 interface SearchModalProps {
@@ -37,6 +38,7 @@ const RECENT_MAX = 6;
 
 export function SearchModal({ open, onClose, initialQuery = "" }: SearchModalProps) {
   const router = useRouter();
+  const { stores, products } = useCatalog();
   const inputRef = useRef<HTMLInputElement>(null);
 
   const [query, setQuery] = useState(initialQuery);
@@ -76,7 +78,7 @@ export function SearchModal({ open, onClose, initialQuery = "" }: SearchModalPro
           p.description.toLowerCase().includes(q)
       )
       .slice(0, 4);
-  }, [trimmed, isSearching]);
+  }, [trimmed, isSearching, products]);
 
   const matchingStores = useMemo(() => {
     if (!isSearching) return [];
@@ -89,7 +91,7 @@ export function SearchModal({ open, onClose, initialQuery = "" }: SearchModalPro
           s.tags?.some((t) => t.toLowerCase().includes(q))
       )
       .slice(0, 4);
-  }, [trimmed, isSearching]);
+  }, [trimmed, isSearching, stores]);
 
   const totalResults = matchingProducts.length + matchingStores.length;
 
@@ -265,7 +267,8 @@ export function SearchModal({ open, onClose, initialQuery = "" }: SearchModalPro
                                         </span>
                                         <span aria-hidden>·</span>
                                         <span className="truncate">
-                                          {storeName(p.storeId)}
+                                          {stores.find((x) => x.id === p.storeId)
+                                            ?.name ?? ""}
                                         </span>
                                       </span>
                                     </span>
@@ -537,8 +540,4 @@ function EmptyResults({ query }: { query: string }) {
       </p>
     </div>
   );
-}
-
-function storeName(storeId: string) {
-  return stores.find((s) => s.id === storeId)?.name ?? "";
 }

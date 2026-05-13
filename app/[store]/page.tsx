@@ -8,9 +8,9 @@ import { BottomNav } from "@/components/layout/BottomNav";
 import { StoreHeader } from "@/components/store/StoreHeader";
 import { MenuSection } from "@/components/store/MenuSection";
 import { CartFooter } from "@/components/cart/CartFooter";
+import { useCatalog } from "@/context/CatalogContext";
 import {
   categories,
-  getProductsByStore,
   getStoreBySlug,
 } from "@/data/mockData";
 import { cn } from "@/lib/utils";
@@ -22,15 +22,16 @@ interface PageProps {
 
 export default function StorePage({ params }: PageProps) {
   const { store: storeSlug } = use(params);
-  const store = getStoreBySlug(storeSlug);
+  const { stores, products } = useCatalog();
 
-  if (!store) {
-    notFound();
-  }
+  const store = useMemo(
+    () => getStoreBySlug(storeSlug),
+    [stores, storeSlug]
+  );
 
   const allProducts = useMemo(
-    () => getProductsByStore(store.id),
-    [store.id]
+    () => (store ? products.filter((p) => p.storeId === store.id) : []),
+    [store, products]
   );
 
   // Build category list from product categories that exist on this store
@@ -62,6 +63,10 @@ export default function StorePage({ params }: PageProps) {
     });
     return Array.from(map.entries());
   }, [visible]);
+
+  if (!store) {
+    notFound();
+  }
 
   return (
     <div className="min-h-screen pb-32">

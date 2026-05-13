@@ -12,22 +12,23 @@ import {
   adSlides,
   getFeaturedProducts,
   getStoresByCategory,
-  stores,
 } from "@/data/mockData";
 import type { CategoryId } from "@/types";
+import { useCatalog } from "@/context/CatalogContext";
 
 export default function HomePage() {
+  const { stores } = useCatalog();
   const [category, setCategory] = useState<CategoryId>("all");
 
   const featuredStores = useMemo(
     () => stores.filter((s) => s.isFeatured),
-    [],
+    [stores],
   );
-  const featuredProducts = useMemo(() => getFeaturedProducts(), []);
+  const featuredProducts = useMemo(() => getFeaturedProducts(), [stores]);
 
   const filteredStores = useMemo(
     () => getStoresByCategory(category),
-    [category],
+    [category, stores],
   );
 
   return (

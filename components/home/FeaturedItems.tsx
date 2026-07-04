@@ -32,7 +32,7 @@ export function FeaturedItems({
       {showHeader && (
         <div className={`mb-3 flex items-end justify-between gap-3 ${gutter}`}>
           <div>
-            <h2 className="text-[18px] font-extrabold tracking-tight text-[var(--color-ink)]">
+            <h2 className="font-display text-[19px] font-bold tracking-tight text-[var(--color-ink)]">
               {title}
             </h2>
             {subtitle && (
@@ -84,7 +84,7 @@ export function FeaturedItems({
                   {p.name}
                 </p>
                 <div className="mt-0.5 flex items-baseline gap-1.5">
-                  <span className="text-[13px] font-bold text-[var(--color-primary)]">
+                  <span className="font-display text-[13.5px] font-bold text-[var(--color-primary)]">
                     {formatPrice(p.price)}
                   </span>
                   {p.oldPrice && (

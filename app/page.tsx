@@ -60,7 +60,7 @@ export default function HomePage() {
           <section className="px-4 pt-5">
             <div className="mb-3 flex items-end justify-between">
               <div>
-                <h2 className="text-[18px] font-extrabold tracking-tight text-[var(--color-ink)]">
+                <h2 className="font-display text-[19px] font-bold tracking-tight text-[var(--color-ink)]">
                   Featured stores
                 </h2>
                 <p className="text-[12.5px] text-[var(--color-ink-muted)]">
@@ -81,7 +81,7 @@ export default function HomePage() {
         <section className="px-4 pt-5">
           <div className="mb-3 flex items-end justify-between gap-3">
             <div className="min-w-0">
-              <h2 className="text-[18px] font-extrabold tracking-tight text-[var(--color-ink)]">
+              <h2 className="font-display text-[19px] font-bold tracking-tight text-[var(--color-ink)]">
                 All stores nearby
               </h2>
               <p className="mt-0.5 text-[12.5px] text-[var(--color-ink-muted)]">
@@ -103,9 +103,16 @@ export default function HomePage() {
           )}
         </section>
 
-        <footer className="px-4 pt-10 pb-6 text-center">
-          <p className="text-[12px] font-semibold text-[var(--color-ink-soft)]">
-            ilú · your town. your taste. delivered.
+        <footer className="mt-14 border-t border-[var(--color-line)] px-4 pt-10 pb-8">
+          <p className="font-display text-[44px] font-extrabold leading-none tracking-tight text-[var(--color-ink)] lg:text-[72px]">
+            ìlú<span className="text-[var(--color-primary)]">Eats</span>
+            <span className="text-[var(--color-primary)]">.</span>
+          </p>
+          <p className="mt-3 text-[13px] font-semibold text-[var(--color-ink-muted)]">
+            Your town. Your taste. Delivered.
+          </p>
+          <p className="mt-6 text-[11px] font-medium text-[var(--color-ink-soft)]">
+            Made for Ilisan-Remo · ìlú means town
           </p>
         </footer>
       </main>

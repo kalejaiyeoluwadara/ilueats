@@ -1,21 +1,22 @@
 @import "tailwindcss";
 
 :root {
-  /* Brand palette */
-  --color-primary: #e8541a;
-  --color-primary-dark: #c0392b;
-  --color-primary-soft: #fff1ea;
-  --color-secondary: #c0392b;
-  --color-accent: #f4a623;
-  --color-accent-soft: #fff7e6;
-  --color-bg: #fafaf8;
+  /* Brand palette — "the town's kitchen": palm-oil orange on warm paper,
+     espresso ink, leaf green for anything fresh or open. */
+  --color-primary: #e64e0e;
+  --color-primary-dark: #b83a05;
+  --color-primary-soft: #fdeee5;
+  --color-secondary: #b83a05;
+  --color-accent: #efa00b;
+  --color-accent-soft: #fdf4e3;
+  --color-bg: #fcfaf7;
   --color-surface: #ffffff;
-  --color-ink: #1a1a1a;
-  --color-ink-muted: #6b6b6b;
-  --color-ink-soft: #9a9a9a;
-  --color-line: #ececec;
-  --color-success: #16a34a;
-  --color-success-soft: #ecfdf3;
+  --color-ink: #231512;
+  --color-ink-muted: #6f625c;
+  --color-ink-soft: #a2968f;
+  --color-line: #ede7e0;
+  --color-success: #0f7a3d;
+  --color-success-soft: #e9f6ee;
 }
 
 @theme inline {
@@ -36,12 +37,19 @@
   --color-success-soft: var(--color-success-soft);
 
   --font-sans: var(--font-jakarta);
-  --font-display: var(--font-jakarta);
+  --font-display: var(--font-bricolage);
 
   /* Search / elevated surfaces */
-  --shadow-crisp: 0 1px 2px rgb(0 0 0 / 0.04), 0 8px 24px -4px rgb(0 0 0 / 0.06);
+  --shadow-crisp: 0 1px 2px rgb(35 21 18 / 0.04), 0 8px 24px -4px rgb(35 21 18 / 0.06);
+  --shadow-lift: 0 2px 4px rgb(35 21 18 / 0.05), 0 16px 40px -12px rgb(35 21 18 / 0.14);
   --shadow-search-focus: 0 0 0 3px var(--color-primary-soft),
-    0 12px 40px -12px rgb(232 84 26 / 0.22);
+    0 12px 40px -12px rgb(230 78 14 / 0.22);
+}
+
+/* Display face for headings, wordmark, and prices */
+.font-display {
+  font-family: var(--font-bricolage), var(--font-jakarta), system-ui, sans-serif;
+  letter-spacing: -0.01em;
 }
 
 * {

@@ -46,7 +46,7 @@ export function StoreHeader({ store }: { store: Store }) {
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-1.5">
-                <h1 className="truncate text-[18px] font-extrabold tracking-tight text-[var(--color-ink)]">
+                <h1 className="font-display truncate text-[19px] font-extrabold tracking-tight text-[var(--color-ink)]">
                   {store.name}
                 </h1>
                 {store.isOpen ? (
@@ -120,7 +120,7 @@ function Stat({
 }) {
   return (
     <div className="text-center">
-      <div className="mx-auto flex items-center justify-center gap-1 text-[13px] font-bold text-[var(--color-ink)]">
+      <div className="font-display mx-auto flex items-center justify-center gap-1 text-[13.5px] font-bold text-[var(--color-ink)]">
         {icon}
         <span>{value}</span>
       </div>

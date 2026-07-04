@@ -17,7 +17,7 @@ export function MenuSection({ title, subtitle, products, store }: MenuSectionPro
     <section className="px-4">
       <div className="mb-2 flex items-end justify-between gap-3">
         <div>
-          <h2 className="text-[16px] font-extrabold tracking-tight text-[var(--color-ink)]">
+          <h2 className="font-display text-[17px] font-bold tracking-tight text-[var(--color-ink)]">
             {title}
           </h2>
           {subtitle && (

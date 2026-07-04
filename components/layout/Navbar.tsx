@@ -73,16 +73,16 @@ export function Navbar({
           )}
 
           {!isHome && title && (
-            <h1 className="flex-1 truncate text-[15px] font-bold tracking-tight">
+            <h1 className="font-display flex-1 truncate text-[15.5px] font-bold tracking-tight">
               {title}
             </h1>
           )}
 
           {isHome && (
-            <div className="flex flex-1 items-center gap-1.5 text-[12px] font-medium text-[var(--color-ink-muted)]">
-              <MapPinIcon className="h-4 w-4 text-[var(--color-primary)]" />
-              <span>
-                Delivering to{" "}
+            <div className="flex flex-1 items-center">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-primary-soft)]/70 px-2.5 py-1.5 text-[12px] font-medium text-[var(--color-ink-muted)]">
+                <MapPinIcon className="h-4 w-4 text-[var(--color-primary)]" />
+                <span className="hidden sm:inline">Delivering to </span>
                 <span className="font-bold text-[var(--color-ink)]">Ilisan</span>
               </span>
             </div>
@@ -161,8 +161,9 @@ export function Navbar({
 function Logo() {
   return (
     <div className="flex items-center gap-2">
-      <span className="text-[17px] font-extrabold tracking-tight">
-        ilu<span className="text-[var(--color-primary)]">Eats</span>
+      <span className="font-display text-[19px] font-extrabold leading-none tracking-tight">
+        ìlú<span className="text-[var(--color-primary)]">Eats</span>
+        <span className="text-[var(--color-primary)]">.</span>
       </span>
     </div>
   );

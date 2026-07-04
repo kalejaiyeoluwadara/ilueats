@@ -27,9 +27,9 @@ export function StoreCard({ store, index = 0, variant = "vertical" }: StoreCardP
     >
       <Link
         href={`/${store.slug}`}
-        className="group block min-w-0 rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg)]"
+        className="group block min-w-0 rounded-2xl transition-transform duration-300 ease-out hover:-translate-y-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg)]"
       >
-        <div className="overflow-hidden rounded-2xl">
+        <div className="overflow-hidden rounded-2xl transition-shadow duration-300 group-hover:shadow-lift">
           <div
             className={
               isHorizontal
@@ -61,7 +61,7 @@ export function StoreCard({ store, index = 0, variant = "vertical" }: StoreCardP
 
             <div className="absolute bottom-3 left-3 right-3 flex items-end justify-between gap-2">
               <div className="min-w-0">
-                <h3 className="truncate text-[15px] font-bold text-white drop-shadow-sm">
+                <h3 className="font-display truncate text-[16px] font-bold text-white drop-shadow-sm">
                   {store.name}
                 </h3>
               </div>

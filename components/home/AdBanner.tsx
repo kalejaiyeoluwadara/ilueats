@@ -69,7 +69,7 @@ export function AdBanner({ slides, intervalMs = 4500 }: AdBannerProps) {
                   {current.badge}
                 </span>
               )}
-              <h3 className="mt-2 max-w-[78%] text-[18px] font-extrabold leading-tight text-white sm:text-[20px]">
+              <h3 className="font-display mt-2 max-w-[78%] text-[19px] font-extrabold leading-tight text-white sm:text-[21px] lg:text-[24px]">
                 {current.title}
               </h3>
               <p className="mt-1 max-w-[78%] text-[12.5px] text-white/80">
@@ -93,10 +93,23 @@ export function AdBanner({ slides, intervalMs = 4500 }: AdBannerProps) {
                     onClick={() => setIndex(i)}
                     className={
                       i === index
-                        ? "h-1.5 w-5 rounded-full bg-white transition-all"
+                        ? "relative h-1.5 w-7 overflow-hidden rounded-full bg-white/30 transition-all"
                         : "h-1.5 w-1.5 rounded-full bg-white/45 transition-all hover:bg-white/70"
                     }
-                  />
+                  >
+                    {i === index && slides.length > 1 && (
+                      <motion.span
+                        key={`progress-${current.id}`}
+                        initial={{ scaleX: 0 }}
+                        animate={{ scaleX: 1 }}
+                        transition={{
+                          duration: intervalMs / 1000,
+                          ease: "linear",
+                        }}
+                        className="absolute inset-0 origin-left rounded-full bg-white"
+                      />
+                    )}
+                  </button>
                 ))}
               </div>
             </div>

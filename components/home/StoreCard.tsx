@@ -41,7 +41,11 @@ export function StoreCard({ store, index = 0, variant = "vertical" }: StoreCardP
               src={store.cover}
               alt={store.name}
               fill
-              sizes={isHorizontal ? "224px" : "(max-width: 640px) 100vw, 600px"}
+              sizes={
+                isHorizontal
+                  ? "224px"
+                  : "(max-width: 640px) 100vw, (max-width: 1024px) 600px, 380px"
+              }
               className="object-cover transition-transform duration-500 group-hover:scale-[1.04]"
             />
 

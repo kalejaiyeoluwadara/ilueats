@@ -21,7 +21,7 @@ export function HeroBanner() {
           <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-[var(--color-primary)]">
             Hey there
           </p>
-          <h1 className="mt-1 text-[26px] font-extrabold leading-[1.1] tracking-tight text-[var(--color-ink)] sm:text-[30px]">
+          <h1 className="mt-1 text-[26px] font-extrabold leading-[1.1] tracking-tight text-[var(--color-ink)] sm:text-[30px] lg:text-[36px]">
             What are you craving
             <br />
             <span className="text-[var(--color-primary)]">today?</span>

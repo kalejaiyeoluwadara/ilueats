@@ -15,7 +15,7 @@ import { formatDeliveryTime, formatPrice } from "@/lib/utils";
 export function StoreHeader({ store }: { store: Store }) {
   return (
     <section>
-      <div className="relative h-44 w-full overflow-hidden sm:h-56">
+      <div className="relative h-44 w-full overflow-hidden sm:h-56 lg:h-72 lg:rounded-3xl">
         <Image
           src={store.cover}
           alt={store.name}

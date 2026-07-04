@@ -95,7 +95,7 @@ function SearchPageInner() {
   return (
     <div className="min-h-screen pb-24">
       <header className="sticky top-0 z-40 border-b border-[var(--color-line)]/70 bg-[var(--color-bg)]/85 backdrop-blur-md supports-[backdrop-filter]:bg-[var(--color-bg)]/70">
-        <div className="mx-auto flex max-w-2xl items-center gap-2 px-3 pt-[max(env(safe-area-inset-top),12px)] pb-3 sm:px-4">
+        <div className="mx-auto flex max-w-2xl items-center gap-2 px-3 pt-[max(env(safe-area-inset-top),12px)] pb-3 sm:px-4 lg:max-w-5xl lg:px-6">
           <button
             type="button"
             onClick={() => router.back()}
@@ -150,7 +150,7 @@ function SearchPageInner() {
         </div>
 
         {isSearching && (
-          <div className="mx-auto max-w-2xl px-3 pb-3 sm:px-4">
+          <div className="mx-auto max-w-2xl px-3 pb-3 sm:px-4 lg:max-w-5xl lg:px-6">
             <div className="no-scrollbar flex items-center gap-1.5 overflow-x-auto">
               {TABS.map((t) => {
                 const count =
@@ -189,7 +189,7 @@ function SearchPageInner() {
         )}
       </header>
 
-      <main className="mx-auto max-w-2xl px-4 pt-4">
+      <main className="mx-auto max-w-2xl px-4 pt-4 lg:max-w-5xl lg:px-6">
         {!isSearching ? (
           <EmptyLanding
             stores={stores}
@@ -208,7 +208,7 @@ function SearchPageInner() {
                   count={matchingProducts.length}
                   subtitle={`Matching “${trimmed}”`}
                 />
-                <ul className="grid grid-cols-1 gap-2.5">
+                <ul className="grid grid-cols-1 gap-2.5 lg:grid-cols-2 lg:gap-3">
                   {matchingProducts.map((p, idx) => (
                     <motion.li
                       key={p.id}
@@ -262,7 +262,7 @@ function SearchPageInner() {
                   count={matchingStores.length}
                   subtitle={`Open spots that match “${trimmed}”`}
                 />
-                <div className="grid grid-cols-1 gap-8">
+                <div className="grid grid-cols-1 gap-8 lg:grid-cols-3 lg:gap-x-6 lg:gap-y-9">
                   {matchingStores.map((s, idx) => (
                     <StoreCard key={s.id} store={s} index={idx} />
                   ))}
@@ -352,7 +352,7 @@ function EmptyLanding({
         <h3 className="mb-2 text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--color-ink-soft)]">
           Popular spots
         </h3>
-        <ul className="grid grid-cols-1 gap-2">
+        <ul className="grid grid-cols-1 gap-2 lg:grid-cols-2 lg:gap-3">
           {stores
             .filter((s) => s.isFeatured)
             .slice(0, 4)

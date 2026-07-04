@@ -40,14 +40,15 @@ export default function CartPage() {
   const belowMin = subtotal < minOrder;
 
   return (
-    <div className="min-h-screen pb-40">
+    <div className="min-h-screen pb-40 lg:pb-16">
       <Navbar variant="page" title="Your bag" showSearch={false} />
 
-      <main className="mx-auto max-w-2xl">
+      <main className="mx-auto max-w-2xl lg:max-w-5xl lg:px-6 lg:pt-4">
         {count === 0 ? (
           <EmptyCart />
         ) : (
-          <>
+          <div className="lg:grid lg:grid-cols-[1fr_380px] lg:items-start lg:gap-8">
+            <div className="min-w-0">
             <section className="px-4 pt-3">
               <div className="flex items-center justify-between">
                 <div className="min-w-0">
@@ -95,27 +96,53 @@ export default function CartPage() {
                 </AnimatePresence>
               </ul>
             </section>
+            </div>
 
-            <section className="px-4 pt-5">
-              <CartSummary subtotal={subtotal} deliveryFee={deliveryFee} />
-            </section>
+            <div className="lg:sticky lg:top-24">
+              <section className="px-4 pt-5 lg:px-0 lg:pt-3">
+                <CartSummary subtotal={subtotal} deliveryFee={deliveryFee} />
+              </section>
 
-            {storeSlug && (
-              <div className="px-4 pt-3">
+              {storeSlug && (
+                <div className="px-4 pt-3 lg:px-0">
+                  <Link
+                    href={`/${storeSlug}`}
+                    className="inline-flex items-center gap-1 text-[13px] font-semibold text-[var(--color-primary)] hover:underline"
+                  >
+                    + Add more from {store?.name ?? "this store"}
+                  </Link>
+                </div>
+              )}
+
+              {/* Desktop inline checkout */}
+              <div className="hidden lg:block lg:pt-4">
+                {belowMin && (
+                  <p className="mb-2 rounded-xl bg-[var(--color-accent-soft)] px-3 py-2 text-[12px] font-semibold text-[#8a4f00]">
+                    Add {formatPrice(minOrder - subtotal)} more to meet minimum
+                    order.
+                  </p>
+                )}
                 <Link
-                  href={`/${storeSlug}`}
-                  className="inline-flex items-center gap-1 text-[13px] font-semibold text-[var(--color-primary)] hover:underline"
+                  href={belowMin ? "/cart" : "/checkout"}
+                  className="block"
                 >
-                  + Add more from {store?.name ?? "this store"}
+                  <Button
+                    size="lg"
+                    fullWidth
+                    disabled={belowMin}
+                    rightIcon={<ArrowRightIcon className="h-4 w-4" />}
+                  >
+                    Checkout · {formatPrice(subtotal + deliveryFee)}
+                  </Button>
                 </Link>
               </div>
-            )}
-          </>
+            </div>
+          </div>
         )}
       </main>
 
       {count > 0 && (
-        <div className="fixed inset-x-0 bottom-[68px] z-50 border-t border-[var(--color-line)] bg-white px-4 pb-3 pt-3 sm:bottom-[72px]">
+        <div className="fixed inset-x-0 bottom-[68px] z-50 border-t border-[var(--color-line)] bg-white px-4 pb-3 pt-3 sm:bottom-[72px] lg:hidden">
           <div className="mx-auto max-w-2xl">
             {belowMin && (
               <p className="mb-2 rounded-xl bg-[var(--color-accent-soft)] px-3 py-2 text-[12px] font-semibold text-[#8a4f00]">

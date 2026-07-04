@@ -105,10 +105,11 @@ export default function CheckoutPage() {
   }
 
   return (
-    <div className="min-h-screen pb-36">
+    <div className="min-h-screen pb-36 lg:pb-16">
       <Navbar variant="page" title="Checkout" showSearch={false} />
 
-      <main className="mx-auto max-w-2xl space-y-5 px-4 pt-4">
+      <main className="mx-auto max-w-2xl space-y-5 px-4 pt-4 lg:grid lg:max-w-5xl lg:grid-cols-[1fr_400px] lg:items-start lg:gap-8 lg:space-y-0 lg:px-6">
+        <div className="min-w-0 space-y-5">
         {/* Delivery details */}
         <section className="rounded-2xl bg-white p-4 ring-1 ring-[var(--color-line)]">
           <SectionHeader
@@ -258,7 +259,9 @@ export default function CheckoutPage() {
             />
           </div>
         </section>
+        </div>
 
+        <div className="space-y-5 lg:sticky lg:top-24">
         {/* Items review */}
         <section className="rounded-2xl bg-white p-4 ring-1 ring-[var(--color-line)]">
           <SectionHeader title="Your order" />
@@ -287,10 +290,37 @@ export default function CheckoutPage() {
         </section>
 
         <CartSummary subtotal={subtotal} deliveryFee={deliveryFee} />
+
+        {/* Desktop inline pay */}
+        <div className="hidden lg:flex lg:items-center lg:gap-3 lg:rounded-2xl lg:bg-white lg:p-4 lg:ring-1 lg:ring-[var(--color-line)]">
+          <div className="leading-tight">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--color-ink-soft)]">
+              You pay
+            </p>
+            <p className="text-[18px] font-extrabold tracking-tight text-[var(--color-ink)]">
+              {formatPrice(total)}
+            </p>
+          </div>
+          <Button
+            size="lg"
+            fullWidth
+            onClick={submit}
+            disabled={!canSubmit || step === "paying"}
+            loading={step === "paying"}
+            className="flex-1"
+          >
+            {step === "paying"
+              ? "Placing order…"
+              : method === "cash"
+              ? "Place order"
+              : "Pay & place order"}
+          </Button>
+        </div>
+        </div>
       </main>
 
       {/* Sticky pay footer */}
-      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-[var(--color-line)] bg-white px-4 pb-[calc(env(safe-area-inset-bottom,0px)+12px)] pt-3">
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-[var(--color-line)] bg-white px-4 pb-[calc(env(safe-area-inset-bottom,0px)+12px)] pt-3 lg:hidden">
         <div className="mx-auto flex max-w-2xl items-center gap-3">
           <div className="leading-tight">
             <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--color-ink-soft)]">

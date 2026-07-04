@@ -22,9 +22,9 @@ export function CartFooter() {
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 80, opacity: 0 }}
           transition={{ type: "spring", stiffness: 360, damping: 30 }}
-          className="fixed inset-x-0 bottom-[68px] z-30 px-4 sm:bottom-[72px]"
+          className="fixed inset-x-0 bottom-[68px] z-30 px-4 sm:bottom-[72px] lg:bottom-6"
         >
-          <div className="mx-auto max-w-2xl">
+          <div className="mx-auto max-w-2xl lg:max-w-3xl">
             <Link
               href="/cart"
               className="flex items-center justify-between gap-3 rounded-2xl bg-[var(--color-ink)] px-4 py-3 text-white shadow-[0_10px_30px_rgba(0,0,0,0.18)] ring-1 ring-black/30"

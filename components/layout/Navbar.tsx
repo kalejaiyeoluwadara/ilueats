@@ -13,6 +13,13 @@ import { cn } from "@/lib/utils";
 import { useCart } from "@/hooks/useCart";
 import { useSearch } from "@/context/SearchContext";
 
+const desktopLinks = [
+  { href: "/", label: "Home" },
+  { href: "/orders", label: "Orders" },
+  { href: "/favorites", label: "Favourites" },
+  { href: "/account", label: "Account" },
+];
+
 interface NavbarProps {
   variant?: "home" | "page";
   title?: string;
@@ -45,7 +52,7 @@ export function Navbar({
           className
         )}
       >
-        <div className="mx-auto flex h-14 max-w-2xl items-center gap-3 px-4">
+        <div className="mx-auto flex h-14 max-w-2xl items-center gap-3 px-4 lg:h-16 lg:max-w-6xl lg:px-6">
           {isHome ? (
             <Link
               href="/"
@@ -80,6 +87,33 @@ export function Navbar({
               </span>
             </div>
           )}
+
+          <nav
+            aria-label="Primary"
+            className="hidden items-center gap-1 lg:flex"
+          >
+            {desktopLinks.map((l) => {
+              const active =
+                l.href === "/"
+                  ? pathname === "/"
+                  : pathname?.startsWith(l.href);
+              return (
+                <Link
+                  key={l.href}
+                  href={l.href}
+                  aria-current={active ? "page" : undefined}
+                  className={cn(
+                    "rounded-full px-3.5 py-2 text-[13.5px] font-semibold tracking-tight transition-colors",
+                    active
+                      ? "bg-[var(--color-primary-soft)] text-[var(--color-primary)]"
+                      : "text-[var(--color-ink-muted)] hover:bg-black/5 hover:text-[var(--color-ink)]"
+                  )}
+                >
+                  {l.label}
+                </Link>
+              );
+            })}
+          </nav>
 
           {showSearch && (
             <button

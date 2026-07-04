@@ -69,13 +69,13 @@ export default function StorePage({ params }: PageProps) {
   }
 
   return (
-    <div className="min-h-screen pb-32">
+    <div className="min-h-screen pb-32 lg:pb-40">
       <Navbar variant="page" title={store.name} showSearch={false} />
 
-      <main className="mx-auto max-w-2xl">
+      <main className="mx-auto max-w-2xl lg:max-w-5xl lg:px-6">
         <StoreHeader store={store} />
 
-        <div className="sticky top-14 z-30 bg-[var(--color-bg)]/85 backdrop-blur-md">
+        <div className="sticky top-14 z-30 bg-[var(--color-bg)]/85 backdrop-blur-md lg:top-16">
           <div className="no-scrollbar flex gap-2 overflow-x-auto px-4 py-3">
             {tabs.map((t) => {
               const isActive = activeTab === t.id;

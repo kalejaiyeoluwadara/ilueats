@@ -28,7 +28,7 @@ export function AdBanner({ slides, intervalMs = 4500 }: AdBannerProps) {
 
   return (
     <section className="px-4">
-      <div className="relative h-[190px] overflow-hidden rounded-3xl bg-[var(--color-ink)] sm:h-[180px]">
+      <div className="relative h-[190px] overflow-hidden rounded-3xl bg-[var(--color-ink)] sm:h-[180px] lg:h-[250px]">
         <AnimatePresence mode="wait">
           <motion.div
             key={current.id}

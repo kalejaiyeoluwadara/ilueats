@@ -30,17 +30,19 @@ export default function HomePage() {
   );
 
   return (
-    <div className="min-h-screen pb-24">
+    <div className="min-h-screen pb-24 lg:pb-12">
       <Navbar variant="home" />
 
-      <main className="mx-auto max-w-2xl">
-        <HeroBanner />
+      <main className="mx-auto max-w-2xl lg:max-w-6xl lg:px-6">
+        <div className="lg:grid lg:grid-cols-[1.05fr_1fr] lg:items-center lg:gap-10 lg:pt-6">
+          <HeroBanner />
 
-        <div className="pt-1 pb-2">
-          <AdBanner slides={banners} />
+          <div className="pt-1 pb-2 lg:p-0">
+            <AdBanner slides={banners} />
+          </div>
         </div>
 
-        <div className="pt-2">
+        <div className="pt-2 lg:pt-6">
           <CategoryPills active={category} onChange={setCategory} />
         </div>
 
@@ -93,7 +95,7 @@ export default function HomePage() {
           {filteredStores.length === 0 ? (
             <EmptyState category={category} />
           ) : (
-            <div className="grid grid-cols-1 gap-8">
+            <div className="grid grid-cols-1 gap-8 lg:grid-cols-3 lg:gap-x-6 lg:gap-y-9">
               {filteredStores.map((s, idx) => (
                 <StoreCard key={s.id} store={s} index={idx} />
               ))}

@@ -34,7 +34,7 @@ export default function FavoritesPage() {
   return (
     <div className="min-h-screen pb-24">
       <Navbar variant="page" title="Favourites" showSearch={false} />
-      <main className="mx-auto max-w-2xl px-4 pt-4">
+      <main className="mx-auto max-w-2xl px-4 pt-4 lg:max-w-5xl lg:px-6">
         {!ready ? (
           <ContentLoader message="Loading favourites…" className="py-16" />
         ) : items.length === 0 ? (
@@ -53,7 +53,7 @@ export default function FavoritesPage() {
             </Link>
           </div>
         ) : (
-          <ul className="space-y-3">
+          <ul className="space-y-3 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0">
             {items.map(({ product, store }) => (
               <li key={product.id}>
                 <Link

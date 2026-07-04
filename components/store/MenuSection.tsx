@@ -30,7 +30,7 @@ export function MenuSection({ title, subtitle, products, store }: MenuSectionPro
           {products.length} item{products.length === 1 ? "" : "s"}
         </span>
       </div>
-      <div className="space-y-2.5">
+      <div className="space-y-2.5 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0">
         {products.map((p, idx) => (
           <ProductCard key={p.id} product={p} store={store} index={idx} />
         ))}

@@ -126,12 +126,12 @@ function ProductPageContent({
   };
 
   return (
-    <div className="min-h-screen pb-32">
+    <div className="min-h-screen pb-32 lg:pb-12">
       <Navbar variant="page" title={product.name} showSearch={false} />
 
-      <main className="mx-auto max-w-2xl">
+      <main className="mx-auto max-w-2xl lg:grid lg:max-w-5xl lg:grid-cols-2 lg:items-start lg:gap-10 lg:px-6 lg:pt-6">
         {/* Hero image */}
-        <div className="relative aspect-[4/3] w-full overflow-hidden bg-[var(--color-line)] sm:rounded-b-3xl">
+        <div className="relative aspect-[4/3] w-full overflow-hidden bg-[var(--color-line)] sm:rounded-b-3xl lg:sticky lg:top-24 lg:rounded-3xl">
           <Image
             src={product.image}
             alt={product.name}
@@ -150,6 +150,8 @@ function ProductPageContent({
           />
         </div>
 
+        {/* Details column */}
+        <div className="min-w-0">
         {/* Title */}
         <motion.div
           initial={{ opacity: 0, y: 8 }}
@@ -279,15 +281,31 @@ function ProductPageContent({
           </div>
         </section>
 
+        {/* Desktop inline total + CTA */}
+        <div className="hidden lg:mt-6 lg:flex lg:items-center lg:gap-3 lg:rounded-2xl lg:bg-white lg:p-4 lg:ring-1 lg:ring-[var(--color-line)]">
+          <div className="leading-tight">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--color-ink-soft)]">
+              Total
+            </p>
+            <p className="text-[18px] font-extrabold tracking-tight text-[var(--color-ink)]">
+              {formatPrice(totalPrice)}
+            </p>
+          </div>
+          <Button size="lg" fullWidth onClick={handleAdd} className="flex-1">
+            Add {quantity > 1 ? `${quantity} ` : ""}to bag
+          </Button>
+        </div>
+
         <div className="px-4 pt-8 pb-4 text-center">
           <p className="text-[12px] text-[var(--color-ink-soft)]">
             Going to {store.name} · est. delivery {store.deliveryTimeMins[0]}–
             {store.deliveryTimeMins[1]} mins
           </p>
         </div>
+        </div>
       </main>
 
-      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-[var(--color-line)] bg-white px-4 pb-[calc(env(safe-area-inset-bottom,0px)+12px)] pt-3">
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-[var(--color-line)] bg-white px-4 pb-[calc(env(safe-area-inset-bottom,0px)+12px)] pt-3 lg:hidden">
         <div className="mx-auto flex max-w-2xl items-center gap-3">
           <div className="leading-tight">
             <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--color-ink-soft)]">

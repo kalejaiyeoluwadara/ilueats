@@ -297,7 +297,7 @@ export default function CheckoutPage() {
             <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--color-ink-soft)]">
               You pay
             </p>
-            <p className="text-[18px] font-extrabold tracking-tight text-[var(--color-ink)]">
+            <p className="font-display text-[18px] font-extrabold tracking-tight text-[var(--color-ink)]">
               {formatPrice(total)}
             </p>
           </div>
@@ -326,7 +326,7 @@ export default function CheckoutPage() {
             <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--color-ink-soft)]">
               You pay
             </p>
-            <p className="text-[18px] font-extrabold tracking-tight text-[var(--color-ink)]">
+            <p className="font-display text-[18px] font-extrabold tracking-tight text-[var(--color-ink)]">
               {formatPrice(total)}
             </p>
           </div>
@@ -512,7 +512,7 @@ function SuccessView({ orderId, total }: { orderId: string; total: number }) {
           initial={{ y: 8, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.15 }}
-          className="mt-6 text-[24px] font-extrabold tracking-tight"
+          className="font-display mt-6 text-[24px] font-extrabold tracking-tight"
         >
           On its way to you 🔥
         </motion.h1>

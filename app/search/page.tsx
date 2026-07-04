@@ -290,7 +290,7 @@ function SectionHeader({
   return (
     <div className="mb-3 flex items-end justify-between gap-3">
       <div className="min-w-0">
-        <h2 className="flex items-center gap-2 text-[18px] font-extrabold tracking-tight text-[var(--color-ink)]">
+        <h2 className="font-display flex items-center gap-2 text-[19px] font-bold tracking-tight text-[var(--color-ink)]">
           {title}
           {typeof count === "number" && (
             <span className="rounded-full bg-[var(--color-primary-soft)] px-2 py-0.5 text-[12px] font-bold tabular-nums text-[var(--color-primary-dark)]">
@@ -321,7 +321,7 @@ function EmptyLanding({
         <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--color-primary)]">
           Search ìlú
         </p>
-        <h1 className="mt-1 text-[22px] font-extrabold tracking-tight text-[var(--color-ink)]">
+        <h1 className="font-display mt-1 text-[22px] font-extrabold tracking-tight text-[var(--color-ink)]">
           Find your next meal
         </h1>
         <p className="mt-1 text-[13px] leading-relaxed text-[var(--color-ink-muted)]">

@@ -40,7 +40,7 @@ export function CartFooter() {
                   <p className="text-[12px] font-semibold text-white/65">
                     {count} item{count === 1 ? "" : "s"} in bag
                   </p>
-                  <p className="text-[14px] font-extrabold tracking-tight">
+                  <p className="font-display text-[14.5px] font-extrabold tracking-tight">
                     {formatPrice(subtotal)}
                   </p>
                 </div>

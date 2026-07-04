@@ -6,7 +6,7 @@ export default function NotFound() {
     <div className="min-h-screen bg-[var(--color-bg)]">
       <main className="mx-auto flex max-w-2xl flex-col items-center px-6 pt-24 text-center">
         <span className="text-6xl">🍽️</span>
-        <h1 className="mt-4 text-[24px] font-extrabold tracking-tight">
+        <h1 className="font-display mt-4 text-[24px] font-extrabold tracking-tight">
           Page not found
         </h1>
         <p className="mt-2 max-w-sm text-[14px] text-[var(--color-ink-muted)]">

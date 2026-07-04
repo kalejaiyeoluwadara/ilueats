@@ -55,7 +55,7 @@ export default function CartPage() {
                   <p className="text-[12px] font-semibold uppercase tracking-wider text-[var(--color-primary)]">
                     {count} item{count === 1 ? "" : "s"}
                   </p>
-                  <h2 className="truncate text-[18px] font-extrabold tracking-tight">
+                  <h2 className="font-display truncate text-[19px] font-bold tracking-tight">
                     {storeName ?? store?.name ?? "Your bag"}
                   </h2>
                   {store && (
@@ -179,7 +179,7 @@ function EmptyCart() {
       >
         <ShoppingBagIcon className="h-9 w-9 text-[var(--color-primary)]" />
       </motion.div>
-      <h2 className="mt-5 text-[20px] font-extrabold tracking-tight">
+      <h2 className="font-display mt-5 text-[20px] font-extrabold tracking-tight">
         Your bag is empty
       </h2>
       <p className="mt-1.5 max-w-xs text-[13.5px] text-[var(--color-ink-muted)]">

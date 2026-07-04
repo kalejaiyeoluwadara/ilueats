@@ -162,7 +162,7 @@ function ProductPageContent({
           <p className="text-[12px] font-semibold uppercase tracking-wider text-[var(--color-primary)]">
             {store.name}
           </p>
-          <h1 className="mt-1 text-[22px] font-extrabold leading-tight tracking-tight text-[var(--color-ink)] sm:text-[24px]">
+          <h1 className="font-display mt-1 text-[24px] font-extrabold leading-tight tracking-tight text-[var(--color-ink)] sm:text-[26px]">
             {product.name}
           </h1>
           {product.rating ? (
@@ -180,7 +180,7 @@ function ProductPageContent({
             {product.description}
           </p>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-[20px] font-extrabold tracking-tight text-[var(--color-primary)]">
+            <span className="font-display text-[21px] font-extrabold tracking-tight text-[var(--color-primary)]">
               {formatPrice(unitPrice)}
             </span>
             {product.oldPrice && (
@@ -287,7 +287,7 @@ function ProductPageContent({
             <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--color-ink-soft)]">
               Total
             </p>
-            <p className="text-[18px] font-extrabold tracking-tight text-[var(--color-ink)]">
+            <p className="font-display text-[18px] font-extrabold tracking-tight text-[var(--color-ink)]">
               {formatPrice(totalPrice)}
             </p>
           </div>
@@ -311,7 +311,7 @@ function ProductPageContent({
             <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--color-ink-soft)]">
               Total
             </p>
-            <p className="text-[18px] font-extrabold tracking-tight text-[var(--color-ink)]">
+            <p className="font-display text-[18px] font-extrabold tracking-tight text-[var(--color-ink)]">
               {formatPrice(totalPrice)}
             </p>
           </div>

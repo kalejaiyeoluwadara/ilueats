@@ -68,7 +68,7 @@ export function ProductCard({ product, store, index = 0 }: ProductCardProps) {
             {product.description}
           </p>
           <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-[14px] font-extrabold text-[var(--color-primary)]">
+            <span className="font-display text-[14.5px] font-bold text-[var(--color-primary)]">
               {formatPrice(product.price)}
             </span>
             {product.oldPrice && (

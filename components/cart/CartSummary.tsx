@@ -46,7 +46,7 @@ export function CartSummary({
         <span className="text-[15px] font-extrabold tracking-tight text-[var(--color-ink)]">
           Total
         </span>
-        <span className="text-[18px] font-extrabold tracking-tight text-[var(--color-primary)]">
+        <span className="font-display text-[19px] font-extrabold tracking-tight text-[var(--color-primary)]">
           {formatPrice(total)}
         </span>
       </div>

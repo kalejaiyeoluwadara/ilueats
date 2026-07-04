@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 import { useSearch } from "@/context/SearchContext";
 
@@ -19,14 +19,16 @@ const EASE = [0.22, 1, 0.36, 1] as const;
 
 function RotatingCraving() {
   const [index, setIndex] = useState(0);
+  const reduceMotion = useReducedMotion();
 
   useEffect(() => {
+    if (reduceMotion) return;
     const t = window.setInterval(
       () => setIndex((i) => (i + 1) % CRAVINGS.length),
       2600
     );
     return () => window.clearInterval(t);
-  }, []);
+  }, [reduceMotion]);
 
   const current = CRAVINGS[index];
 

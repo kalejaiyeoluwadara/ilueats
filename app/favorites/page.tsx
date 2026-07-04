@@ -42,7 +42,7 @@ export default function FavoritesPage() {
             <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[var(--color-primary-soft)]">
               <HeartIcon className="h-9 w-9 text-[var(--color-primary)]" />
             </div>
-            <h1 className="mt-5 text-[20px] font-extrabold tracking-tight">
+            <h1 className="font-display mt-5 text-[20px] font-extrabold tracking-tight">
               No favourites yet
             </h1>
             <p className="mt-1.5 max-w-xs text-[13.5px] text-[var(--color-ink-muted)]">

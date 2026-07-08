@@ -25,7 +25,10 @@ interface AddToCartInput {
   quantity?: number;
   selectedOptions?: {
     groupId: string;
+    groupName: string;
     choice: ProductOptionChoice;
+    /** How many of this choice (allowQuantity groups); defaults to 1. */
+    qty?: number;
   }[];
   notes?: string;
 }
@@ -153,7 +156,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       }
 
       const optionDelta = selectedOptions.reduce(
-        (sum, o) => sum + (o.choice.priceDelta ?? 0),
+        (sum, o) => sum + (o.choice.priceDelta ?? 0) * (o.qty ?? 1),
         0
       );
       const lineId = makeCartLineId(
@@ -161,6 +164,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         selectedOptions.map((o) => ({
           groupId: o.groupId,
           choiceId: o.choice.id,
+          qty: o.qty ?? 1,
         }))
       );
       const item: CartItem = {
@@ -176,8 +180,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         notes,
         selectedOptions: selectedOptions.map((o) => ({
           groupId: o.groupId,
+          groupName: o.groupName,
           choiceId: o.choice.id,
           name: o.choice.name,
+          qty: o.qty ?? 1,
+          priceDelta: o.choice.priceDelta ?? 0,
         })),
       };
 

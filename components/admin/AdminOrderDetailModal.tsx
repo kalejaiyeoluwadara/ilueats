@@ -3,17 +3,20 @@
 import { MapPinIcon } from "@heroicons/react/24/outline";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
+import { useOrders } from "@/context/OrdersContext";
 import {
-  adminOrderLinesSubtotal,
-  adminOrderStatusBadge,
-  type AdminOrderRow,
-} from "@/data/adminOrdersMock";
+  formatPlacedAgo,
+  nextOrderStatus,
+  orderLinesSubtotal,
+  orderStatusBadge,
+} from "@/lib/ordersStore";
 import { cn, formatPrice } from "@/lib/utils";
+import type { Order } from "@/types";
 
 interface AdminOrderDetailModalProps {
   open: boolean;
   onClose: () => void;
-  order: AdminOrderRow | null;
+  order: Order | null;
 }
 
 export function AdminOrderDetailModal({
@@ -21,8 +24,9 @@ export function AdminOrderDetailModal({
   onClose,
   order,
 }: AdminOrderDetailModalProps) {
-  const badge =
-    order != null ? adminOrderStatusBadge[order.status] : null;
+  const { updateOrderStatus } = useOrders();
+  const badge = order != null ? orderStatusBadge[order.status] : null;
+  const next = order ? nextOrderStatus(order.status) : null;
 
   return (
     <Modal
@@ -32,18 +36,33 @@ export function AdminOrderDetailModal({
       className="sm:max-w-xl"
       title={order ? `Order ${order.id}` : undefined}
       description={
-        order ? `${order.placed} · ${order.paymentLabel}` : undefined
+        order
+          ? `${formatPlacedAgo(order.placedAt)} · ${order.paymentLabel}`
+          : undefined
       }
       footer={
-        <Button
-          type="button"
-          variant="outline"
-          fullWidth
-          size="md"
-          onClick={onClose}
-        >
-          Close
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            fullWidth
+            size="md"
+            onClick={onClose}
+          >
+            Close
+          </Button>
+          {order && next ? (
+            <Button
+              type="button"
+              variant="primary"
+              fullWidth
+              size="md"
+              onClick={() => updateOrderStatus(order.id, next)}
+            >
+              Mark {orderStatusBadge[next].label.toLowerCase()}
+            </Button>
+          ) : null}
+        </div>
       }
     >
       {order && badge ? (
@@ -62,11 +81,11 @@ function AdminOrderDetailBody({
   statusClassName,
   statusLabel,
 }: {
-  order: AdminOrderRow;
+  order: Order;
   statusClassName: string;
   statusLabel: string;
 }) {
-  const subtotal = adminOrderLinesSubtotal(order.lineItems);
+  const subtotal = orderLinesSubtotal(order.lineItems);
   const variance =
     order.total - subtotal - order.deliveryFee - order.serviceFee;
 
@@ -91,6 +110,9 @@ function AdminOrderDetailBody({
           <DetailRow label="Name" value={order.customer} />
           <DetailRow label="Phone" value={order.customerPhone} mono />
           <DetailRow label="Address" value={order.deliveryAddress} />
+          {order.deliveryNote ? (
+            <DetailRow label="Rider note" value={order.deliveryNote} />
+          ) : null}
         </dl>
       </section>
 
@@ -133,6 +155,11 @@ function AdminOrderDetailBody({
                         {line.modifiers.join(" · ")}
                       </p>
                     ) : null}
+                    {line.notes ? (
+                      <p className="mt-1 text-[12px] italic text-[var(--color-ink-muted)]">
+                        “{line.notes}”
+                      </p>
+                    ) : null}
                     <p className="mt-1 text-[11px] font-semibold text-[var(--color-ink-soft)]">
                       {line.qty} × {formatPrice(line.unitPrice)}
                     </p>
@@ -169,7 +196,9 @@ function AdminOrderDetailBody({
       </section>
 
       <p className="text-[11px] font-medium leading-relaxed text-[var(--color-ink-soft)]">
-        Demo receipt — SKU-level data will sync from your storefront API.
+        {order.source === "app"
+          ? "Placed live from the storefront checkout in this browser."
+          : "Demo board row — place an order in the storefront to see it appear here."}
       </p>
     </div>
   );

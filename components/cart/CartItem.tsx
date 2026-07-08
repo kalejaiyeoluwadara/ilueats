@@ -8,7 +8,7 @@ import {
   TrashIcon,
 } from "@heroicons/react/24/outline";
 import type { CartItem as CartItemType } from "@/types";
-import { formatPrice } from "@/lib/utils";
+import { formatCartOption, formatPrice } from "@/lib/utils";
 
 interface CartItemProps {
   item: CartItemType;
@@ -47,8 +47,8 @@ export function CartItem({
             {item.name}
           </h3>
           {item.selectedOptions && item.selectedOptions.length > 0 && (
-            <p className="mt-0.5 line-clamp-1 text-[11.5px] text-[var(--color-ink-muted)]">
-              {item.selectedOptions.map((o) => o.name).join(" · ")}
+            <p className="mt-0.5 line-clamp-2 text-[11.5px] text-[var(--color-ink-muted)]">
+              {item.selectedOptions.map(formatCartOption).join(" · ")}
             </p>
           )}
           <p className="mt-1 text-[13.5px] font-extrabold text-[var(--color-primary)]">

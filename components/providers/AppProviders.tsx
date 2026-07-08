@@ -6,6 +6,7 @@ import { BannerProvider } from "@/context/BannersContext";
 import { CatalogProvider } from "@/context/CatalogContext";
 import { CartProvider } from "@/context/CartContext";
 import { FavoritesProvider } from "@/context/FavoritesContext";
+import { OrdersProvider } from "@/context/OrdersContext";
 import { SearchProvider } from "@/context/SearchContext";
 import { ToastProvider } from "@/context/ToastContext";
 
@@ -19,6 +20,8 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
       <AuthProvider>
         {/* Catalog must wrap SearchProvider so SearchModal (sibling to pages) sees the same snapshot. */}
         <CatalogProvider>
+          {/* Orders wrap everything order-adjacent: checkout writes, admin + rider read. */}
+          <OrdersProvider>
           <BannerProvider>
             <SearchProvider>
               <FavoritesProvider>
@@ -28,6 +31,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
               </FavoritesProvider>
             </SearchProvider>
           </BannerProvider>
+          </OrdersProvider>
         </CatalogProvider>
       </AuthProvider>
     </ToastProvider>

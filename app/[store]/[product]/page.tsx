@@ -16,7 +16,12 @@ import { getProductBySlug, getStoreBySlug } from "@/data/mockData";
 import { cn, formatPrice } from "@/lib/utils";
 import { useCart } from "@/hooks/useCart";
 import { useToast } from "@/hooks/useToast";
-import type { Product, ProductOptionChoice, Store } from "@/types";
+import type {
+  Product,
+  ProductOptionChoice,
+  ProductOptionGroup,
+  Store,
+} from "@/types";
 
 interface PageProps {
   params: Promise<{ store: string; product: string }>;
@@ -35,57 +40,85 @@ function ProductPageContent({
 
   const [quantity, setQuantity] = useState(1);
   const [selections, setSelections] = useState<
-    Record<string, ProductOptionChoice[]>
+    Record<string, { choice: ProductOptionChoice; qty: number }[]>
   >({});
   const [conflictOpen, setConflictOpen] = useState(false);
 
   const optionGroups = product.options ?? [];
 
+  const groupMin = (g: ProductOptionGroup) => g.min ?? (g.required ? 1 : 0);
+
   const missingRequired = useMemo(() => {
     return optionGroups
-      .filter((g) => g.required)
-      .filter(
-        (g) =>
-          !selections[g.id] || selections[g.id].length === 0
-      )
+      .filter((g) => (selections[g.id] ?? []).length < groupMin(g))
       .map((g) => g.name);
   }, [optionGroups, selections]);
 
   const optionDelta = useMemo(() => {
     return Object.values(selections)
       .flat()
-      .reduce((sum, c) => sum + (c.priceDelta ?? 0), 0);
+      .reduce((sum, s) => sum + (s.choice.priceDelta ?? 0) * s.qty, 0);
   }, [selections]);
 
   const unitPrice = product.price + optionDelta;
   const totalPrice = unitPrice * quantity;
 
   const toggleChoice = (
-    groupId: string,
-    multi: boolean,
+    group: ProductOptionGroup,
     choice: ProductOptionChoice
   ) => {
     setSelections((prev) => {
-      const current = prev[groupId] ?? [];
-      if (multi) {
-        const exists = current.find((c) => c.id === choice.id);
-        return {
-          ...prev,
-          [groupId]: exists
-            ? current.filter((c) => c.id !== choice.id)
-            : [...current, choice],
-        };
+      const current = prev[group.id] ?? [];
+      if (group.multi) {
+        const exists = current.some((s) => s.choice.id === choice.id);
+        if (exists) {
+          return {
+            ...prev,
+            [group.id]: current.filter((s) => s.choice.id !== choice.id),
+          };
+        }
+        // Respect the group's max distinct choices
+        if (group.max && current.length >= group.max) return prev;
+        return { ...prev, [group.id]: [...current, { choice, qty: 1 }] };
       }
-      return { ...prev, [groupId]: [choice] };
+      return { ...prev, [group.id]: [{ choice, qty: 1 }] };
     });
   };
 
-  const isChoiceActive = (groupId: string, choiceId: string) =>
-    (selections[groupId] ?? []).some((c) => c.id === choiceId);
+  const setChoiceQty = (
+    group: ProductOptionGroup,
+    choice: ProductOptionChoice,
+    qty: number
+  ) => {
+    setSelections((prev) => {
+      const current = prev[group.id] ?? [];
+      if (qty <= 0) {
+        return {
+          ...prev,
+          [group.id]: current.filter((s) => s.choice.id !== choice.id),
+        };
+      }
+      const capped = Math.min(qty, 10);
+      return {
+        ...prev,
+        [group.id]: current.map((s) =>
+          s.choice.id === choice.id ? { ...s, qty: capped } : s
+        ),
+      };
+    });
+  };
+
+  const getSelection = (groupId: string, choiceId: string) =>
+    (selections[groupId] ?? []).find((s) => s.choice.id === choiceId);
 
   const performAdd = () => {
-    const flatOptions = Object.entries(selections).flatMap(([groupId, choices]) =>
-      choices.map((choice) => ({ groupId, choice }))
+    const flatOptions = optionGroups.flatMap((group) =>
+      (selections[group.id] ?? []).map((s) => ({
+        groupId: group.id,
+        groupName: group.name,
+        choice: s.choice,
+        qty: s.qty,
+      }))
     );
     const result = addItem({
       product,
@@ -200,7 +233,7 @@ function ProductPageContent({
                   <h2 className="text-[15px] font-extrabold tracking-tight text-[var(--color-ink)]">
                     {group.name}
                   </h2>
-                  {group.required ? (
+                  {groupMin(group) > 0 ? (
                     <Badge tone="brand">Required</Badge>
                   ) : (
                     <span className="text-[11px] font-semibold text-[var(--color-ink-soft)]">
@@ -208,25 +241,37 @@ function ProductPageContent({
                     </span>
                   )}
                 </div>
+                {group.hint && (
+                  <p className="mt-0.5 text-[12px] text-[var(--color-ink-muted)]">
+                    {group.hint}
+                  </p>
+                )}
                 <div className="mt-2 space-y-2">
                   {group.choices.map((choice) => {
-                    const active = isChoiceActive(group.id, choice.id);
+                    const selection = getSelection(group.id, choice.id);
+                    const active = !!selection;
+                    const showStepper = active && !!group.allowQuantity;
                     return (
-                      <button
+                      <div
                         key={choice.id}
-                        type="button"
-                        onClick={() =>
-                          toggleChoice(group.id, !!group.multi, choice)
-                        }
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => toggleChoice(group, choice)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            toggleChoice(group, choice);
+                          }
+                        }}
                         className={cn(
-                          "flex w-full items-center justify-between gap-3 rounded-2xl bg-white px-4 py-3 text-left ring-1 transition-colors",
+                          "flex w-full cursor-pointer items-center justify-between gap-3 rounded-2xl bg-white px-4 py-3 text-left ring-1 transition-colors",
                           active
                             ? "ring-2 ring-[var(--color-primary)] bg-[var(--color-primary-soft)]"
                             : "ring-[var(--color-line)] hover:bg-black/[0.02]"
                         )}
                         aria-pressed={active}
                       >
-                        <div className="flex items-center gap-3">
+                        <div className="flex min-w-0 items-center gap-3">
                           <span
                             className={cn(
                               "flex h-5 w-5 flex-none items-center justify-center transition-colors",
@@ -240,21 +285,39 @@ function ProductPageContent({
                           >
                             {active && <CheckIcon className="h-3.5 w-3.5" />}
                           </span>
-                          <span className="text-[14px] font-semibold text-[var(--color-ink)]">
+                          <span className="truncate text-[14px] font-semibold text-[var(--color-ink)]">
                             {choice.name}
                           </span>
                         </div>
-                        {choice.priceDelta && choice.priceDelta !== 0 ? (
-                          <span className="text-[13px] font-bold text-[var(--color-ink)]">
-                            {choice.priceDelta > 0 ? "+ " : "− "}
-                            {formatPrice(Math.abs(choice.priceDelta))}
-                          </span>
-                        ) : (
-                          <span className="text-[12px] font-semibold text-[var(--color-ink-soft)]">
-                            Included
-                          </span>
-                        )}
-                      </button>
+                        <div className="flex flex-none items-center gap-3">
+                          {showStepper && (
+                            <span onClick={(e) => e.stopPropagation()}>
+                              <QuantityStepper
+                                quantity={selection.qty}
+                                onIncrement={() =>
+                                  setChoiceQty(group, choice, selection.qty + 1)
+                                }
+                                onDecrement={() =>
+                                  setChoiceQty(group, choice, selection.qty - 1)
+                                }
+                              />
+                            </span>
+                          )}
+                          {choice.priceDelta && choice.priceDelta !== 0 ? (
+                            <span className="text-[13px] font-bold text-[var(--color-ink)]">
+                              {choice.priceDelta > 0 ? "+ " : "− "}
+                              {formatPrice(Math.abs(choice.priceDelta))}
+                              {showStepper && selection.qty > 1
+                                ? ` ×${selection.qty}`
+                                : ""}
+                            </span>
+                          ) : (
+                            <span className="text-[12px] font-semibold text-[var(--color-ink-soft)]">
+                              Included
+                            </span>
+                          )}
+                        </div>
+                      </div>
                     );
                   })}
                 </div>

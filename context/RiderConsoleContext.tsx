@@ -7,138 +7,32 @@ import {
   useMemo,
   useState,
 } from "react";
-import type { RiderJob, RiderOffer } from "@/types";
-import { normalizeStoredRiderJob } from "@/lib/riderOrderBag";
+import type {
+  Order,
+  RiderJob,
+  RiderJobStatus,
+  RiderOffer,
+  RiderOrderLineItem,
+} from "@/types";
+import { useOrders } from "@/context/OrdersContext";
 import { readLocalStorage, writeLocalStorage } from "@/lib/utils";
 
-const STORAGE_KEY = "ilueats:rider_console:v1";
+/**
+ * Rider console derives everything from the shared orders store:
+ * - Offers  = open orders (new/preparing) nobody has accepted yet.
+ * - Jobs    = orders this rider accepted; job stage follows order status.
+ * Accepting / picking up / delivering writes the status back, so the admin
+ * board and the rider screen always agree.
+ */
 
-const OFFER_POOL: RiderOffer[] = [
-  {
-    id: "ILU-9K2M",
-    store: "Mama Put Palace",
-    customer: "Kemi F.",
-    drop: "Babcock University gate",
-    pay: 850,
-    etaMin: 6,
-    phone: "08021112222",
-    lineItems: [
-      {
-        name: "Party jollof rice",
-        qty: 1,
-        modifiers: ["Extra goat meat"],
-      },
-      { name: "Moi moi", qty: 2 },
-      { name: "Zobo (75cl)", qty: 2 },
-    ],
-  },
-  {
-    id: "ILU-9K2N",
-    store: "Crisp Bites",
-    customer: "Dave L.",
-    drop: "OPIC — Cedar Close",
-    pay: 920,
-    etaMin: 8,
-    phone: "08032223333",
-    lineItems: [
-      { name: "Crunch duo box", qty: 1, modifiers: ["Mild spice"] },
-      { name: "Spicy fries", qty: 1, modifiers: ["Cheese dust"] },
-      { name: "Oreo shake", qty: 1 },
-    ],
-  },
-  {
-    id: "ILU-9K2P",
-    store: "SmoothCity",
-    customer: "Ife O.",
-    drop: "Campus roundabout ATM",
-    pay: 640,
-    etaMin: 5,
-    phone: "08043334444",
-    lineItems: [
-      { name: "Green detox", qty: 1 },
-      { name: "Ginger blast shot", qty: 2 },
-    ],
-  },
-  {
-    id: "ILU-9K2Q",
-    store: "Slice House",
-    customer: "Wale T.",
-    drop: "Ilisan post office",
-    pay: 1100,
-    etaMin: 10,
-    phone: "08054445555",
-    lineItems: [
-      {
-        name: "Pepperoni medium",
-        qty: 1,
-        modifiers: ["Stuffed crust", "Extra dip"],
-      },
-      { name: "Garlic bread", qty: 1 },
-    ],
-  },
-];
+const STORAGE_KEY = "ilueats:rider_console:v2";
 
-const INITIAL_JOBS: RiderJob[] = [
-  {
-    id: "ILU-9K2A",
-    store: "Crisp Bites",
-    customer: "Temi A.",
-    address: "Opic Estate — Block C",
-    payout: 520,
-    status: "pickup",
-    phone: "08031110001",
-    lineItems: [
-      {
-        name: "Double smash burger",
-        qty: 2,
-        modifiers: ["No pickles", "Bacon"],
-      },
-      { name: "Onion rings", qty: 1 },
-      { name: "Coke Zero 50cl", qty: 2 },
-    ],
-  },
-  {
-    id: "ILU-9K2H",
-    store: "SmoothCity",
-    customer: "Chidi O.",
-    address: "Babcock gate",
-    payout: 480,
-    status: "en_route",
-    phone: "08031110002",
-    lineItems: [
-      {
-        name: "Tropical fusion bowl",
-        qty: 1,
-        modifiers: ["No ginger"],
-      },
-      { name: "Cold-pressed orange", qty: 2 },
-      { name: "Protein muffin", qty: 2 },
-    ],
-  },
-  {
-    id: "ILU-9K2G",
-    store: "Slice House",
-    customer: "Anita I.",
-    address: "Campus roundabout",
-    payout: 610,
-    status: "done",
-    phone: "08031110003",
-    lineItems: [
-      {
-        name: "Veggie supreme (medium)",
-        qty: 1,
-        modifiers: ["Thin crust"],
-      },
-      { name: "Buffalo wings (6)", qty: 1 },
-      { name: "Coke 1.5L", qty: 1 },
-    ],
-  },
-];
+/** Seed acceptance so the demo console isn't empty on first load. */
+const SEED_ACCEPTED_ORDER_IDS = ["ILU-9K2K", "ILU-9K2H", "ILU-9K2G"];
 
 type PersistedShape = {
   isOnline: boolean;
-  jobs: RiderJob[];
-  offerCursor: number;
+  acceptedOrderIds: string[];
   deliveriesToday: number;
   tipsToday: number;
 };
@@ -146,8 +40,7 @@ type PersistedShape = {
 function defaultPersisted(): PersistedShape {
   return {
     isOnline: true,
-    jobs: INITIAL_JOBS,
-    offerCursor: 0,
+    acceptedOrderIds: SEED_ACCEPTED_ORDER_IDS,
     deliveriesToday: 7,
     tipsToday: 1200,
   };
@@ -156,16 +49,12 @@ function defaultPersisted(): PersistedShape {
 function loadPersisted(): PersistedShape {
   const fallback = defaultPersisted();
   const raw = readLocalStorage<PersistedShape | null>(STORAGE_KEY, null);
-  if (!raw || !Array.isArray(raw.jobs)) return fallback;
+  if (!raw || !Array.isArray(raw.acceptedOrderIds)) return fallback;
   return {
     isOnline: typeof raw.isOnline === "boolean" ? raw.isOnline : true,
-    jobs: raw.jobs.length
-      ? (raw.jobs as RiderJob[]).map(normalizeStoredRiderJob)
-      : fallback.jobs,
-    offerCursor:
-      typeof raw.offerCursor === "number"
-        ? Math.abs(raw.offerCursor) % OFFER_POOL.length
-        : 0,
+    acceptedOrderIds: raw.acceptedOrderIds.filter(
+      (id): id is string => typeof id === "string"
+    ),
     deliveriesToday:
       typeof raw.deliveriesToday === "number"
         ? raw.deliveriesToday
@@ -175,25 +64,54 @@ function loadPersisted(): PersistedShape {
   };
 }
 
-function savePersisted(data: PersistedShape) {
-  writeLocalStorage(STORAGE_KEY, data);
+function orderToRiderLines(order: Order): RiderOrderLineItem[] {
+  return order.lineItems.map((line) => ({
+    name: line.name,
+    qty: line.qty,
+    modifiers: [
+      ...(line.modifiers ?? []),
+      ...(line.notes ? [`Note: ${line.notes}`] : []),
+    ].slice(0, 8),
+  }));
 }
 
-function jobBlocksOffer(job: RiderJob, offer: RiderOffer) {
-  return job.id === offer.id && job.status !== "done";
+function orderStatusToJobStatus(order: Order): RiderJobStatus {
+  if (order.status === "delivered") return "done";
+  if (order.status === "out") return "en_route";
+  return "pickup";
 }
 
-function listAvailableOffers(jobs: RiderJob[]): RiderOffer[] {
-  return OFFER_POOL.filter(
-    (o) => !jobs.some((j) => jobBlocksOffer(j, o))
-  );
+function orderToJob(order: Order): RiderJob {
+  return {
+    id: order.id,
+    store: order.store,
+    customer: order.customer,
+    address: order.deliveryAddress,
+    payout: order.deliveryFee,
+    status: orderStatusToJobStatus(order),
+    phone: order.customerPhone,
+    lineItems: orderToRiderLines(order),
+  };
+}
+
+function orderToOffer(order: Order): RiderOffer {
+  return {
+    id: order.id,
+    store: order.store,
+    customer: order.customer,
+    drop: order.deliveryAddress,
+    pay: order.deliveryFee,
+    etaMin: Math.max(4, Math.round(order.deliveryFee / 100)),
+    phone: order.customerPhone,
+    lineItems: orderToRiderLines(order),
+  };
 }
 
 interface RiderConsoleContextValue {
   isOnline: boolean;
   setOnline: (next: boolean) => void;
   jobs: RiderJob[];
-  /** Offers you can pick up right now (not blocked by an active job). */
+  /** Offers you can pick up right now (open orders nobody accepted). */
   availableOffers: RiderOffer[];
   deliveriesToday: number;
   tipsToday: number;
@@ -212,28 +130,26 @@ export function RiderConsoleProvider({
 }: {
   children: React.ReactNode;
 }) {
+  const { orders, updateOrderStatus } = useOrders();
   const init = useMemo(() => loadPersisted(), []);
   const [isOnline, setIsOnlineState] = useState(init.isOnline);
-  const [jobs, setJobs] = useState<RiderJob[]>(init.jobs);
-  const [offerCursor, setOfferCursor] = useState(init.offerCursor);
-  const [deliveriesToday, setDeliveriesToday] = useState(
-    init.deliveriesToday
+  const [acceptedOrderIds, setAcceptedOrderIds] = useState<string[]>(
+    init.acceptedOrderIds
   );
+  const [deliveriesToday, setDeliveriesToday] = useState(init.deliveriesToday);
   const [tipsToday, setTipsToday] = useState(init.tipsToday);
 
   const persist = useCallback(
     (patch: Partial<PersistedShape>) => {
-      const next: PersistedShape = {
+      writeLocalStorage(STORAGE_KEY, {
         isOnline,
-        jobs,
-        offerCursor,
+        acceptedOrderIds,
         deliveriesToday,
         tipsToday,
         ...patch,
-      };
-      savePersisted(next);
+      });
     },
-    [isOnline, jobs, offerCursor, deliveriesToday, tipsToday]
+    [isOnline, acceptedOrderIds, deliveriesToday, tipsToday]
   );
 
   const setOnline = useCallback(
@@ -244,75 +160,63 @@ export function RiderConsoleProvider({
     [persist]
   );
 
-  const availableOffers = useMemo(() => {
+  const jobs = useMemo<RiderJob[]>(
+    () =>
+      acceptedOrderIds
+        .map((id) => orders.find((o) => o.id === id))
+        .filter((o): o is Order => !!o)
+        .map(orderToJob),
+    [acceptedOrderIds, orders]
+  );
+
+  const availableOffers = useMemo<RiderOffer[]>(() => {
     if (!isOnline) return [];
-    return listAvailableOffers(jobs);
-  }, [isOnline, jobs]);
+    return orders
+      .filter(
+        (o) =>
+          (o.status === "new" || o.status === "preparing") &&
+          !acceptedOrderIds.includes(o.id)
+      )
+      .map(orderToOffer);
+  }, [isOnline, orders, acceptedOrderIds]);
 
   const acceptOffer = useCallback(
     (offerId: string): boolean => {
       if (!isOnline) return false;
-      const o = OFFER_POOL.find((x) => x.id === offerId);
-      if (!o) return false;
-      if (jobs.some((j) => j.id === o.id && j.status !== "done")) return false;
+      const order = orders.find((o) => o.id === offerId);
+      if (!order || acceptedOrderIds.includes(offerId)) return false;
 
-      const row: RiderJob = {
-        id: o.id,
-        store: o.store,
-        customer: o.customer,
-        address: o.drop,
-        payout: o.pay,
-        status: "pickup",
-        phone: o.phone,
-        lineItems: o.lineItems,
-      };
-      const nextJobs = [
-        ...jobs.filter((j) => !(j.id === o.id && j.status === "done")),
-        row,
-      ];
-      const idx = OFFER_POOL.findIndex((x) => x.id === offerId);
-      const nextCursor =
-        idx >= 0 ? (idx + 1) % OFFER_POOL.length : offerCursor;
-      setJobs(nextJobs);
-      setOfferCursor(nextCursor);
-      persist({ jobs: nextJobs, offerCursor: nextCursor });
+      const next = [...acceptedOrderIds, offerId];
+      setAcceptedOrderIds(next);
+      persist({ acceptedOrderIds: next });
       return true;
     },
-    [isOnline, jobs, offerCursor, persist]
+    [isOnline, orders, acceptedOrderIds, persist]
   );
 
   const markPickedUp = useCallback(
     (jobId: string) => {
-      setJobs((prev) => {
-        const next = prev.map((j) =>
-          j.id === jobId && j.status === "pickup"
-            ? { ...j, status: "en_route" as const }
-            : j
-        );
-        persist({ jobs: next });
-        return next;
-      });
+      const order = orders.find((o) => o.id === jobId);
+      if (!order || orderStatusToJobStatus(order) !== "pickup") return;
+      updateOrderStatus(jobId, "out");
     },
-    [persist]
+    [orders, updateOrderStatus]
   );
 
   const markDelivered = useCallback(
     (jobId: string): number | null => {
-      const target = jobs.find((j) => j.id === jobId);
-      if (!target || target.status !== "en_route") return null;
+      const order = orders.find((o) => o.id === jobId);
+      if (!order || orderStatusToJobStatus(order) !== "en_route") return null;
       const tip = 150 + Math.floor(Math.random() * 200);
-      const next = jobs.map((j) =>
-        j.id === jobId ? { ...j, status: "done" as const } : j
-      );
+      updateOrderStatus(jobId, "delivered");
       const d = deliveriesToday + 1;
       const t = tipsToday + tip;
-      setJobs(next);
       setDeliveriesToday(d);
       setTipsToday(t);
-      persist({ jobs: next, deliveriesToday: d, tipsToday: t });
+      persist({ deliveriesToday: d, tipsToday: t });
       return tip;
     },
-    [jobs, deliveriesToday, tipsToday, persist]
+    [orders, updateOrderStatus, deliveriesToday, tipsToday, persist]
   );
 
   const value = useMemo<RiderConsoleContextValue>(

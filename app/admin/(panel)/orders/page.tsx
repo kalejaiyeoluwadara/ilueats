@@ -7,18 +7,15 @@ import {
 } from "@heroicons/react/24/outline";
 import { AdminOrderDetailModal } from "@/components/admin/AdminOrderDetailModal";
 import { Pagination } from "@/components/ui/Pagination";
-import {
-  ADMIN_ORDERS_MOCK,
-  adminOrderStatusBadge,
-  type AdminOrderRow,
-  type AdminOrderStatus,
-} from "@/data/adminOrdersMock";
+import { useOrders } from "@/context/OrdersContext";
+import { formatPlacedAgo, orderStatusBadge } from "@/lib/ordersStore";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { cn, formatPrice } from "@/lib/utils";
+import type { Order, OrderStatus } from "@/types";
 
 const ORDER_PAGE_SIZE = 10;
 
-type OrdersFilter = "all" | "open" | AdminOrderStatus;
+type OrdersFilter = "all" | "open" | OrderStatus;
 
 const ORDER_FILTER_CHIPS: { id: OrdersFilter; label: string }[] = [
   { id: "all", label: "All" },
@@ -30,9 +27,9 @@ const ORDER_FILTER_CHIPS: { id: OrdersFilter; label: string }[] = [
 ];
 
 function applyOrderStatusFilter(
-  rows: AdminOrderRow[],
+  rows: Order[],
   filter: OrdersFilter
-): AdminOrderRow[] {
+): Order[] {
   if (filter === "all") return rows;
   if (filter === "open") {
     return rows.filter((r) => r.status !== "delivered");
@@ -40,7 +37,7 @@ function applyOrderStatusFilter(
   return rows.filter((r) => r.status === filter);
 }
 
-function applyOrderSearch(rows: AdminOrderRow[], q: string): AdminOrderRow[] {
+function applyOrderSearch(rows: Order[], q: string): Order[] {
   const needle = q.trim().toLowerCase();
   if (!needle) return rows;
   return rows.filter((r) => {
@@ -61,18 +58,23 @@ function applyOrderSearch(rows: AdminOrderRow[], q: string): AdminOrderRow[] {
 }
 
 function countOrdersMatchingFilter(
-  rows: readonly AdminOrderRow[],
+  rows: readonly Order[],
   filter: OrdersFilter
 ): number {
   return applyOrderStatusFilter([...rows], filter).length;
 }
 
 export default function AdminOrdersPage() {
-  const rows = useMemo(() => ADMIN_ORDERS_MOCK, []);
+  const { orders: rows } = useOrders();
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<OrdersFilter>("all");
-  const [detailOrder, setDetailOrder] = useState<AdminOrderRow | null>(null);
+  const [detailOrderId, setDetailOrderId] = useState<string | null>(null);
+  // Resolve from live rows so status changes made in the modal render immediately.
+  const detailOrder = useMemo(
+    () => rows.find((r) => r.id === detailOrderId) ?? null,
+    [rows, detailOrderId]
+  );
 
   const filteredRows = useMemo(() => {
     const byStatus = applyOrderStatusFilter(rows, statusFilter);
@@ -205,7 +207,7 @@ export default function AdminOrdersPage() {
                 </tr>
               ) : (
                 pagedRows.map((r) => {
-                  const badge = adminOrderStatusBadge[r.status];
+                  const badge = orderStatusBadge[r.status];
                   return (
                     <tr
                       key={r.id}
@@ -234,12 +236,12 @@ export default function AdminOrdersPage() {
                         </span>
                       </td>
                       <td className="px-4 py-3.5 text-right text-[12px] font-medium text-[var(--color-ink-muted)]">
-                        {r.placed}
+                        {formatPlacedAgo(r.placedAt)}
                       </td>
                       <td className="px-2 py-3.5 text-center">
                         <button
                           type="button"
-                          onClick={() => setDetailOrder(r)}
+                          onClick={() => setDetailOrderId(r.id)}
                           className="inline-flex h-9 w-9 items-center justify-center rounded-full text-[var(--color-ink-muted)] outline-none ring-[var(--color-ink)]/0 transition hover:bg-black/[0.05] hover:text-[var(--color-ink)] focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/35"
                           aria-label={`Full details for ${r.id}`}
                         >
@@ -270,7 +272,7 @@ export default function AdminOrdersPage() {
       <AdminOrderDetailModal
         open={!!detailOrder}
         order={detailOrder}
-        onClose={() => setDetailOrder(null)}
+        onClose={() => setDetailOrderId(null)}
       />
     </div>
   );

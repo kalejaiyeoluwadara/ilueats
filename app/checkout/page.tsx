@@ -22,26 +22,38 @@ import { useAuth } from "@/hooks/useAuth";
 import { useAddresses } from "@/hooks/useAddresses";
 import { useToast } from "@/hooks/useToast";
 import { useCatalog } from "@/context/CatalogContext";
+import { useOrders } from "@/context/OrdersContext";
 import { pickupLandmarks } from "@/data/mockData";
-import { cn, formatPrice, shortId } from "@/lib/utils";
+import {
+  cn,
+  formatCartOption,
+  formatCartOptionWithPrice,
+  formatPrice,
+} from "@/lib/utils";
 
 type PayMethod = "card" | "transfer" | "cash";
 type DeliveryMode = "door" | "landmark";
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { items, subtotal, count, storeSlug, clearCart } = useCart();
+  const { items, subtotal, count, storeSlug, storeName, clearCart } = useCart();
   const { user, ready: authReady } = useAuth();
   const { addresses, defaultAddress, ready: addrReady } = useAddresses();
   const { success } = useToast();
   const { stores } = useCatalog();
+  const { placeOrder } = useOrders();
 
   const store = useMemo(
     () => (storeSlug ? stores.find((s) => s.slug === storeSlug) : undefined),
     [storeSlug, stores]
   );
   const deliveryFee = store?.deliveryFee ?? 0;
-  const total = subtotal + deliveryFee;
+  // Platform & handling — 5% of the basket, ₦100 floor / ₦500 cap (demo pricing).
+  const serviceFee =
+    subtotal > 0
+      ? Math.min(500, Math.max(100, Math.round((subtotal * 0.05) / 50) * 50))
+      : 0;
+  const total = subtotal + deliveryFee + serviceFee;
 
   const [step, setStep] = useState<"form" | "paying" | "done">("form");
   const [name, setName] = useState("");
@@ -91,13 +103,46 @@ export default function CheckoutPage() {
   const submit = async () => {
     if (!canSubmit) return;
     setStep("paying");
-    // Simulate payment / order placement
+    // Simulate payment, then record the order where admin & rider can see it
     await new Promise((r) => setTimeout(r, 2200));
-    const id = `ILU-${shortId().toUpperCase()}`;
-    setOrderId(id);
+
+    const paymentLabels: Record<PayMethod, string> = {
+      card: "Card (demo)",
+      transfer: "Bank transfer (verified)",
+      cash: "Pay on delivery",
+    };
+    const landmark = pickupLandmarks.find((l) => l.id === landmarkId);
+    const order = placeOrder({
+      customer: name.trim(),
+      customerPhone: phone.trim(),
+      deliveryMode,
+      deliveryAddress:
+        deliveryMode === "door"
+          ? address.trim()
+          : `Landmark — ${landmark?.label ?? "meet-up point"}`,
+      deliveryNote: notes.trim() || undefined,
+      storeId: store?.id,
+      store: storeName ?? store?.name ?? "Store",
+      storeAddress: store?.location ?? "Ilisan-Remo",
+      paymentLabel: paymentLabels[method],
+      deliveryFee,
+      serviceFee,
+      total,
+      lineItems: items.map((it) => ({
+        name: it.name,
+        qty: it.quantity,
+        unitPrice: it.price,
+        modifiers: it.selectedOptions?.length
+          ? it.selectedOptions.map(formatCartOptionWithPrice)
+          : undefined,
+        notes: it.notes,
+      })),
+    });
+
+    setOrderId(order.id);
     setStep("done");
     clearCart();
-    success("Order placed!", `Order ${id} is on its way.`);
+    success("Order placed!", `Order ${order.id} is on its way.`);
   };
 
   if (step === "done") {
@@ -276,8 +321,8 @@ export default function CheckoutPage() {
                     {it.quantity} × {it.name}
                   </p>
                   {it.selectedOptions && it.selectedOptions.length > 0 && (
-                    <p className="line-clamp-1 text-[12px] text-[var(--color-ink-muted)]">
-                      {it.selectedOptions.map((o) => o.name).join(" · ")}
+                    <p className="line-clamp-2 text-[12px] text-[var(--color-ink-muted)]">
+                      {it.selectedOptions.map(formatCartOption).join(" · ")}
                     </p>
                   )}
                 </div>
@@ -289,7 +334,11 @@ export default function CheckoutPage() {
           </ul>
         </section>
 
-        <CartSummary subtotal={subtotal} deliveryFee={deliveryFee} />
+        <CartSummary
+          subtotal={subtotal}
+          deliveryFee={deliveryFee}
+          serviceFee={serviceFee}
+        />
 
         {/* Desktop inline pay */}
         <div className="hidden lg:flex lg:items-center lg:gap-3 lg:rounded-2xl lg:bg-white lg:p-4 lg:ring-1 lg:ring-[var(--color-line)]">

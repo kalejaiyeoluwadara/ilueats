@@ -56,17 +56,44 @@ export interface Product {
   options?: ProductOptionGroup[];
 }
 
+/**
+ * Option group on a product. Two Nigerian ordering shapes are supported:
+ * - "Pick one" (shawarma size, spice level): single-select, `required`.
+ * - "Compose a plate" (rice + proteins + sides): `multi` with `allowQuantity`
+ *   so a customer can take 2× beef, add beans and plantain on top, etc.
+ */
 export interface ProductOptionGroup {
   id: string;
   name: string;
+  /** Shorthand for min = 1. */
   required?: boolean;
+  /** Allow several distinct choices (checkbox group). */
   multi?: boolean;
+  /** Minimum selections across the group (overrides `required` when set). */
+  min?: number;
+  /** Maximum distinct choices selectable (multi groups). */
+  max?: number;
+  /** Choices can repeat with a stepper, e.g. "2× Peppered Beef" (multi only). */
+  allowQuantity?: boolean;
+  /** Helper copy under the group title, e.g. "Comes with stew — pick your protein". */
+  hint?: string;
   choices: ProductOptionChoice[];
 }
 
 export interface ProductOptionChoice {
   id: string;
   name: string;
+  priceDelta?: number;
+}
+
+/** One chosen option on a cart line. qty > 1 only for allowQuantity groups. */
+export interface CartSelectedOption {
+  groupId: string;
+  choiceId: string;
+  name: string;
+  /** Defaults to 1 for lines saved before quantity support. */
+  qty?: number;
+  groupName?: string;
   priceDelta?: number;
 }
 
@@ -81,7 +108,7 @@ export interface CartItem {
   price: number; // unit price including options
   quantity: number;
   notes?: string;
-  selectedOptions?: { groupId: string; choiceId: string; name: string }[];
+  selectedOptions?: CartSelectedOption[];
 }
 
 export interface AdSlide {
@@ -115,6 +142,51 @@ export interface AuthUser {
   phone?: string;
   /** Present for all accounts after migration; defaults to customer when missing in storage. */
   role: UserRole;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Orders — single canonical shape shared by customer, admin, and rider.      */
+/* -------------------------------------------------------------------------- */
+
+export type OrderStatus = "new" | "preparing" | "out" | "delivered";
+
+/**
+ * A settled order line. `modifiers` are display-ready strings that already
+ * carry option quantity and price, e.g. "2× Peppered Beef (+₦1,400)".
+ */
+export interface OrderLineItem {
+  name: string;
+  qty: number;
+  /** Per-unit price including all selected options. */
+  unitPrice: number;
+  modifiers?: string[];
+  /** Free-text item note from the customer, e.g. "no onions". */
+  notes?: string;
+}
+
+export type OrderDeliveryMode = "door" | "landmark";
+
+export interface Order {
+  id: string;
+  /** ISO timestamp; UIs render a relative "x min ago". */
+  placedAt: string;
+  customer: string;
+  customerPhone: string;
+  deliveryAddress: string;
+  deliveryMode?: OrderDeliveryMode;
+  /** Notes for the rider (gate code, apartment, etc.). */
+  deliveryNote?: string;
+  storeId?: string;
+  store: string;
+  storeAddress: string;
+  paymentLabel: string;
+  deliveryFee: number;
+  serviceFee: number;
+  total: number;
+  status: OrderStatus;
+  lineItems: OrderLineItem[];
+  /** seed = demo board row; app = placed via checkout in this browser. */
+  source?: "seed" | "app";
 }
 
 /** Rider-visible order lines (picked up bag) — qty + mods to avoid wrong handoff. */

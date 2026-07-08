@@ -35,14 +35,41 @@ export function slugify(input: string): string {
 /** Stable id generator for cart line items based on product + selected options */
 export function makeCartLineId(
   productId: string,
-  options?: { groupId: string; choiceId: string }[]
+  options?: { groupId: string; choiceId: string; qty?: number }[]
 ) {
   if (!options || options.length === 0) return productId;
   const sig = [...options]
-    .sort((a, b) => a.groupId.localeCompare(b.groupId))
-    .map((o) => `${o.groupId}:${o.choiceId}`)
+    .sort(
+      (a, b) =>
+        a.groupId.localeCompare(b.groupId) ||
+        a.choiceId.localeCompare(b.choiceId)
+    )
+    .map((o) => `${o.groupId}:${o.choiceId}x${o.qty ?? 1}`)
     .join("|");
   return `${productId}::${sig}`;
+}
+
+/** "Peppered Beef" / "2× Peppered Beef" — customer-facing option label. */
+export function formatCartOption(o: { name: string; qty?: number }): string {
+  const qty = o.qty ?? 1;
+  return qty > 1 ? `${qty}× ${o.name}` : o.name;
+}
+
+/**
+ * Option label with its price, e.g. "2× Peppered Beef (+₦1,400)".
+ * This is what lands in order modifiers so admin & rider see full detail.
+ */
+export function formatCartOptionWithPrice(o: {
+  name: string;
+  qty?: number;
+  priceDelta?: number;
+}): string {
+  const label = formatCartOption(o);
+  const qty = o.qty ?? 1;
+  const delta = (o.priceDelta ?? 0) * qty;
+  if (delta === 0) return label;
+  const sign = delta > 0 ? "+" : "−";
+  return `${label} (${sign}${formatPrice(Math.abs(delta))})`;
 }
 
 export function clamp(n: number, min: number, max: number) {

@@ -1,78 +1,46 @@
-export type AdminOrderStatus = "new" | "preparing" | "out" | "delivered";
+import type { Order } from "@/types";
 
-export type AdminOrderLineItem = {
-  name: string;
-  qty: number;
-  unitPrice: number;
-  modifiers?: string[];
+/**
+ * Order board seed (split so ordersStore avoids circular imports).
+ * `placedMinsAgo` is converted to an absolute `placedAt` when the store
+ * clones the seed, so relative labels stay believable across sessions.
+ */
+export type OrderSeedRow = Omit<Order, "placedAt" | "source"> & {
+  placedMinsAgo: number;
 };
 
-export type AdminOrderRow = {
-  id: string;
-  customer: string;
-  customerPhone: string;
-  deliveryAddress: string;
-  store: string;
-  storeAddress: string;
-  paymentLabel: string;
-  total: number;
-  deliveryFee: number;
-  serviceFee: number;
-  status: AdminOrderStatus;
-  placed: string;
-  lineItems: AdminOrderLineItem[];
-};
-
-export function adminOrderLinesSubtotal(items: AdminOrderLineItem[]): number {
-  return items.reduce((sum, i) => sum + i.qty * i.unitPrice, 0);
-}
-
-export const adminOrderStatusBadge: Record<
-  AdminOrderStatus,
-  { label: string; className: string }
-> = {
-  new: {
-    label: "New",
-    className:
-      "bg-[var(--color-primary-soft)] text-[var(--color-primary)] ring-[var(--color-primary)]/20",
-  },
-  preparing: {
-    label: "Preparing",
-    className: "bg-amber-50 text-amber-800 ring-amber-200/80",
-  },
-  out: {
-    label: "Out for delivery",
-    className: "bg-sky-50 text-sky-800 ring-sky-200/80",
-  },
-  delivered: {
-    label: "Delivered",
-    className:
-      "bg-[var(--color-success-soft)] text-[var(--color-success)] ring-emerald-200/80",
-  },
-};
-
-export const ADMIN_ORDERS_MOCK: AdminOrderRow[] = [
+export const ORDERS_SEED: OrderSeedRow[] = [
   {
     id: "ILU-9K2M",
     customer: "Temi A.",
     customerPhone: "08031110001",
     deliveryAddress: "Opic Estate — Block C12, Ilisan",
-    store: "Mama Put Palace",
+    store: "Mama Tope's Kitchen",
     storeAddress: "Shop 4, Ilisan market row",
     paymentLabel: "Pay on delivery",
-    total: 5200,
+    total: 9350,
     deliveryFee: 600,
     serviceFee: 250,
     status: "new",
-    placed: "2 min ago",
+    placedMinsAgo: 2,
     lineItems: [
+      {
+        name: "White Rice & Stew",
+        qty: 1,
+        unitPrice: 4600,
+        modifiers: [
+          "2× Peppered Beef (+₦1,400)",
+          "Fried Fish (+₦1,200)",
+          "Beans on top (+₦500)",
+          "Fried Plantain (+₦500)",
+        ],
+      },
       {
         name: "Party jollof rice",
         qty: 2,
         unitPrice: 1400,
-        modifiers: ["Extra goat meat", "Medium spice"],
+        modifiers: ["Grilled Chicken", "Extra stew (+₦300)"],
       },
-      { name: "Moi moi wrap", qty: 2, unitPrice: 450 },
       { name: "Zobo drink (75cl)", qty: 1, unitPrice: 650 },
     ],
   },
@@ -88,7 +56,7 @@ export const ADMIN_ORDERS_MOCK: AdminOrderRow[] = [
     deliveryFee: 700,
     serviceFee: 350,
     status: "preparing",
-    placed: "8 min ago",
+    placedMinsAgo: 8,
     lineItems: [
       {
         name: "Crunch chicken bucket (8 pcs)",
@@ -96,11 +64,7 @@ export const ADMIN_ORDERS_MOCK: AdminOrderRow[] = [
         unitPrice: 6950,
         modifiers: ["Honey glaze"],
       },
-      {
-        name: "Spicy fries",
-        qty: 3,
-        unitPrice: 790,
-      },
+      { name: "Spicy fries", qty: 3, unitPrice: 790 },
       { name: "Mango chill smoothie", qty: 2, unitPrice: 855 },
     ],
   },
@@ -116,7 +80,7 @@ export const ADMIN_ORDERS_MOCK: AdminOrderRow[] = [
     deliveryFee: 500,
     serviceFee: 200,
     status: "out",
-    placed: "14 min ago",
+    placedMinsAgo: 14,
     lineItems: [
       {
         name: "Tropical fusion bowl",
@@ -124,11 +88,7 @@ export const ADMIN_ORDERS_MOCK: AdminOrderRow[] = [
         unitPrice: 1500,
         modifiers: ["No ginger", "Extra chia"],
       },
-      {
-        name: "Cold-pressed orange",
-        qty: 2,
-        unitPrice: 850,
-      },
+      { name: "Cold-pressed orange", qty: 2, unitPrice: 850 },
       { name: "Protein muffin", qty: 2, unitPrice: 250 },
     ],
   },
@@ -144,7 +104,7 @@ export const ADMIN_ORDERS_MOCK: AdminOrderRow[] = [
     deliveryFee: 0,
     serviceFee: 800,
     status: "delivered",
-    placed: "Yesterday",
+    placedMinsAgo: 60 * 24,
     lineItems: [
       {
         name: "Meat feast large",
@@ -152,16 +112,8 @@ export const ADMIN_ORDERS_MOCK: AdminOrderRow[] = [
         unitPrice: 6980,
         modifiers: ["Thin crust", "Extra cheese"],
       },
-      {
-        name: "Garlic dough balls",
-        qty: 4,
-        unitPrice: 1150,
-      },
-      {
-        name: "Tiramisu slice",
-        qty: 3,
-        unitPrice: 1420,
-      },
+      { name: "Garlic dough balls", qty: 4, unitPrice: 1150 },
+      { name: "Tiramisu slice", qty: 3, unitPrice: 1420 },
     ],
   },
   {
@@ -169,22 +121,32 @@ export const ADMIN_ORDERS_MOCK: AdminOrderRow[] = [
     customer: "Bola E.",
     customerPhone: "08031110005",
     deliveryAddress: "Greenfield annex — Apt 3B",
-    store: "Mama Put Palace",
+    store: "Mama Tope's Kitchen",
     storeAddress: "Shop 4, Ilisan market row",
     paymentLabel: "Pay on delivery",
-    total: 6200,
+    total: 8250,
     deliveryFee: 600,
     serviceFee: 300,
     status: "preparing",
-    placed: "32 min ago",
+    placedMinsAgo: 32,
     lineItems: [
       {
-        name: "Ofada rice & ayamase",
-        qty: 2,
-        unitPrice: 1900,
-        modifiers: ["Assorted meat"],
+        name: "Jollof Spaghetti",
+        qty: 1,
+        unitPrice: 3900,
+        modifiers: [
+          "Turkey (+₦2,200)",
+          "2× Boiled Egg (+₦800)",
+          "Coleslaw (+₦600)",
+        ],
+        notes: "Not too spicy please",
       },
-      { name: "Plantain (fried)", qty: 3, unitPrice: 400 },
+      {
+        name: "Ewa Agoyin (Beans)",
+        qty: 1,
+        unitPrice: 2550,
+        modifiers: ["Fried Fish (+₦1,200)", "Agege Bread (+₦500)"],
+      },
       { name: "Chapman (1L)", qty: 1, unitPrice: 900 },
     ],
   },
@@ -200,7 +162,7 @@ export const ADMIN_ORDERS_MOCK: AdminOrderRow[] = [
     deliveryFee: 650,
     serviceFee: 200,
     status: "out",
-    placed: "45 min ago",
+    placedMinsAgo: 45,
     lineItems: [
       {
         name: "Double smash burger",
@@ -224,7 +186,7 @@ export const ADMIN_ORDERS_MOCK: AdminOrderRow[] = [
     deliveryFee: 700,
     serviceFee: 600,
     status: "delivered",
-    placed: "2h ago",
+    placedMinsAgo: 120,
     lineItems: [
       {
         name: "Veggie supreme (medium)",
@@ -248,7 +210,7 @@ export const ADMIN_ORDERS_MOCK: AdminOrderRow[] = [
     deliveryFee: 450,
     serviceFee: 150,
     status: "new",
-    placed: "3 min ago",
+    placedMinsAgo: 3,
     lineItems: [
       { name: "Jollof & chicken lunchbox", qty: 1, unitPrice: 1200 },
       { name: "Spring roll (2)", qty: 1, unitPrice: 300 },
@@ -266,22 +228,22 @@ export const ADMIN_ORDERS_MOCK: AdminOrderRow[] = [
     deliveryFee: 0,
     serviceFee: 100,
     status: "delivered",
-    placed: "3h ago",
+    placedMinsAgo: 180,
     lineItems: [{ name: "Acai power blend", qty: 1, unitPrice: 1400 }],
   },
   {
     id: "ILU-9K2D",
     customer: "Amaka U.",
     customerPhone: "08031110010",
-    deliveryAddress: "Mama Put — eat-in table 2 (runner)",
-    store: "Mama Put Palace",
+    deliveryAddress: "Mama Tope — eat-in table 2 (runner)",
+    store: "Mama Tope's Kitchen",
     storeAddress: "Shop 4, Ilisan market row",
     paymentLabel: "POS — terminal 3",
     total: 8900,
     deliveryFee: 0,
     serviceFee: 400,
     status: "preparing",
-    placed: "1h ago",
+    placedMinsAgo: 60,
     lineItems: [
       {
         name: "Seafood okro",
@@ -305,7 +267,7 @@ export const ADMIN_ORDERS_MOCK: AdminOrderRow[] = [
     deliveryFee: 900,
     serviceFee: 450,
     status: "out",
-    placed: "20 min ago",
+    placedMinsAgo: 20,
     lineItems: [
       {
         name: "Grilled barracuda platter",
@@ -329,7 +291,7 @@ export const ADMIN_ORDERS_MOCK: AdminOrderRow[] = [
     deliveryFee: 500,
     serviceFee: 200,
     status: "delivered",
-    placed: "Saturday",
+    placedMinsAgo: 60 * 48,
     lineItems: [
       {
         name: "Family rice box",

@@ -35,6 +35,12 @@ export const metadata: Metadata = {
   ],
   applicationName: "IluEats",
   authors: [{ name: "IluEats" }],
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "IluEats",
+  },
   openGraph: {
     title: "IluEats — Your town. Your taste. Delivered.",
     description:
@@ -44,7 +50,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#e8541a",
+  themeColor: "#e64e0e",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,

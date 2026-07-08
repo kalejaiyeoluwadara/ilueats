@@ -15,7 +15,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { StoreCard } from "@/components/home/StoreCard";
-import { ContentLoader } from "@/components/ui/Loaders";
+import { SearchPageSkeleton } from "@/components/ui/Skeletons";
 import { ErrorState } from "@/components/ui/EmptyState";
 import { useCatalog } from "@/context/CatalogContext";
 import { useSearchCatalog } from "@/hooks/useCatalogQueries";
@@ -181,7 +181,7 @@ function SearchPageInner() {
             }
           />
         ) : searchLoading ? (
-          <ContentLoader message={`Searching for “${trimmed}”…`} />
+          <SearchPageSkeleton />
         ) : searchError ? (
           <ErrorState message={searchError} />
         ) : totalResults === 0 ? (

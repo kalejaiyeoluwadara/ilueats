@@ -66,7 +66,7 @@ export default function StorePage({ params }: PageProps) {
   }
 
   if (storeLoading) {
-    return <PageLoader message="Loading store…" />;
+    return <StorePageSkeleton />;
   }
 
   if (storeError || !store) {

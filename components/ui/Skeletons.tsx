@@ -163,3 +163,43 @@ export function StorePageSkeleton() {
     </div>
   );
 }
+
+/** Shimmering skeleton loader for the SearchPage results. */
+export function SearchPageSkeleton() {
+  return (
+    <div className="space-y-8">
+      {/* Dishes Skeleton Section */}
+      <section>
+        <div className="mb-3">
+          <div className="h-5 w-24 rounded bg-[var(--color-line)] skeleton" />
+          <div className="mt-1 h-3.5 w-36 rounded bg-[var(--color-line)] skeleton" />
+        </div>
+        <ul className="grid grid-cols-1 gap-2.5 lg:grid-cols-2 lg:gap-3">
+          {Array.from({ length: 4 }).map((_, idx) => (
+            <li key={idx} className="flex items-center gap-3 rounded-2xl border border-[var(--color-line)] bg-[var(--color-surface)] p-2.5">
+              <div className="h-16 w-16 shrink-0 rounded-xl bg-[var(--color-line)] skeleton" />
+              <div className="min-w-0 flex-1 space-y-1.5">
+                <div className="h-4 w-32 rounded bg-[var(--color-line)] skeleton" />
+                <div className="h-3 w-48 rounded bg-[var(--color-line)] skeleton" />
+                <div className="h-3 w-12 rounded bg-[var(--color-line)] skeleton" />
+              </div>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      {/* Stores Skeleton Section */}
+      <section>
+        <div className="mb-3">
+          <div className="h-5 w-24 rounded bg-[var(--color-line)] skeleton" />
+          <div className="mt-1 h-3.5 w-48 rounded bg-[var(--color-line)] skeleton" />
+        </div>
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-3 lg:gap-x-6 lg:gap-y-9">
+          {Array.from({ length: 3 }).map((_, idx) => (
+            <StoreCardSkeleton key={idx} />
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}

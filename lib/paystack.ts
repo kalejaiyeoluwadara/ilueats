@@ -10,18 +10,22 @@ interface PaystackPopupOptions {
   onClose: () => void;
 }
 
+interface PaystackSetupOptions {
+  key: string;
+  email?: string;
+  amount?: number;
+  ref?: string;
+  access_code?: string;
+  onSuccess?: (transaction: { reference: string }) => void;
+  onCancel?: () => void;
+  callback?: (transaction: { reference: string }) => void;
+  onClose?: () => void;
+}
+
 declare global {
   interface Window {
     PaystackPop?: {
-      setup: (options: {
-        key: string;
-        email: string;
-        amount: number;
-        ref: string;
-        access_code?: string;
-        onSuccess: (transaction: { reference: string }) => void;
-        onCancel: () => void;
-      }) => { openIframe: () => void };
+      setup: (options: PaystackSetupOptions) => { openIframe: () => void };
     };
   }
 }
@@ -51,13 +55,21 @@ export async function openPaystackPopup(options: PaystackPopupOptions) {
   await loadPaystackScript();
   if (!window.PaystackPop) throw new Error("Paystack failed to initialize");
 
-  window.PaystackPop.setup({
+  const setupParams: PaystackSetupOptions = {
     key: options.key,
-    email: options.email,
-    amount: options.amount,
-    ref: options.ref,
-    access_code: options.accessCode,
     onSuccess: (transaction) => options.onSuccess(transaction.reference),
     onCancel: options.onClose,
-  }).openIframe();
+    callback: (transaction) => options.onSuccess(transaction.reference),
+    onClose: options.onClose,
+  };
+
+  if (options.accessCode) {
+    setupParams.access_code = options.accessCode;
+  } else {
+    setupParams.email = options.email;
+    setupParams.amount = options.amount;
+    setupParams.ref = options.ref;
+  }
+
+  window.PaystackPop.setup(setupParams).openIframe();
 }

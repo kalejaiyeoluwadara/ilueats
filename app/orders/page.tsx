@@ -102,6 +102,7 @@ export default function OrdersPage() {
         setLoading(false);
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authReady, user?.id, fetchOrders]);
 
   const loadOrderDetail = async (orderId: string) => {

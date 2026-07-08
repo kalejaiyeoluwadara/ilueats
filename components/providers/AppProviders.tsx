@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { SessionProvider } from "next-auth/react";
 import { AddressesProvider } from "@/context/AddressesContext";
 import { AuthProvider } from "@/context/AuthContext";
 import { BannerProvider } from "@/context/BannersContext";
@@ -31,6 +32,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
+    <SessionProvider>
     <ToastProvider>
       <AuthProvider>
         {/* Catalog must wrap SearchProvider so SearchModal (sibling to pages) sees the same snapshot. */}
@@ -53,5 +55,6 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
         </CatalogProvider>
       </AuthProvider>
     </ToastProvider>
+    </SessionProvider>
   );
 }

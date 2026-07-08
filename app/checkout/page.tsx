@@ -14,6 +14,7 @@ import {
   MapPinIcon,
   PencilSquareIcon,
 } from "@heroicons/react/24/outline";
+import { useSession } from "next-auth/react";
 import { Navbar } from "@/components/layout/Navbar";
 import { Button } from "@/components/ui/Button";
 import { CartSummary } from "@/components/cart/CartSummary";
@@ -24,6 +25,10 @@ import { useToast } from "@/hooks/useToast";
 import { useCatalog } from "@/context/CatalogContext";
 import { useOrders } from "@/context/OrdersContext";
 import { pickupLandmarks } from "@/data/mockData";
+import { createOrder as createBackendOrder } from "@/lib/api/orders";
+import { initializePayment, verifyPayment } from "@/lib/api/payments";
+import { ApiError } from "@/lib/api/client";
+import { openPaystackPopup } from "@/lib/paystack";
 import {
   cn,
   formatCartOption,
@@ -38,8 +43,9 @@ export default function CheckoutPage() {
   const router = useRouter();
   const { items, subtotal, count, storeSlug, storeName, clearCart } = useCart();
   const { user, ready: authReady } = useAuth();
+  const { data: session } = useSession();
   const { addresses, defaultAddress, ready: addrReady } = useAddresses();
-  const { success } = useToast();
+  const { success, error: toastError } = useToast();
   const { stores } = useCatalog();
   const { placeOrder } = useOrders();
 
@@ -100,19 +106,15 @@ export default function CheckoutPage() {
     return landmarkId !== null;
   }, [name, phone, address, deliveryMode, landmarkId]);
 
-  const submit = async () => {
-    if (!canSubmit) return;
-    setStep("paying");
-    // Simulate payment, then record the order where admin & rider can see it
-    await new Promise((r) => setTimeout(r, 2200));
+  const paymentLabels: Record<PayMethod, string> = {
+    card: "Card (demo)",
+    transfer: "Bank transfer (verified)",
+    cash: "Pay on delivery",
+  };
 
-    const paymentLabels: Record<PayMethod, string> = {
-      card: "Card (demo)",
-      transfer: "Bank transfer (verified)",
-      cash: "Pay on delivery",
-    };
+  const recordLocalOrder = (finalPaymentLabel: string) => {
     const landmark = pickupLandmarks.find((l) => l.id === landmarkId);
-    const order = placeOrder({
+    return placeOrder({
       customer: name.trim(),
       customerPhone: phone.trim(),
       deliveryMode,
@@ -124,7 +126,7 @@ export default function CheckoutPage() {
       storeId: store?.id,
       store: storeName ?? store?.name ?? "Store",
       storeAddress: store?.location ?? "Ilisan-Remo",
-      paymentLabel: paymentLabels[method],
+      paymentLabel: finalPaymentLabel,
       deliveryFee,
       serviceFee,
       total,
@@ -138,11 +140,98 @@ export default function CheckoutPage() {
         notes: it.notes,
       })),
     });
+  };
 
+  // Signed-in users hit the real Nest backend: create the order there, then
+  // charge it through Paystack. Guests keep the local mock flow below.
+  const submitViaBackend = async () => {
+    if (!store || !session?.accessToken) return;
+    setStep("paying");
+
+    try {
+      const backendOrder = await createBackendOrder({
+        storeId: store.id,
+        storeSlug: store.slug,
+        items: items.map((it) => ({
+          productId: it.productId,
+          quantity: it.quantity,
+          selectedOptions: it.selectedOptions?.map((o) => ({
+            groupId: o.groupId,
+            choiceId: o.choiceId,
+          })),
+          notes: it.notes,
+        })),
+        deliveryMode,
+        address: deliveryMode === "door" ? address.trim() : undefined,
+        landmarkId: deliveryMode === "landmark" ? landmarkId ?? undefined : undefined,
+        contactName: name.trim(),
+        contactPhone: phone.trim(),
+        notes: notes.trim() || undefined,
+        paymentMethod: method,
+      });
+
+      if (backendOrder.paymentRequired) {
+        const payment = await initializePayment(backendOrder.orderId);
+        openPaystackPopup({
+          key: payment.publicKey,
+          email: session.user.email ?? "",
+          amount: Math.round(total * 100),
+          ref: payment.reference,
+          accessCode: payment.accessCode,
+          onSuccess: async (reference) => {
+            try {
+              await verifyPayment(reference);
+              recordLocalOrder(paymentLabels[method]);
+              setOrderId(backendOrder.orderId);
+              setStep("done");
+              clearCart();
+              success("Payment received!", `Order ${backendOrder.orderId} is on its way.`);
+            } catch (err) {
+              toastError(
+                "Payment could not be verified",
+                err instanceof ApiError ? err.message : "Please contact support with your reference.",
+              );
+              setStep("form");
+            }
+          },
+          onClose: () => {
+            setStep("form");
+          },
+        });
+      } else {
+        recordLocalOrder(paymentLabels[method]);
+        setOrderId(backendOrder.orderId);
+        setStep("done");
+        clearCart();
+        success("Order placed!", `Order ${backendOrder.orderId} is on its way.`);
+      }
+    } catch (err) {
+      toastError(
+        "Could not place order",
+        err instanceof ApiError ? err.message : "Something went wrong. Try again.",
+      );
+      setStep("form");
+    }
+  };
+
+  const submitLocalDemo = async () => {
+    setStep("paying");
+    // Simulate payment, then record the order where admin & rider can see it
+    await new Promise((r) => setTimeout(r, 2200));
+    const order = recordLocalOrder(paymentLabels[method]);
     setOrderId(order.id);
     setStep("done");
     clearCart();
     success("Order placed!", `Order ${order.id} is on its way.`);
+  };
+
+  const submit = async () => {
+    if (!canSubmit) return;
+    if (session?.accessToken) {
+      await submitViaBackend();
+    } else {
+      await submitLocalDemo();
+    }
   };
 
   if (step === "done") {

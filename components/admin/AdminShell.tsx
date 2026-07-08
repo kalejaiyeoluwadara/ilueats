@@ -68,8 +68,8 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     return pathname === href || pathname.startsWith(`${href}/`);
   };
 
-  const onSignOut = () => {
-    signOut();
+  const onSignOut = async () => {
+    await signOut();
     router.push("/admin/login");
   };
 

@@ -79,8 +79,8 @@ export default function RiderProfilePage() {
         variant="danger"
         fullWidth
         size="lg"
-        onClick={() => {
-          signOut();
+        onClick={async () => {
+          await signOut();
           router.push("/rider/login");
         }}
       >

@@ -59,8 +59,8 @@ export function RiderShell({ children }: { children: React.ReactNode }) {
     return pathname === href || pathname.startsWith(`${href}/`);
   };
 
-  const onSignOut = () => {
-    signOut();
+  const onSignOut = async () => {
+    await signOut();
     router.push("/rider/login");
   };
 

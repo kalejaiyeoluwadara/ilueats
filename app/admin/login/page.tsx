@@ -34,7 +34,7 @@ export default function AdminLoginPage() {
     e.preventDefault();
     setBusy(true);
     try {
-      const r = signIn(email, password, { allowedRoles: ["admin"] });
+      const r = await signIn(email, password, { allowedRoles: ["admin"] });
       if (!r.ok) {
         toastError("Sign in failed", r.error);
         return;

@@ -34,7 +34,7 @@ export default function RiderLoginPage() {
     e.preventDefault();
     setBusy(true);
     try {
-      const r = signIn(email, password, { allowedRoles: ["rider"] });
+      const r = await signIn(email, password, { allowedRoles: ["rider"] });
       if (!r.ok) {
         toastError("Sign in failed", r.error);
         return;

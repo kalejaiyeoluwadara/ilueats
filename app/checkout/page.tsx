@@ -13,6 +13,7 @@ import {
   HomeIcon,
   MapPinIcon,
   PencilSquareIcon,
+  LockClosedIcon,
 } from "@heroicons/react/24/outline";
 import { useSession } from "next-auth/react";
 import { Navbar } from "@/components/layout/Navbar";
@@ -68,7 +69,7 @@ export default function CheckoutPage() {
   const [deliveryMode, setDeliveryMode] = useState<DeliveryMode>("door");
   const [landmarkId, setLandmarkId] = useState<string | null>(null);
   const [notes, setNotes] = useState("");
-  const [method, setMethod] = useState<PayMethod>("card");
+  const [method, setMethod] = useState<PayMethod>("transfer");
   const [orderId, setOrderId] = useState<string>("");
 
   // Redirect to cart if there's nothing to checkout
@@ -234,6 +235,41 @@ export default function CheckoutPage() {
     }
   };
 
+  if (!authReady) {
+    return (
+      <div className="min-h-screen pb-24">
+        <Navbar variant="page" title="Checkout" showSearch={false} />
+        <div className="flex min-h-[50vh] items-center justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-[var(--color-primary)] border-t-transparent" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen pb-24">
+        <Navbar variant="page" title="Checkout" showSearch={false} />
+        <main className="mx-auto flex max-w-md flex-col items-center px-6 pt-20 text-center">
+          <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[var(--color-primary-soft)] text-[var(--color-primary)] ring-1 ring-[var(--color-primary)]/10 animate-pulse">
+            <LockClosedIcon className="h-9 w-9" />
+          </div>
+          <h1 className="font-display mt-6 text-[22px] font-extrabold tracking-tight text-[var(--color-ink)]">
+            Sign in to check out
+          </h1>
+          <p className="mt-2 text-[14px] leading-relaxed text-[var(--color-ink-muted)]">
+            Please log in or create an account to complete your order. Your items are saved.
+          </p>
+          <Link href="/account?redirect=/checkout" className="mt-6 w-full">
+            <Button size="lg" fullWidth>
+              Sign in / Register
+            </Button>
+          </Link>
+        </main>
+      </div>
+    );
+  }
+
   if (step === "done") {
     return <SuccessView orderId={orderId} total={total} />;
   }
@@ -374,22 +410,15 @@ export default function CheckoutPage() {
           <SectionHeader
             icon={<CreditCardIcon className="h-4 w-4" />}
             title="Payment method"
-            subtitle="Simulated for demo — no real charge."
+            subtitle="Complete your payment using secure bank transfer."
           />
-          <div className="mt-3 grid gap-2">
+          <div className="mt-3">
             <PaymentOption
-              active={method === "transfer"}
+              active={true}
               icon={<DevicePhoneMobileIcon className="h-5 w-5" />}
               title="Bank transfer"
-              subtitle="Get a one-time account number"
-              onClick={() => setMethod("transfer")}
-            />
-            <PaymentOption
-              active={method === "cash"}
-              icon={<BanknotesIcon className="h-5 w-5" />}
-              title="Cash on delivery"
-              subtitle="Pay the rider when your order arrives"
-              onClick={() => setMethod("cash")}
+              subtitle="Get a one-time account number via Paystack"
+              onClick={() => {}}
             />
           </div>
         </section>

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   ChevronRightIcon,
   HeartIcon,
@@ -33,6 +34,10 @@ type AuthMode = "signin" | "signup";
 export default function AccountPage() {
   const { user, ready, signIn, signUp, signOut, updateProfile } = useAuth();
   const { success, error: toastError } = useToast();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectTo = searchParams?.get("redirect") || null;
+
   const [mode, setMode] = useState<AuthMode>("signin");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -47,18 +52,24 @@ export default function AccountPage() {
     setBusy(true);
     try {
       if (mode === "signin") {
-        const r = signIn(email, password, { allowedRoles: ["customer"] });
+        const r = await signIn(email, password, { allowedRoles: ["customer"] });
         if (!r.ok) toastError("Sign in failed", r.error);
         else {
           success("Welcome back", "You're signed in on this device.");
           setPassword("");
+          if (redirectTo) {
+            router.replace(redirectTo);
+          }
         }
       } else {
-        const r = signUp(name, email, password);
+        const r = await signUp(name, email, password);
         if (!r.ok) toastError("Could not create account", r.error);
         else {
           success("Account created", "You're signed in on this device.");
           setPassword("");
+          if (redirectTo) {
+            router.replace(redirectTo);
+          }
         }
       }
     } finally {
@@ -73,10 +84,14 @@ export default function AccountPage() {
     setEditing(true);
   };
 
-  const saveProfile = () => {
-    updateProfile({ name: editName, phone: editPhone });
-    setEditing(false);
-    success("Profile updated");
+  const saveProfile = async () => {
+    try {
+      await updateProfile({ name: editName, phone: editPhone });
+      setEditing(false);
+      success("Profile updated");
+    } catch (err) {
+      toastError("Could not update profile", err instanceof Error ? err.message : "Please try again.");
+    }
   };
 
   return (
@@ -125,8 +140,8 @@ export default function AccountPage() {
                     size="sm"
                     className="text-[var(--color-ink-soft)]"
                     leftIcon={<ArrowRightOnRectangleIcon className="h-4 w-4" />}
-                    onClick={() => {
-                      signOut();
+                    onClick={async () => {
+                      await signOut();
                       success("Signed out");
                     }}
                   >
@@ -173,9 +188,7 @@ export default function AccountPage() {
                 </div>
               )}
             </section>
-            <p className="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-[11.5px] font-medium text-amber-900/90 ring-1 ring-amber-200/80">
-              Demo only: sign-in is stored in this browser. No server or real security yet.
-            </p>
+
             <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11.5px] font-semibold text-[var(--color-ink-soft)]">
               <span>Try portals:</span>
               <Link href="/admin/login" className="text-[var(--color-primary)] hover:underline">
@@ -268,9 +281,7 @@ export default function AccountPage() {
                 {mode === "signin" ? "Sign in" : "Create account"}
               </Button>
             </form>
-            <p className="mt-3 text-center text-[11px] font-medium text-[var(--color-ink-soft)]">
-              Local demo auth — passwords stay in browser storage only.
-            </p>
+
             <p className="mt-2 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[11px] font-semibold text-[var(--color-ink-soft)]">
               <span>Operators:</span>
               <Link href="/admin/login" className="text-[var(--color-primary)] hover:underline">

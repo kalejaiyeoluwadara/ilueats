@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -31,7 +31,7 @@ const links = [
 
 type AuthMode = "signin" | "signup";
 
-export default function AccountPage() {
+function AccountPageContent() {
   const { user, ready, signIn, signUp, signOut, updateProfile } = useAuth();
   const { success, error: toastError } = useToast();
   const router = useRouter();
@@ -325,5 +325,21 @@ export default function AccountPage() {
       </main>
       <BottomNav />
     </div>
+  );
+}
+
+export default function AccountPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen pb-24">
+        <Navbar variant="page" title="Account" showSearch={false} />
+        <div className="flex min-h-[50vh] items-center justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-[var(--color-primary)] border-t-transparent" />
+        </div>
+        <BottomNav />
+      </div>
+    }>
+      <AccountPageContent />
+    </Suspense>
   );
 }

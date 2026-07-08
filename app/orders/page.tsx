@@ -117,7 +117,7 @@ export default function OrdersPage() {
         ...prev,
         [orderId]: { loading: false, data: res },
       }));
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
       const errMsg =
         err instanceof ApiError

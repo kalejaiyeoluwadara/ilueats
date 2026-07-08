@@ -40,6 +40,16 @@ import {
 type PayMethod = "card" | "transfer" | "cash";
 type DeliveryMode = "door" | "landmark";
 
+type OrderReceipt = {
+  storeName: string;
+  deliverySummary: string;
+  items: { name: string; qty: number; lineTotal: number; options: string[] }[];
+  subtotal: number;
+  deliveryFee: number;
+  serviceFee: number;
+  total: number;
+};
+
 export default function CheckoutPage() {
   const router = useRouter();
   const { items, subtotal, count, storeSlug, storeName, clearCart } = useCart();
@@ -71,6 +81,9 @@ export default function CheckoutPage() {
   const [notes, setNotes] = useState("");
   const [method, setMethod] = useState<PayMethod>("transfer");
   const [orderId, setOrderId] = useState<string>("");
+  // Snapshot the order (items, fees, delivery) before clearCart() empties it,
+  // so the success page can render the full order details.
+  const [receipt, setReceipt] = useState<OrderReceipt | null>(null);
 
   // Redirect to cart if there's nothing to checkout
   useEffect(() => {
@@ -143,6 +156,31 @@ export default function CheckoutPage() {
     });
   };
 
+  // Freeze the order contents at success time — the cart is cleared right after,
+  // so the success page reads from this instead of live cart state.
+  const buildReceipt = (finalTotal: number): OrderReceipt => {
+    const landmark = pickupLandmarks.find((l) => l.id === landmarkId);
+    return {
+      storeName: storeName ?? store?.name ?? "Store",
+      deliverySummary:
+        deliveryMode === "door"
+          ? address.trim()
+          : `Landmark — ${landmark?.label ?? "meet-up point"}`,
+      items: items.map((it) => ({
+        name: it.name,
+        qty: it.quantity,
+        lineTotal: it.price * it.quantity,
+        options: it.selectedOptions?.length
+          ? it.selectedOptions.map(formatCartOption)
+          : [],
+      })),
+      subtotal,
+      deliveryFee,
+      serviceFee,
+      total: finalTotal,
+    };
+  };
+
   // Signed-in users hit the real Nest backend: create the order there, then
   // charge it through Paystack. Guests keep the local mock flow below.
   const submitViaBackend = async () => {
@@ -194,6 +232,7 @@ export default function CheckoutPage() {
             }
             recordLocalOrder(paymentLabels[method]);
             setOrderId(backendOrder.orderId);
+            setReceipt(buildReceipt(backendOrder.total));
             setStep("done");
             clearCart();
             success("Payment received!", `Order ${backendOrder.orderId} is on its way.`);
@@ -220,6 +259,7 @@ export default function CheckoutPage() {
       } else {
         recordLocalOrder(paymentLabels[method]);
         setOrderId(backendOrder.orderId);
+        setReceipt(buildReceipt(backendOrder.total));
         setStep("done");
         clearCart();
         success("Order placed!", `Order ${backendOrder.orderId} is on its way.`);
@@ -239,6 +279,7 @@ export default function CheckoutPage() {
     await new Promise((r) => setTimeout(r, 2200));
     const order = recordLocalOrder(paymentLabels[method]);
     setOrderId(order.id);
+    setReceipt(buildReceipt(total));
     setStep("done");
     clearCart();
     success("Order placed!", `Order ${order.id} is on its way.`);
@@ -288,8 +329,8 @@ export default function CheckoutPage() {
     );
   }
 
-  if (step === "done") {
-    return <SuccessView orderId={orderId} total={total} />;
+  if (step === "done" && receipt) {
+    return <SuccessView orderId={orderId} receipt={receipt} />;
   }
 
   return (
@@ -671,9 +712,15 @@ function PaymentOption({
 /* Success view                                                               */
 /* -------------------------------------------------------------------------- */
 
-function SuccessView({ orderId, total }: { orderId: string; total: number }) {
+function SuccessView({
+  orderId,
+  receipt,
+}: {
+  orderId: string;
+  receipt: OrderReceipt;
+}) {
   return (
-    <div className="min-h-screen bg-[var(--color-bg)]">
+    <div className="min-h-screen bg-[var(--color-bg)] pb-16">
       <main className="mx-auto flex max-w-2xl flex-col items-center px-6 pt-20 text-center">
         <AnimatePresence>
           <motion.div
@@ -715,17 +762,71 @@ function SuccessView({ orderId, total }: { orderId: string; total: number }) {
           initial={{ y: 8, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.3 }}
-          className="mt-6 w-full max-w-sm rounded-2xl bg-white p-4 text-left ring-1 ring-[var(--color-line)]"
+          className="mt-6 w-full max-w-md rounded-2xl bg-white p-4 text-left ring-1 ring-[var(--color-line)]"
         >
           <Row k="Order ID" v={orderId} />
-          <Row k="Total paid" v={formatPrice(total)} />
+          <Row k="Store" v={receipt.storeName} />
+          <Row k="Deliver to" v={receipt.deliverySummary} />
           <Row k="Status" v="Confirmed" tone="success" />
           <Row k="Estimated delivery" v="25–40 mins" />
         </motion.div>
 
-        <div className="mt-8 flex w-full max-w-sm flex-col gap-2">
-          <Link href="/" className="block">
+        {/* Ordered items */}
+        <motion.div
+          initial={{ y: 8, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.35 }}
+          className="mt-4 w-full max-w-md rounded-2xl bg-white p-4 text-left ring-1 ring-[var(--color-line)]"
+        >
+          <h3 className="text-[13px] font-extrabold uppercase tracking-wider text-[var(--color-ink-soft)]">
+            Your order
+          </h3>
+          <ul className="mt-3 space-y-3">
+            {receipt.items.map((it, idx) => (
+              <li
+                key={idx}
+                className="flex items-start justify-between gap-3 text-[13.5px]"
+              >
+                <div className="min-w-0">
+                  <p className="font-semibold text-[var(--color-ink)]">
+                    {it.qty} × {it.name}
+                  </p>
+                  {it.options.length > 0 && (
+                    <p className="mt-0.5 text-[12px] text-[var(--color-ink-muted)]">
+                      {it.options.join(" · ")}
+                    </p>
+                  )}
+                </div>
+                <span className="whitespace-nowrap font-bold text-[var(--color-ink)]">
+                  {formatPrice(it.lineTotal)}
+                </span>
+              </li>
+            ))}
+          </ul>
+
+          <div className="mt-4 space-y-1 border-t border-dashed border-[var(--color-line)] pt-3">
+            <Row k="Subtotal" v={formatPrice(receipt.subtotal)} />
+            <Row k="Delivery fee" v={formatPrice(receipt.deliveryFee)} />
+            <Row k="Service fee" v={formatPrice(receipt.serviceFee)} />
+          </div>
+          <div className="mt-2 flex items-center justify-between border-t border-[var(--color-line)] pt-3">
+            <span className="text-[14px] font-extrabold text-[var(--color-ink)]">
+              Total paid
+            </span>
+            <span className="font-display text-[16px] font-extrabold text-[var(--color-primary)]">
+              {formatPrice(receipt.total)}
+            </span>
+          </div>
+        </motion.div>
+
+        <div className="mt-8 flex w-full max-w-md flex-col gap-2">
+          <Link href="/orders" className="block">
             <Button size="lg" fullWidth>
+              Track my order
+            </Button>
+          </Link>
+          <Link href="/" className="block">
+            <Button size="lg" fullWidth variant="ghost">
               Back to home
             </Button>
           </Link>
@@ -745,11 +846,13 @@ function Row({
   tone?: "success";
 }) {
   return (
-    <div className="flex items-center justify-between border-b border-dashed border-[var(--color-line)] py-2 last:border-b-0">
-      <span className="text-[12.5px] text-[var(--color-ink-muted)]">{k}</span>
+    <div className="flex items-start justify-between gap-4 border-b border-dashed border-[var(--color-line)] py-2 last:border-b-0">
+      <span className="shrink-0 text-[12.5px] text-[var(--color-ink-muted)]">
+        {k}
+      </span>
       <span
         className={cn(
-          "text-[13px] font-bold",
+          "min-w-0 break-words text-right text-[13px] font-bold",
           tone === "success"
             ? "text-[var(--color-success)]"
             : "text-[var(--color-ink)]"

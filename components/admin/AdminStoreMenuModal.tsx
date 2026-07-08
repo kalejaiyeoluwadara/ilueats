@@ -10,8 +10,10 @@ import {
 } from "@heroicons/react/24/outline";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
+import { ContentLoader } from "@/components/ui/Loaders";
+import { ErrorState } from "@/components/ui/EmptyState";
 import { categories } from "@/data/mockData";
-import type { MenuItemPayload } from "@/lib/catalogStore";
+import type { MenuItemPayload } from "@/lib/api/catalog";
 import { cn, formatPrice, shortId, slugify } from "@/lib/utils";
 import type {
   CategoryId,
@@ -839,6 +841,8 @@ export interface AdminStoreMenuModalProps {
   open: boolean;
   store: Store | null;
   items: Product[];
+  loading?: boolean;
+  error?: string | null;
   onClose: () => void;
   onRemoveItem?: (productId: string) => void;
   onUpsertAdd: (payload: MenuItemPayload) => void;
@@ -849,6 +853,8 @@ export function AdminStoreMenuModal({
   open,
   store,
   items,
+  loading,
+  error,
   onClose,
   onRemoveItem,
   onUpsertAdd,
@@ -899,7 +905,11 @@ export function AdminStoreMenuModal({
           </div>
         }
       >
-        {sorted.length === 0 ? (
+        {loading ? (
+          <ContentLoader message="Loading menu…" />
+        ) : error ? (
+          <ErrorState message={error} />
+        ) : sorted.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-[var(--color-line)] bg-[var(--color-bg)] p-8 text-center">
             <p className="text-[14px] font-bold text-[var(--color-ink)]">
               No dishes yet

@@ -70,30 +70,20 @@ export function SearchModal({ open, onClose, initialQuery = "" }: SearchModalPro
   const trimmed = query.trim();
   const isSearching = trimmed.length > 0;
 
-  const matchingProducts = useMemo(() => {
-    if (!isSearching) return [];
-    const q = trimmed.toLowerCase();
-    return products
-      .filter(
-        (p) =>
-          p.name.toLowerCase().includes(q) ||
-          p.description.toLowerCase().includes(q)
-      )
-      .slice(0, 4);
-  }, [trimmed, isSearching, products]);
+  const {
+    stores: searchStores,
+    products: searchProducts,
+    loading: searchLoading,
+  } = useSearchCatalog(open ? query : "");
 
-  const matchingStores = useMemo(() => {
-    if (!isSearching) return [];
-    const q = trimmed.toLowerCase();
-    return stores
-      .filter(
-        (s) =>
-          s.name.toLowerCase().includes(q) ||
-          s.tagline.toLowerCase().includes(q) ||
-          s.tags?.some((t) => t.toLowerCase().includes(q))
-      )
-      .slice(0, 4);
-  }, [trimmed, isSearching, stores]);
+  const matchingProducts = useMemo(
+    () => searchProducts.slice(0, 4),
+    [searchProducts]
+  );
+  const matchingStores = useMemo(
+    () => searchStores.slice(0, 4),
+    [searchStores]
+  );
 
   const totalResults = matchingProducts.length + matchingStores.length;
 
@@ -231,7 +221,12 @@ export function SearchModal({ open, onClose, initialQuery = "" }: SearchModalPro
                     transition={{ duration: 0.18 }}
                     className="space-y-5 pt-4"
                   >
-                    {totalResults === 0 ? (
+                    {searchLoading ? (
+                      <div className="flex items-center justify-center gap-2 py-10 text-[13px] font-medium text-[var(--color-ink-muted)]">
+                        <InlineLoader size="sm" />
+                        Searching…
+                      </div>
+                    ) : totalResults === 0 ? (
                       <EmptyResults query={trimmed} />
                     ) : (
                       <>

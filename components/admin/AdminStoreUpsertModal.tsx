@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { categories } from "@/data/mockData";
 import { cn } from "@/lib/utils";
 import type { CategoryId, Store } from "@/types";
-import type { StoreUpsertPayload } from "@/lib/catalogStore";
+import type { StoreUpsertPayload } from "@/lib/api/catalog";
 
 export type StoreFormMode = "add" | "edit";
 

@@ -5,8 +5,11 @@ import { MagnifyingGlassIcon, PlusIcon } from "@heroicons/react/24/outline";
 import { AdminStoreUpsertModal } from "@/components/admin/AdminStoreUpsertModal";
 import { AdminStoreMenuModal } from "@/components/admin/AdminStoreMenuModal";
 import { Pagination } from "@/components/ui/Pagination";
+import { ContentLoader } from "@/components/ui/Loaders";
+import { ErrorState } from "@/components/ui/EmptyState";
 import { useCatalog } from "@/context/CatalogContext";
 import { categories as menuCategories } from "@/data/mockData";
+import { useStoreProducts } from "@/hooks/useCatalogQueries";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { useToast } from "@/hooks/useToast";
 import { cn } from "@/lib/utils";
@@ -69,9 +72,18 @@ function countForLive(rows: readonly Store[], filter: StoreLiveFilter): number {
 }
 
 export default function AdminStoresPage() {
-  const { stores, products, addStore, updateStore, addMenuItem, updateMenuItem, removeMenuItem } =
-    useCatalog();
-  const { success } = useToast();
+  const {
+    stores,
+    loading: storesLoading,
+    error: storesError,
+    refetch: refetchStores,
+    addStore,
+    updateStore,
+    addMenuItem,
+    updateMenuItem,
+    removeMenuItem,
+  } = useCatalog();
+  const { success, error: errorToast } = useToast();
 
   const catalogCategoryIds = useMemo(() => {
     const ids = new Set<string>();
@@ -128,11 +140,12 @@ export default function AdminStoresPage() {
   const [editStore, setEditStore] = useState<Store | null>(null);
   const [menuStore, setMenuStore] = useState<Store | null>(null);
 
-  const menuItems = useMemo(
-    () =>
-      menuStore ? products.filter((p) => p.storeId === menuStore.id) : [],
-    [menuStore, products]
-  );
+  const {
+    products: menuItems,
+    loading: menuItemsLoading,
+    error: menuItemsError,
+    refetch: refetchMenuItems,
+  } = useStoreProducts(menuStore?.slug ?? null);
 
   return (
     <div className="space-y-6">
@@ -161,9 +174,13 @@ export default function AdminStoresPage() {
         mode="add"
         initialStore={null}
         onClose={() => setAddOpen(false)}
-        onSave={(payload) => {
-          const created = addStore(payload);
-          success("Store created", `${created.name} is live in the catalog.`);
+        onSave={async (payload) => {
+          try {
+            const created = await addStore(payload);
+            success("Store created", `${created.name} is live in the catalog.`);
+          } catch {
+            errorToast("Couldn't create store", "Please check the details and try again.");
+          }
         }}
       />
 
@@ -172,11 +189,15 @@ export default function AdminStoresPage() {
         mode="edit"
         initialStore={editStore}
         onClose={() => setEditStore(null)}
-        onSave={(payload) => {
+        onSave={async (payload) => {
           if (!editStore) return;
-          updateStore(editStore.id, payload);
-          success("Store updated", `${payload.name.trim()} saved.`);
-          setEditStore(null);
+          try {
+            await updateStore(editStore.id, payload);
+            success("Store updated", `${payload.name.trim()} saved.`);
+            setEditStore(null);
+          } catch {
+            errorToast("Couldn't update store", "Please try again.");
+          }
         }}
       />
 
@@ -184,19 +205,36 @@ export default function AdminStoresPage() {
         open={!!menuStore}
         store={menuStore}
         items={menuItems}
+        loading={menuItemsLoading}
+        error={menuItemsError}
         onClose={() => setMenuStore(null)}
-        onRemoveItem={(id) => {
-          removeMenuItem(id);
-          success("Removed", "Dish dropped from menu.");
+        onRemoveItem={async (id) => {
+          try {
+            await removeMenuItem(id);
+            await refetchMenuItems();
+            success("Removed", "Dish dropped from menu.");
+          } catch {
+            errorToast("Couldn't remove dish", "Please try again.");
+          }
         }}
-        onUpsertAdd={(payload) => {
+        onUpsertAdd={async (payload) => {
           if (!menuStore) return;
-          addMenuItem(menuStore, payload);
-          success("Dish added", "Menu updated — check the live storefront.");
+          try {
+            await addMenuItem(menuStore, payload);
+            await refetchMenuItems();
+            success("Dish added", "Menu updated — check the live storefront.");
+          } catch {
+            errorToast("Couldn't add dish", "Please check the details and try again.");
+          }
         }}
-        onUpsertEdit={(productId, payload) => {
-          updateMenuItem(productId, payload);
-          success("Dish updated", "Changes saved.");
+        onUpsertEdit={async (productId, payload) => {
+          try {
+            await updateMenuItem(productId, payload);
+            await refetchMenuItems();
+            success("Dish updated", "Changes saved.");
+          } catch {
+            errorToast("Couldn't update dish", "Please try again.");
+          }
         }}
       />
 
@@ -292,7 +330,11 @@ export default function AdminStoresPage() {
         </div>
       </section>
 
-      {storeTotal === 0 ? (
+      {storesLoading ? (
+        <ContentLoader message="Loading stores…" />
+      ) : storesError ? (
+        <ErrorState message={storesError} onRetry={refetchStores} />
+      ) : storeTotal === 0 ? (
         <div className="rounded-[1.25rem] border border-dashed border-[var(--color-line)] bg-[var(--color-surface)] p-12 text-center shadow-crisp ring-1 ring-black/[0.02]">
           <p className="text-[15px] font-extrabold text-[var(--color-ink)]">
             No matching stores
@@ -362,7 +404,7 @@ export default function AdminStoresPage() {
         </div>
       )}
 
-      {storeTotal > 0 ? (
+      {!storesLoading && !storesError && storeTotal > 0 ? (
         <Pagination
           page={page}
           pageCount={pageCount}

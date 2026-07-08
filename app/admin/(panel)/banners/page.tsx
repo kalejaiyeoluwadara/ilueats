@@ -12,6 +12,8 @@ import {
 } from "@heroicons/react/24/outline";
 import { AdminBannerModal } from "@/components/admin/AdminBannerModal";
 import { Button } from "@/components/ui/Button";
+import { ContentLoader } from "@/components/ui/Loaders";
+import { ErrorState } from "@/components/ui/EmptyState";
 import { useBanners } from "@/context/BannersContext";
 import { useToast } from "@/hooks/useToast";
 import type { AdSlide } from "@/types";
@@ -19,13 +21,15 @@ import type { AdSlide } from "@/types";
 export default function AdminBannersPage() {
   const {
     banners,
+    loading,
+    error,
+    refetch,
     addBanner,
     updateBanner,
     removeBanner,
     reorderBanner,
-    resetToSeed,
   } = useBanners();
-  const { success, info } = useToast();
+  const { success, info, error: errorToast } = useToast();
 
   const [addOpen, setAddOpen] = useState(false);
   const [editSlide, setEditSlide] = useState<AdSlide | null>(null);
@@ -38,8 +42,8 @@ export default function AdminBannersPage() {
             Banners
           </h1>
           <p className="mt-1 w-[500px] text-[13px] text-[var(--color-ink-muted)]">
-            Home promo carousel — images are uploaded files (stored in this
-            browser until you connect storage). Text and link stay editable.
+            Home promo carousel — upload a file or paste an image URL. Text
+            and link stay editable.
           </p>
         </div>
         <div className="flex flex-wrap justify-end gap-2">

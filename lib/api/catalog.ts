@@ -34,6 +34,14 @@ export async function fetchFeaturedProducts(): Promise<Product[]> {
   return items;
 }
 
+export async function fetchProductsByIds(ids: string[]): Promise<Product[]> {
+  if (!ids.length) return [];
+  const { items } = await apiFetch<{ items: Product[] }>("/products/by-ids", {
+    query: { ids: ids.join(",") },
+  });
+  return items;
+}
+
 export async function fetchProduct(
   storeSlug: string,
   productSlug: string

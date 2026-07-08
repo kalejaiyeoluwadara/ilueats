@@ -16,7 +16,7 @@ type ApiFetchOptions = {
   body?: unknown | FormData;
   /** Bearer token to use instead of the browser session (e.g. from a server component). */
   token?: string;
-  query?: Record<string, string | number | undefined>;
+  query?: Record<string, string | number | boolean | undefined>;
 };
 
 function buildUrl(path: string, query?: ApiFetchOptions["query"]) {

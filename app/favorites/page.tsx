@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { HeartIcon } from "@heroicons/react/24/outline";
@@ -8,17 +8,46 @@ import { Navbar } from "@/components/layout/Navbar";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { Button } from "@/components/ui/Button";
 import { ContentLoader } from "@/components/ui/Loaders";
+import { ErrorState } from "@/components/ui/EmptyState";
 import { FavoriteButton } from "@/components/favorites/FavoriteButton";
 import { useFavorites } from "@/hooks/useFavorites";
 import { useCatalog } from "@/context/CatalogContext";
+import { fetchProductsByIds } from "@/lib/api/catalog";
+import { ApiError } from "@/lib/api/client";
 import { formatPrice } from "@/lib/utils";
+import type { Product } from "@/types";
 
 export default function FavoritesPage() {
   const { favoriteIds, ready } = useFavorites();
-  const { stores, products } = useCatalog();
+  const { stores } = useCatalog();
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!ready) return;
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    fetchProductsByIds(favoriteIds)
+      .then((items) => {
+        if (!cancelled) setProducts(items);
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setError(err instanceof ApiError ? err.message : "Couldn't load favourites.");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [ready, favoriteIds]);
 
   const items = useMemo(() => {
-    if (!ready) return [];
+    if (!ready || loading) return [];
     return favoriteIds
       .map((id) => {
         const product = products.find((p) => p.id === id);
@@ -29,14 +58,16 @@ export default function FavoritesPage() {
       .filter(
         (x): x is NonNullable<typeof x> => x !== null && x.store !== undefined
       );
-  }, [favoriteIds, ready, products, stores]);
+  }, [favoriteIds, ready, loading, products, stores]);
 
   return (
     <div className="min-h-screen pb-24">
       <Navbar variant="page" title="Favourites" showSearch={false} />
       <main className="mx-auto max-w-2xl px-4 pt-4 lg:max-w-5xl lg:px-6">
-        {!ready ? (
+        {!ready || loading ? (
           <ContentLoader message="Loading favourites…" className="py-16" />
+        ) : error ? (
+          <ErrorState message={error} />
         ) : items.length === 0 ? (
           <div className="flex flex-col items-center px-4 pt-14 text-center">
             <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[var(--color-primary-soft)]">

@@ -9,7 +9,6 @@ import { CategoryPills } from "@/components/home/CategoryPills";
 import { AdBanner } from "@/components/home/AdBanner";
 import { FeaturedItems } from "@/components/home/FeaturedItems";
 import { StoreCard } from "@/components/home/StoreCard";
-import { ContentLoader } from "@/components/ui/Loaders";
 import { EmptyState, ErrorState } from "@/components/ui/EmptyState";
 import { FeaturedItemsSkeleton, StoreCardSkeleton } from "@/components/ui/Skeletons";
 import { useBanners } from "@/context/BannersContext";

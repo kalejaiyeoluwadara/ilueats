@@ -7,7 +7,6 @@ import { HeartIcon } from "@heroicons/react/24/outline";
 import { Navbar } from "@/components/layout/Navbar";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { Button } from "@/components/ui/Button";
-import { ContentLoader } from "@/components/ui/Loaders";
 import { ErrorState } from "@/components/ui/EmptyState";
 import { FavoriteButton } from "@/components/favorites/FavoriteButton";
 import { useFavorites } from "@/hooks/useFavorites";
@@ -65,7 +64,21 @@ export default function FavoritesPage() {
       <Navbar variant="page" title="Favourites" showSearch={false} />
       <main className="mx-auto max-w-2xl px-4 pt-4 lg:max-w-5xl lg:px-6">
         {!ready || loading ? (
-          <ContentLoader message="Loading favourites…" className="py-16" />
+          <div className="space-y-3 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0">
+            {Array.from({ length: 4 }).map((_, idx) => (
+              <div
+                key={idx}
+                className="flex items-stretch gap-3 rounded-2xl bg-white p-3 ring-1 ring-[var(--color-line)]"
+              >
+                <div className="h-[88px] w-[88px] shrink-0 rounded-xl bg-[var(--color-line)] skeleton" />
+                <div className="min-w-0 flex-1 py-1 space-y-2">
+                  <div className="h-3 w-16 rounded bg-[var(--color-line)] skeleton" />
+                  <div className="h-4.5 w-3/4 rounded bg-[var(--color-line)] skeleton" />
+                  <div className="h-4 w-12 rounded bg-[var(--color-line)] skeleton" />
+                </div>
+              </div>
+            ))}
+          </div>
         ) : error ? (
           <ErrorState message={error} />
         ) : items.length === 0 ? (

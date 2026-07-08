@@ -11,7 +11,6 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { QuantityStepper } from "@/components/cart/CartItem";
 import { Modal } from "@/components/ui/Modal";
-import { PageLoader } from "@/components/ui/Loaders";
 import { ErrorState } from "@/components/ui/EmptyState";
 import { ProductPageSkeleton } from "@/components/ui/Skeletons";
 import { useProduct, useStore } from "@/hooks/useCatalogQueries";

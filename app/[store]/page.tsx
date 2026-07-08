@@ -8,7 +8,6 @@ import { BottomNav } from "@/components/layout/BottomNav";
 import { StoreHeader } from "@/components/store/StoreHeader";
 import { MenuSection } from "@/components/store/MenuSection";
 import { CartFooter } from "@/components/cart/CartFooter";
-import { PageLoader, ContentLoader } from "@/components/ui/Loaders";
 import { EmptyState, ErrorState } from "@/components/ui/EmptyState";
 import { StorePageSkeleton, ProductCardSkeleton } from "@/components/ui/Skeletons";
 import { MagnifyingGlassIcon } from "@heroicons/react/24/outline";

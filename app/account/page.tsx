@@ -15,7 +15,7 @@ import {
 import { Navbar } from "@/components/layout/Navbar";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { Button } from "@/components/ui/Button";
-import { ContentLoader } from "@/components/ui/Loaders";
+import { ErrorState } from "@/components/ui/EmptyState";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/useToast";
 import { cn } from "@/lib/utils";
@@ -84,8 +84,14 @@ export default function AccountPage() {
       <Navbar variant="page" title="Account" showSearch={false} />
       <main className="mx-auto max-w-2xl px-4 pt-4">
         {!ready ? (
-          <section className="rounded-2xl bg-white p-6 ring-1 ring-[var(--color-line)]">
-            <ContentLoader message="Loading your account…" />
+          <section className="rounded-2xl bg-white p-4 ring-1 ring-[var(--color-line)]">
+            <div className="flex items-start gap-3">
+              <div className="h-12 w-12 shrink-0 rounded-full bg-[var(--color-line)] skeleton" />
+              <div className="min-w-0 flex-1 space-y-2 py-1">
+                <div className="h-4.5 w-32 rounded bg-[var(--color-line)] skeleton" />
+                <div className="h-3.5 w-48 rounded bg-[var(--color-line)] skeleton" />
+              </div>
+            </div>
           </section>
         ) : user ? (
           <>

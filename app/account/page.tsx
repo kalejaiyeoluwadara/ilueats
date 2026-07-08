@@ -3,6 +3,7 @@
 import { useState, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { signIn as nextAuthSignIn } from "next-auth/react";
 import {
   ChevronRightIcon,
   HeartIcon,
@@ -37,6 +38,10 @@ function AccountPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo = searchParams?.get("redirect") || null;
+
+  const onGoogleSignIn = () => {
+    nextAuthSignIn("google", { redirect: true, callbackUrl: redirectTo || "/" });
+  };
 
   const [mode, setMode] = useState<AuthMode>("signin");
   const [name, setName] = useState("");
@@ -282,7 +287,28 @@ function AccountPageContent() {
               </Button>
             </form>
 
-            <p className="mt-2 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[11px] font-semibold text-[var(--color-ink-soft)]">
+            <div className="relative mt-4 flex items-center justify-center">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-[var(--color-line)]" />
+              </div>
+              <span className="relative bg-white px-3 text-[11px] font-bold uppercase tracking-wider text-[var(--color-ink-soft)]">
+                Or
+              </span>
+            </div>
+
+            <Button
+              type="button"
+              variant="outline"
+              fullWidth
+              size="lg"
+              className="mt-3 bg-white"
+              onClick={onGoogleSignIn}
+              leftIcon={<GoogleIcon className="h-5 w-5" />}
+            >
+              Continue with Google
+            </Button>
+
+            <p className="mt-4 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[11px] font-semibold text-[var(--color-ink-soft)]">
               <span>Operators:</span>
               <Link href="/admin/login" className="text-[var(--color-primary)] hover:underline">
                 Admin
@@ -341,5 +367,28 @@ export default function AccountPage() {
     }>
       <AccountPageContent />
     </Suspense>
+  );
+}
+
+function GoogleIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" {...props}>
+      <path
+        fill="#EA4335"
+        d="M23.49 12.275c0-.825-.075-1.62-.21-2.385H12v4.515h6.45c-.285 1.485-1.125 2.745-2.385 3.585v2.985h3.855c2.265-2.085 3.57-5.145 3.57-8.7z"
+      />
+      <path
+        fill="#4285F4"
+        d="M12 24c3.24 0 5.955-1.08 7.935-2.91l-3.855-2.985c-1.08.72-2.46 1.155-4.08 1.155-3.135 0-5.805-2.115-6.75-4.965H1.365v3.075C3.345 21.225 7.425 24 12 24z"
+      />
+      <path
+        fill="#FBBC05"
+        d="M5.25 14.295a7.143 7.143 0 0 1 0-4.59V6.63H1.365a11.936 11.936 0 0 0 0 10.74l3.885-3.075z"
+      />
+      <path
+        fill="#34A853"
+        d="M12 4.74c1.77 0 3.345.615 4.59 1.8l3.435-3.435C17.94 1.185 15.225 0 12 0 7.425 0 3.345 2.775 1.365 6.63l3.885 3.075c.945-2.85 3.615-4.965 6.75-4.965z"
+      />
+    </svg>
   );
 }

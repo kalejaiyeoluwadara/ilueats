@@ -1,13 +1,18 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
+import Google from "next-auth/providers/google";
 import { signIn as backendSignIn } from "@/lib/api/auth";
-import { ApiError } from "@/lib/api/client";
+import { ApiError, apiFetch } from "@/lib/api/client";
 import type { BackendRole } from "@/lib/api/auth";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   session: { strategy: "jwt" },
   pages: { signIn: "/account" },
   providers: [
+    Google({
+      clientId: process.env.AUTH_GOOGLE_ID || process.env.GOOGLE_CLIENT_ID || "dummy-id",
+      clientSecret: process.env.AUTH_GOOGLE_SECRET || process.env.GOOGLE_CLIENT_SECRET || "dummy-secret",
+    }),
     Credentials({
       credentials: {
         email: { label: "Email", type: "email" },
@@ -48,6 +53,28 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   callbacks: {
+    async signIn({ user, account }) {
+      if (account?.provider === "google") {
+        try {
+          const syncResult = await apiFetch<{ token: string; user: any }>("/auth/google-sync", {
+            method: "POST",
+            body: {
+              email: user.email,
+              name: user.name,
+            },
+          });
+          user.accessToken = syncResult.token;
+          user.role = syncResult.user.role;
+          user.phone = syncResult.user.phone;
+          user.id = syncResult.user.id;
+          return true;
+        } catch (err) {
+          console.error("Backend OAuth sync failed", err);
+          return false;
+        }
+      }
+      return true;
+    },
     async jwt({ token, user, trigger, session }) {
       if (user) {
         token.accessToken = user.accessToken;

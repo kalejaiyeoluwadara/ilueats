@@ -203,3 +203,89 @@ export function SearchPageSkeleton() {
     </div>
   );
 }
+
+/** Shimmering page skeleton loader for full-page Product details loading. */
+export function ProductPageSkeleton() {
+  return (
+    <div className="min-h-screen pb-32 lg:pb-12 bg-[var(--color-bg)]">
+      <Navbar variant="page" title="" showSearch={false} />
+
+      <main className="mx-auto max-w-2xl lg:grid lg:max-w-5xl lg:grid-cols-2 lg:items-start lg:gap-10 lg:px-6 lg:pt-6">
+        {/* Left column: Hero image placeholder */}
+        <div className="relative aspect-[4/3] w-full overflow-hidden bg-[var(--color-line)] skeleton sm:rounded-b-3xl lg:sticky lg:top-24 lg:rounded-3xl" />
+
+        {/* Right column: Details */}
+        <div className="min-w-0 px-4 pt-4 lg:px-0 lg:pt-0 space-y-5">
+          {/* Store name & title */}
+          <div>
+            <div className="h-3.5 w-24 rounded bg-[var(--color-line)] skeleton" />
+            <div className="mt-2.5 h-6 w-3/4 rounded bg-[var(--color-line)] skeleton" />
+            <div className="mt-2 h-4 w-32 rounded bg-[var(--color-line)] skeleton" />
+          </div>
+
+          {/* Description */}
+          <div className="space-y-1.5 pt-1">
+            <div className="h-3.5 w-full rounded bg-[var(--color-line)] skeleton" />
+            <div className="h-3.5 w-5/6 rounded bg-[var(--color-line)] skeleton" />
+            <div className="h-3.5 w-2/3 rounded bg-[var(--color-line)] skeleton" />
+          </div>
+
+          {/* Price */}
+          <div className="h-6 w-20 rounded bg-[var(--color-line)] skeleton pt-1" />
+
+          {/* Options groups (2 groups) */}
+          <div className="space-y-4 pt-2">
+            {Array.from({ length: 2 }).map((_, gIdx) => (
+              <div key={gIdx} className="space-y-2">
+                <div className="h-4.5 w-28 rounded bg-[var(--color-line)] skeleton" />
+                <div className="space-y-2">
+                  {Array.from({ length: 2 }).map((_, cIdx) => (
+                    <div
+                      key={cIdx}
+                      className="flex h-12 w-full items-center justify-between rounded-2xl bg-white px-4 ring-1 ring-[var(--color-line)]"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="h-5 w-5 rounded bg-[var(--color-line)] skeleton" />
+                        <div className="h-3.5 w-24 rounded bg-[var(--color-line)] skeleton" />
+                      </div>
+                      <div className="h-3.5 w-12 rounded bg-[var(--color-line)] skeleton" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Quantity section */}
+          <div className="pt-2">
+            <div className="h-4.5 w-20 rounded bg-[var(--color-line)] skeleton mb-2" />
+            <div className="flex h-14 items-center justify-between rounded-2xl bg-white p-3 ring-1 ring-[var(--color-line)]">
+              <div className="h-4 w-20 rounded bg-[var(--color-line)] skeleton" />
+              <div className="h-8 w-24 rounded-full bg-[var(--color-line)] skeleton" />
+            </div>
+          </div>
+
+          {/* Desktop inline total + CTA */}
+          <div className="hidden lg:flex lg:items-center lg:gap-3 lg:rounded-2xl lg:bg-white lg:p-4 lg:ring-1 lg:ring-[var(--color-line)]">
+            <div className="space-y-1">
+              <div className="h-3 w-10 rounded bg-[var(--color-line)] skeleton" />
+              <div className="h-4.5 w-16 rounded bg-[var(--color-line)] skeleton" />
+            </div>
+            <div className="h-11 flex-1 rounded-full bg-[var(--color-line)] skeleton" />
+          </div>
+        </div>
+      </main>
+
+      {/* Mobile fixed bottom bar */}
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-[var(--color-line)] bg-white px-4 pb-[calc(env(safe-area-inset-bottom,0px)+12px)] pt-3 lg:hidden">
+        <div className="mx-auto flex max-w-2xl items-center gap-3">
+          <div className="space-y-1">
+            <div className="h-3 w-10 rounded bg-[var(--color-line)] skeleton" />
+            <div className="h-4.5 w-16 rounded bg-[var(--color-line)] skeleton" />
+          </div>
+          <div className="h-11 flex-1 rounded-full bg-[var(--color-line)] skeleton" />
+        </div>
+      </div>
+    </div>
+  );
+}

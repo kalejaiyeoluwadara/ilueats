@@ -13,6 +13,7 @@ import { QuantityStepper } from "@/components/cart/CartItem";
 import { Modal } from "@/components/ui/Modal";
 import { PageLoader } from "@/components/ui/Loaders";
 import { ErrorState } from "@/components/ui/EmptyState";
+import { ProductPageSkeleton } from "@/components/ui/Skeletons";
 import { useProduct, useStore } from "@/hooks/useCatalogQueries";
 import { cn, formatPrice } from "@/lib/utils";
 import { useCart } from "@/hooks/useCart";
@@ -440,7 +441,7 @@ export default function ProductPage({ params }: PageProps) {
   }
 
   if (storeLoading || productLoading) {
-    return <PageLoader message="Loading dish…" />;
+    return <ProductPageSkeleton />;
   }
 
   if (storeError || productError || !store || !product) {

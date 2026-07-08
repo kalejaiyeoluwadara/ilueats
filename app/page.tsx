@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Navbar } from "@/components/layout/Navbar";
 import { BottomNav } from "@/components/layout/BottomNav";
+import { Footer } from "@/components/layout/Footer";
 import { HeroBanner } from "@/components/home/HeroBanner";
 import { CategoryPills } from "@/components/home/CategoryPills";
 import { AdBanner } from "@/components/home/AdBanner";
@@ -103,18 +104,7 @@ export default function HomePage() {
           )}
         </section>
 
-        <footer className="mt-14 border-t border-[var(--color-line)] px-4 pt-10 pb-8">
-          <p className="font-display text-[44px] font-extrabold leading-none tracking-tight text-[var(--color-ink)] lg:text-[72px]">
-            ìlú<span className="text-[var(--color-primary)]">Eats</span>
-            <span className="text-[var(--color-primary)]">.</span>
-          </p>
-          <p className="mt-3 text-[13px] font-semibold text-[var(--color-ink-muted)]">
-            Your town. Your taste. Delivered.
-          </p>
-          <p className="mt-6 text-[11px] font-medium text-[var(--color-ink-soft)]">
-            Made for Ilisan-Remo · ìlú means town
-          </p>
-        </footer>
+        <Footer />
       </main>
 
       <BottomNav />

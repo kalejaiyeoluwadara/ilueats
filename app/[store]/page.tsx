@@ -10,6 +10,8 @@ import { MenuSection } from "@/components/store/MenuSection";
 import { CartFooter } from "@/components/cart/CartFooter";
 import { PageLoader, ContentLoader } from "@/components/ui/Loaders";
 import { EmptyState, ErrorState } from "@/components/ui/EmptyState";
+import { StorePageSkeleton, ProductCardSkeleton } from "@/components/ui/Skeletons";
+import { MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 import { useStore, useStoreProducts } from "@/hooks/useCatalogQueries";
 import { categories } from "@/data/mockData";
 import { cn } from "@/lib/utils";
@@ -115,7 +117,11 @@ export default function StorePage({ params }: PageProps) {
           className="space-y-6 pt-2"
         >
           {productsLoading ? (
-            <ContentLoader message="Loading the menu…" />
+            <div className="px-4 space-y-2.5 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0">
+              {Array.from({ length: 4 }).map((_, idx) => (
+                <ProductCardSkeleton key={idx} />
+              ))}
+            </div>
           ) : productsError ? (
             <div className="px-4">
               <ErrorState message={productsError} />
@@ -123,7 +129,7 @@ export default function StorePage({ params }: PageProps) {
           ) : grouped.length === 0 ? (
             <div className="px-4">
               <EmptyState
-                icon="🥡"
+                icon={<MagnifyingGlassIcon className="h-6 w-6" />}
                 title="No items match"
                 description="Try another category or clear the search."
               />

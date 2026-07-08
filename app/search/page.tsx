@@ -379,8 +379,8 @@ function NoResults({ query }: { query: string }) {
         aria-hidden
         className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-[var(--color-primary)]/[0.07] blur-2xl"
       />
-      <div className="relative mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--color-primary-soft)] text-[28px] ring-1 ring-[var(--color-primary)]/10">
-        🔎
+      <div className="relative mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--color-primary-soft)] text-[var(--color-primary)] ring-1 ring-[var(--color-primary)]/10">
+        <MagnifyingGlassIcon className="h-7 w-7" />
       </div>
       <h3 className="relative text-[16px] font-extrabold tracking-tight text-[var(--color-ink)]">
         Nothing found for “{query}”

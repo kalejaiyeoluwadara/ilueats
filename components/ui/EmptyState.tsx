@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import { InboxIcon, ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 
 export interface EmptyStateProps {
   icon?: ReactNode;
@@ -11,12 +12,14 @@ export interface EmptyStateProps {
 
 /** Reusable "nothing here" card — home, store menu, search, admin lists. */
 export function EmptyState({
-  icon = "🍽️",
+  icon,
   title,
   description,
   action,
   className,
 }: EmptyStateProps) {
+  const displayIcon = icon ?? <InboxIcon className="h-6 w-6" />;
+
   return (
     <div
       className={cn(
@@ -28,8 +31,8 @@ export function EmptyState({
         className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-[var(--color-primary)]/[0.07] blur-2xl"
         aria-hidden
       />
-      <div className="relative mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--color-primary-soft)] text-2xl shadow-[inset_0_1px_0_rgb(255_255_255/0.65)] ring-1 ring-[var(--color-primary)]/10">
-        {icon}
+      <div className="relative mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--color-primary-soft)] text-[var(--color-primary)] shadow-[inset_0_1px_0_rgb(255_255_255/0.65)] ring-1 ring-[var(--color-primary)]/10">
+        {displayIcon}
       </div>
       <h3 className="relative text-[16px] font-extrabold tracking-tight text-[var(--color-ink)]">
         {title}
@@ -63,8 +66,8 @@ export function ErrorState({
         className
       )}
     >
-      <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-red-100 text-2xl">
-        ⚠️
+      <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-red-100 text-red-600">
+        <ExclamationTriangleIcon className="h-6 w-6" />
       </div>
       <h3 className="text-[15px] font-extrabold tracking-tight text-red-800">
         Couldn&apos;t load this
@@ -82,3 +85,4 @@ export function ErrorState({
     </div>
   );
 }
+

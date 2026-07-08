@@ -11,6 +11,7 @@ import { FeaturedItems } from "@/components/home/FeaturedItems";
 import { StoreCard } from "@/components/home/StoreCard";
 import { ContentLoader } from "@/components/ui/Loaders";
 import { EmptyState, ErrorState } from "@/components/ui/EmptyState";
+import { FeaturedItemsSkeleton, StoreCardSkeleton } from "@/components/ui/Skeletons";
 import { useBanners } from "@/context/BannersContext";
 import { useCatalog } from "@/context/CatalogContext";
 import { useFeaturedProducts } from "@/hooks/useCatalogQueries";
@@ -53,7 +54,7 @@ export default function HomePage() {
 
         {featuredLoading ? (
           <div className="pt-4">
-            <ContentLoader message="Finding this week's favourites…" />
+            <FeaturedItemsSkeleton />
           </div>
         ) : featuredProducts.length > 0 ? (
           <div className="pt-4">
@@ -102,7 +103,11 @@ export default function HomePage() {
           </div>
 
           {storesLoading ? (
-            <ContentLoader message="Loading stores near you…" />
+            <div className="grid grid-cols-1 gap-8 lg:grid-cols-3 lg:gap-x-6 lg:gap-y-9">
+              {Array.from({ length: 6 }).map((_, idx) => (
+                <StoreCardSkeleton key={idx} />
+              ))}
+            </div>
           ) : storesError ? (
             <ErrorState message={storesError} onRetry={refetch} />
           ) : filteredStores.length === 0 ? (

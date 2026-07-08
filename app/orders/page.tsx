@@ -79,7 +79,6 @@ export default function OrdersPage() {
   >({});
 
   const fetchOrders = useCallback(async () => {
-    if (!user) return;
     setLoading(true);
     setError(null);
     try {
@@ -93,7 +92,7 @@ export default function OrdersPage() {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, []);
 
   useEffect(() => {
     if (authReady) {
@@ -103,7 +102,7 @@ export default function OrdersPage() {
         setLoading(false);
       }
     }
-  }, [authReady, user, fetchOrders]);
+  }, [authReady, user?.id, fetchOrders]);
 
   const loadOrderDetail = async (orderId: string) => {
     setDetails((prev) => ({

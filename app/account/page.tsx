@@ -193,17 +193,6 @@ function AccountPageContent() {
                 </div>
               )}
             </section>
-
-            <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11.5px] font-semibold text-[var(--color-ink-soft)]">
-              <span>Try portals:</span>
-              <Link href="/admin/login" className="text-[var(--color-primary)] hover:underline">
-                Admin
-              </Link>
-              <span aria-hidden>·</span>
-              <Link href="/rider/login" className="text-emerald-700 hover:underline">
-                Rider
-              </Link>
-            </p>
           </>
         ) : (
           <section className="rounded-2xl bg-white p-4 ring-1 ring-[var(--color-line)]">
@@ -307,17 +296,6 @@ function AccountPageContent() {
             >
               Continue with Google
             </Button>
-
-            <p className="mt-4 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[11px] font-semibold text-[var(--color-ink-soft)]">
-              <span>Operators:</span>
-              <Link href="/admin/login" className="text-[var(--color-primary)] hover:underline">
-                Admin
-              </Link>
-              <span aria-hidden>·</span>
-              <Link href="/rider/login" className="text-emerald-700 hover:underline">
-                Rider
-              </Link>
-            </p>
           </section>
         )}
 

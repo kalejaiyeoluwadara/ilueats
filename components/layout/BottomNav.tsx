@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   HomeIcon as HomeOutline,
   ShoppingBagIcon as BagOutline,
@@ -51,6 +51,8 @@ const items: NavItem[] = [
   },
 ];
 
+const spring = { type: "spring", stiffness: 420, damping: 34 } as const;
+
 export function BottomNav() {
   const pathname = usePathname();
   const { count } = useCart();
@@ -61,9 +63,9 @@ export function BottomNav() {
   return (
     <nav
       aria-label="Primary"
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--color-line)] bg-white/95 backdrop-blur-md pb-[env(safe-area-inset-bottom)] lg:hidden"
+      className="fixed inset-x-0 bottom-3 z-40 px-4 pb-[env(safe-area-inset-bottom)] lg:hidden"
     >
-      <ul className="mx-auto grid max-w-2xl grid-cols-4 px-2">
+      <ul className="mx-auto flex w-fit items-center gap-1 rounded-full border border-[var(--color-line)] bg-white/90 p-1.5 shadow-[var(--shadow-lift)] backdrop-blur-xl">
         {items.map((it) => {
           const active = it.matchPrefix
             ? pathname?.startsWith(it.matchPrefix)
@@ -73,9 +75,17 @@ export function BottomNav() {
             <li key={it.href}>
               <Link
                 href={it.href}
-                className="relative flex flex-col items-center gap-0.5 py-2.5"
+                aria-label={it.label}
                 aria-current={active ? "page" : undefined}
+                className="relative flex h-11 items-center gap-1.5 rounded-full px-4"
               >
+                {active && (
+                  <motion.span
+                    layoutId="bottom-nav-pill"
+                    className="absolute inset-0 rounded-full bg-[var(--color-primary-soft)]"
+                    transition={spring}
+                  />
+                )}
                 <span className="relative">
                   <Icon
                     className={cn(
@@ -91,23 +101,19 @@ export function BottomNav() {
                     </span>
                   )}
                 </span>
-                <span
-                  className={cn(
-                    "text-[10.5px] font-semibold tracking-tight transition-colors",
-                    active
-                      ? "text-[var(--color-primary)]"
-                      : "text-[var(--color-ink-soft)]",
+                <AnimatePresence initial={false}>
+                  {active && (
+                    <motion.span
+                      initial={{ opacity: 0, width: 0 }}
+                      animate={{ opacity: 1, width: "auto" }}
+                      exit={{ opacity: 0, width: 0 }}
+                      transition={spring}
+                      className="relative overflow-hidden whitespace-nowrap text-[12px] font-bold tracking-tight text-[var(--color-primary-dark)]"
+                    >
+                      {it.label}
+                    </motion.span>
                   )}
-                >
-                  {it.label}
-                </span>
-                {active && (
-                  <motion.span
-                    layoutId="bottom-nav-indicator"
-                    className="absolute -top-px h-0.5 w-7 rounded-full bg-[var(--color-primary)]"
-                    transition={{ type: "spring", stiffness: 420, damping: 32 }}
-                  />
-                )}
+                </AnimatePresence>
               </Link>
             </li>
           );

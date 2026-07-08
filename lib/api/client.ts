@@ -60,8 +60,9 @@ export async function apiFetch<T>(
   const data = isJson ? await res.json() : undefined;
 
   if (!res.ok) {
+    const rawMessage = data?.message;
     const message =
-      (data && (data.message?.[0] ?? data.message)) ??
+      (Array.isArray(rawMessage) ? rawMessage[0] : rawMessage) ??
       `Request failed with status ${res.status}`;
     throw new ApiError(res.status, message);
   }

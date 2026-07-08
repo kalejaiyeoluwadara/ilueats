@@ -57,17 +57,21 @@ export async function openPaystackPopup(options: PaystackPopupOptions) {
 
   const setupParams: PaystackSetupOptions = {
     key: options.key,
-    email: options.email,
-    amount: options.amount,
     onSuccess: () => options.onSuccess(),
     onCancel: options.onClose,
     callback: () => options.onSuccess(),
     onClose: options.onClose,
   };
 
+  // access_code alone fully identifies the already-initialized transaction
+  // (amount/email/reference were fixed server-side at /payments/initialize).
+  // Mixing it with amount/email/ref is redundant and can confuse Paystack's
+  // inline widget, so only send one or the other.
   if (options.accessCode) {
     setupParams.access_code = options.accessCode;
   } else {
+    setupParams.email = options.email;
+    setupParams.amount = options.amount;
     setupParams.ref = options.ref;
   }
 

@@ -1,32 +1,30 @@
-const SCRIPT_SRC = "https://js.paystack.co/v1/inline.js";
+const SCRIPT_SRC = "https://js.paystack.co/v2/inline.js";
 
-interface PaystackPopupOptions {
-  key: string;
-  email: string;
-  amount: number;
-  ref: string;
-  accessCode?: string;
-  onSuccess: () => void;
-  onClose: () => void;
+export interface PaystackResumeOptions {
+  /** Access code returned by the backend's /payments/initialize (server-created transaction). */
+  accessCode: string;
+  onSuccess: (transaction: { reference: string }) => void;
+  onCancel: () => void;
+  /** Popup failed to open or errored — caller should fall back to the hosted checkout URL. */
+  onError: (error: Error) => void;
 }
 
-interface PaystackSetupOptions {
-  key: string;
-  email?: string;
-  amount?: number;
-  ref?: string;
-  access_code?: string;
-  onSuccess?: () => void;
+interface PaystackTransactionCallbacks {
+  onSuccess?: (transaction: { reference: string }) => void;
   onCancel?: () => void;
-  callback?: () => void;
-  onClose?: () => void;
+  onError?: (error: { message?: string }) => void;
+}
+
+interface PaystackPopInstance {
+  resumeTransaction: (
+    accessCode: string,
+    callbacks?: PaystackTransactionCallbacks
+  ) => void;
 }
 
 declare global {
   interface Window {
-    PaystackPop?: {
-      setup: (options: PaystackSetupOptions) => { openIframe: () => void };
-    };
+    PaystackPop?: new () => PaystackPopInstance;
   }
 }
 
@@ -44,36 +42,38 @@ function loadPaystackScript(): Promise<void> {
     script.src = SCRIPT_SRC;
     script.async = true;
     script.onload = () => resolve();
-    script.onerror = () => reject(new Error("Failed to load Paystack"));
+    script.onerror = () => {
+      loadPromise = null;
+      reject(new Error("Failed to load Paystack"));
+    };
     document.body.appendChild(script);
   });
   return loadPromise;
 }
 
-/** Opens the Paystack Inline popup and resolves once the user completes or cancels. */
-export async function openPaystackPopup(options: PaystackPopupOptions) {
-  await loadPaystackScript();
-  if (!window.PaystackPop) throw new Error("Paystack failed to initialize");
+/**
+ * Resume a server-initialized Paystack transaction in the v2 popup.
+ * The amount, email and reference are already locked in on the backend, so
+ * nothing sensitive is passed from the browser. Never throws — failures are
+ * routed to onError so the caller can redirect to the hosted checkout page.
+ */
+export async function resumePaystackTransaction(options: PaystackResumeOptions) {
+  try {
+    await loadPaystackScript();
+    if (!window.PaystackPop) {
+      throw new Error("Paystack failed to initialize");
+    }
 
-  const setupParams: PaystackSetupOptions = {
-    key: options.key,
-    onSuccess: () => options.onSuccess(),
-    onCancel: options.onClose,
-    callback: () => options.onSuccess(),
-    onClose: options.onClose,
-  };
-
-  // access_code alone fully identifies the already-initialized transaction
-  // (amount/email/reference were fixed server-side at /payments/initialize).
-  // Mixing it with amount/email/ref is redundant and can confuse Paystack's
-  // inline widget, so only send one or the other.
-  if (options.accessCode) {
-    setupParams.access_code = options.accessCode;
-  } else {
-    setupParams.email = options.email;
-    setupParams.amount = options.amount;
-    setupParams.ref = options.ref;
+    const popup = new window.PaystackPop();
+    popup.resumeTransaction(options.accessCode, {
+      onSuccess: (transaction) => options.onSuccess(transaction),
+      onCancel: () => options.onCancel(),
+      onError: (error) =>
+        options.onError(new Error(error?.message ?? "Paystack popup error")),
+    });
+  } catch (err) {
+    options.onError(
+      err instanceof Error ? err : new Error("Paystack popup error")
+    );
   }
-
-  window.PaystackPop.setup(setupParams).openIframe();
 }

@@ -29,7 +29,7 @@ import { pickupLandmarks } from "@/data/mockData";
 import { createOrder as createBackendOrder } from "@/lib/api/orders";
 import { initializePayment, verifyPayment } from "@/lib/api/payments";
 import { ApiError } from "@/lib/api/client";
-import { openPaystackPopup } from "@/lib/paystack";
+import { resumePaystackTransaction } from "@/lib/paystack";
 import {
   cn,
   formatCartOption,
@@ -173,35 +173,48 @@ export default function CheckoutPage() {
 
       if (backendOrder.paymentRequired) {
         const payment = await initializePayment(backendOrder.orderId);
-        openPaystackPopup({
-          key: payment.publicKey,
-          email: session.user.email ?? "",
-          amount: Math.round(total * 100),
-          ref: payment.reference,
-          accessCode: payment.accessCode,
-          // Always verify using our stored reference (payment.reference), not the
-          // callback reference from the popup which may differ when using access_code.
-          onSuccess: async () => {
-            try {
+
+        // Verify against our stored reference (payment.reference). Bank
+        // transfers can take a few seconds to settle on Paystack's side after
+        // the popup reports success, so retry while the backend still says
+        // "pending" instead of failing the whole checkout on the first poll.
+        const finalizeAfterPayment = async () => {
+          try {
+            let status: string = "pending";
+            for (let attempt = 0; attempt < 5; attempt++) {
               const res = await verifyPayment(payment.reference);
-              if (res.status !== "paid") {
-                throw new Error("Payment status verification failed.");
-              }
-              recordLocalOrder(paymentLabels[method]);
-              setOrderId(backendOrder.orderId);
-              setStep("done");
-              clearCart();
-              success("Payment received!", `Order ${backendOrder.orderId} is on its way.`);
-            } catch (err) {
-              toastError(
-                "Payment could not be verified",
-                err instanceof Error ? err.message : "Please contact support with your reference.",
-              );
-              setStep("form");
+              status = res.status;
+              if (status === "paid" || status === "failed") break;
+              await new Promise((r) => setTimeout(r, 2500));
             }
-          },
-          onClose: () => {
+            if (status !== "paid") {
+              throw new Error(
+                `Payment is not confirmed yet (status: ${status}). If you were debited, keep your reference ${payment.reference} and check your orders shortly.`,
+              );
+            }
+            recordLocalOrder(paymentLabels[method]);
+            setOrderId(backendOrder.orderId);
+            setStep("done");
+            clearCart();
+            success("Payment received!", `Order ${backendOrder.orderId} is on its way.`);
+          } catch (err) {
+            toastError(
+              "Payment could not be verified",
+              err instanceof Error ? err.message : "Please contact support with your reference.",
+            );
             setStep("form");
+          }
+        };
+
+        await resumePaystackTransaction({
+          accessCode: payment.accessCode,
+          onSuccess: finalizeAfterPayment,
+          onCancel: () => setStep("form"),
+          // Popup unavailable (script blocked, in-app browser, etc.) — fall
+          // back to Paystack's hosted checkout; the /checkout/payment/callback
+          // page verifies the payment when the user is redirected back.
+          onError: () => {
+            window.location.href = payment.authorizationUrl;
           },
         });
       } else {

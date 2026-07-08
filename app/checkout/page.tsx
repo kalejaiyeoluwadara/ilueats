@@ -179,9 +179,11 @@ export default function CheckoutPage() {
           amount: Math.round(total * 100),
           ref: payment.reference,
           accessCode: payment.accessCode,
-          onSuccess: async (reference) => {
+          // Always verify using our stored reference (payment.reference), not the
+          // callback reference from the popup which may differ when using access_code.
+          onSuccess: async () => {
             try {
-              const res = await verifyPayment(reference);
+              const res = await verifyPayment(payment.reference);
               if (res.status !== "paid") {
                 throw new Error("Payment status verification failed.");
               }

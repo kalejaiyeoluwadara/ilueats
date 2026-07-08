@@ -6,7 +6,7 @@ interface PaystackPopupOptions {
   amount: number;
   ref: string;
   accessCode?: string;
-  onSuccess: (reference: string) => void;
+  onSuccess: () => void;
   onClose: () => void;
 }
 
@@ -16,9 +16,9 @@ interface PaystackSetupOptions {
   amount?: number;
   ref?: string;
   access_code?: string;
-  onSuccess?: (transaction: { reference?: string; trxref?: string }) => void;
+  onSuccess?: () => void;
   onCancel?: () => void;
-  callback?: (transaction: { reference?: string; trxref?: string }) => void;
+  callback?: () => void;
   onClose?: () => void;
 }
 
@@ -59,9 +59,9 @@ export async function openPaystackPopup(options: PaystackPopupOptions) {
     key: options.key,
     email: options.email,
     amount: options.amount,
-    onSuccess: (transaction) => options.onSuccess(transaction?.reference || transaction?.trxref || options.ref),
+    onSuccess: () => options.onSuccess(),
     onCancel: options.onClose,
-    callback: (transaction) => options.onSuccess(transaction?.reference || transaction?.trxref || options.ref),
+    callback: () => options.onSuccess(),
     onClose: options.onClose,
   };
 

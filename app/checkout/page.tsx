@@ -181,7 +181,10 @@ export default function CheckoutPage() {
           accessCode: payment.accessCode,
           onSuccess: async (reference) => {
             try {
-              await verifyPayment(reference);
+              const res = await verifyPayment(reference);
+              if (res.status !== "paid") {
+                throw new Error("Payment status verification failed.");
+              }
               recordLocalOrder(paymentLabels[method]);
               setOrderId(backendOrder.orderId);
               setStep("done");
@@ -190,7 +193,7 @@ export default function CheckoutPage() {
             } catch (err) {
               toastError(
                 "Payment could not be verified",
-                err instanceof ApiError ? err.message : "Please contact support with your reference.",
+                err instanceof Error ? err.message : "Please contact support with your reference.",
               );
               setStep("form");
             }

@@ -12,6 +12,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useCart } from "@/hooks/useCart";
 import { useSearch } from "@/context/SearchContext";
+import { useAuth } from "@/hooks/useAuth";
 
 const desktopLinks = [
   { href: "/", label: "Home" },
@@ -40,6 +41,7 @@ export function Navbar({
   const pathname = usePathname();
   const { count, bump } = useCart();
   const { openSearch } = useSearch();
+  const { user } = useAuth();
 
   const isHome = variant === "home";
   const isCartPage = pathname === "/cart" || pathname === "/checkout";
@@ -93,23 +95,40 @@ export function Navbar({
             className="hidden items-center gap-1 lg:flex"
           >
             {desktopLinks.map((l) => {
+              const isAccount = l.href === "/account";
+              const showEllipse = isAccount && user;
               const active =
                 l.href === "/"
                   ? pathname === "/"
                   : pathname?.startsWith(l.href);
+
+              const initial = user?.name ? user.name.trim().charAt(0).toUpperCase() : "U";
+
               return (
                 <Link
                   key={l.href}
                   href={l.href}
                   aria-current={active ? "page" : undefined}
                   className={cn(
-                    "rounded-full px-3.5 py-2 text-[13.5px] font-semibold tracking-tight transition-colors",
+                    "rounded-full tracking-tight transition-all flex items-center justify-center",
+                    showEllipse
+                      ? "p-0.5"
+                      : "px-3.5 py-2 text-[13.5px] font-semibold",
                     active
                       ? "bg-[var(--color-primary-soft)] text-[var(--color-primary)]"
                       : "text-[var(--color-ink-muted)] hover:bg-black/5 hover:text-[var(--color-ink)]"
                   )}
                 >
-                  {l.label}
+                  {showEllipse ? (
+                    <span
+                      className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--color-primary)] text-[12.5px] font-extrabold text-white shadow-sm ring-2 ring-white/10 hover:scale-105 transition-transform"
+                      title={user?.name || "Account"}
+                    >
+                      {initial}
+                    </span>
+                  ) : (
+                    l.label
+                  )}
                 </Link>
               );
             })}

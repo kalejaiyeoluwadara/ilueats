@@ -13,7 +13,7 @@ export class ApiError extends Error {
 
 type ApiFetchOptions = {
   method?: "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
-  body?: unknown;
+  body?: unknown | FormData;
   /** Bearer token to use instead of the browser session (e.g. from a server component). */
   token?: string;
   query?: Record<string, string | number | undefined>;
@@ -40,13 +40,20 @@ export async function apiFetch<T>(
       ? (await getSession())?.accessToken
       : undefined);
 
+  const isFormData =
+    typeof FormData !== "undefined" && options.body instanceof FormData;
+
   const res = await fetch(buildUrl(path, options.query), {
     method: options.method ?? "GET",
     headers: {
-      "Content-Type": "application/json",
+      ...(!isFormData && { "Content-Type": "application/json" }),
       ...(token && { Authorization: `Bearer ${token}` }),
     },
-    body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+    body: isFormData
+      ? (options.body as FormData)
+      : options.body !== undefined
+        ? JSON.stringify(options.body)
+        : undefined,
   });
 
   const isJson = res.headers.get("content-type")?.includes("application/json");

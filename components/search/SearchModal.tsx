@@ -15,6 +15,8 @@ import {
 } from "@heroicons/react/24/outline";
 import { categories } from "@/data/mockData";
 import { useCatalog } from "@/context/CatalogContext";
+import { useSearchCatalog } from "@/hooks/useCatalogQueries";
+import { InlineLoader } from "@/components/ui/Loaders";
 import { formatDeliveryTime, formatPrice, readLocalStorage, writeLocalStorage } from "@/lib/utils";
 
 interface SearchModalProps {
@@ -38,7 +40,7 @@ const RECENT_MAX = 6;
 
 export function SearchModal({ open, onClose, initialQuery = "" }: SearchModalProps) {
   const router = useRouter();
-  const { stores, products } = useCatalog();
+  const { stores } = useCatalog();
   const inputRef = useRef<HTMLInputElement>(null);
 
   const [query, setQuery] = useState(initialQuery);

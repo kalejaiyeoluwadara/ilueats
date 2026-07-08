@@ -2,60 +2,103 @@
 
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
-  useSyncExternalStore,
+  useState,
 } from "react";
 import type { AdSlide } from "@/types";
+import { ApiError } from "@/lib/api/client";
 import {
-  addBanner as bannerAdd,
-  hydrateBannersFromStorage,
-  getBannersServerSnapshot,
-  getBannersSnapshot,
-  removeBanner as bannerRemove,
-  reorderBanner as bannerReorder,
-  resetBannersToSeed,
-  subscribeBanners,
-  updateBanner as bannerUpdate,
+  createBanner as apiCreateBanner,
+  deleteBanner as apiDeleteBanner,
+  fetchBanners,
+  reorderBanners as apiReorderBanners,
+  updateBanner as apiUpdateBanner,
   type BannerUpsertPayload,
-} from "@/lib/bannerStore";
+} from "@/lib/api/banners";
+
+export type { BannerUpsertPayload } from "@/lib/api/banners";
 
 type BannersContextValue = {
   banners: AdSlide[];
-  addBanner: (input: BannerUpsertPayload) => AdSlide;
+  loading: boolean;
+  error: string | null;
+  refetch: () => Promise<void>;
+  addBanner: (input: BannerUpsertPayload, file?: File | null) => Promise<AdSlide>;
   updateBanner: (
     id: string,
-    input: Partial<BannerUpsertPayload>
-  ) => AdSlide | undefined;
-  removeBanner: (id: string) => void;
-  reorderBanner: (from: number, to: number) => void;
-  resetToSeed: () => void;
+    input: Partial<BannerUpsertPayload>,
+    file?: File | null
+  ) => Promise<AdSlide>;
+  removeBanner: (id: string) => Promise<void>;
+  reorderBanner: (from: number, to: number) => Promise<void>;
 };
 
 const BannersContext = createContext<BannersContextValue | null>(null);
 
 export function BannerProvider({ children }: { children: React.ReactNode }) {
-  const banners = useSyncExternalStore(
-    subscribeBanners,
-    getBannersSnapshot,
-    getBannersServerSnapshot
-  );
+  const [banners, setBanners] = useState<AdSlide[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      setBanners(await fetchBanners());
+    } catch (err) {
+      setError(
+        err instanceof ApiError ? err.message : "Couldn't load banners."
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    hydrateBannersFromStorage();
-  }, []);
+    load();
+  }, [load]);
 
   const value = useMemo<BannersContextValue>(
     () => ({
       banners,
-      addBanner: bannerAdd,
-      updateBanner: bannerUpdate,
-      removeBanner: bannerRemove,
-      reorderBanner: bannerReorder,
-      resetToSeed: resetBannersToSeed,
+      loading,
+      error,
+      refetch: load,
+      addBanner: async (input, file) => {
+        const created = await apiCreateBanner(input, file);
+        await load();
+        return created;
+      },
+      updateBanner: async (id, input, file) => {
+        const updated = await apiUpdateBanner(id, input, file);
+        await load();
+        return updated;
+      },
+      removeBanner: async (id) => {
+        await apiDeleteBanner(id);
+        await load();
+      },
+      reorderBanner: async (from, to) => {
+        if (
+          from === to ||
+          from < 0 ||
+          to < 0 ||
+          from >= banners.length ||
+          to >= banners.length
+        ) {
+          return;
+        }
+        const next = [...banners];
+        const [item] = next.splice(from, 1);
+        next.splice(to, 0, item);
+        setBanners(next);
+        await apiReorderBanners(next.map((b) => b.id));
+      },
     }),
-    [banners]
+    [banners, loading, error, load]
   );
 
   return (

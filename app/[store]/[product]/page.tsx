@@ -11,8 +11,9 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { QuantityStepper } from "@/components/cart/CartItem";
 import { Modal } from "@/components/ui/Modal";
-import { useCatalog } from "@/context/CatalogContext";
-import { getProductBySlug, getStoreBySlug } from "@/data/mockData";
+import { PageLoader } from "@/components/ui/Loaders";
+import { ErrorState } from "@/components/ui/EmptyState";
+import { useProduct, useStore } from "@/hooks/useCatalogQueries";
 import { cn, formatPrice } from "@/lib/utils";
 import { useCart } from "@/hooks/useCart";
 import { useToast } from "@/hooks/useToast";
@@ -425,20 +426,29 @@ function ProductPageContent({
 
 export default function ProductPage({ params }: PageProps) {
   const { store: storeSlug, product: productSlug } = use(params);
-  const { stores, products } = useCatalog();
+  const { store, loading: storeLoading, error: storeError, notFound: storeNotFound } =
+    useStore(storeSlug);
+  const {
+    product,
+    loading: productLoading,
+    error: productError,
+    notFound: productNotFound,
+  } = useProduct(storeSlug, productSlug);
 
-  const store = useMemo(
-    () => getStoreBySlug(storeSlug),
-    [stores, storeSlug]
-  );
-
-  const product = useMemo(
-    () => getProductBySlug(storeSlug, productSlug),
-    [products, storeSlug, productSlug]
-  );
-
-  if (!store || !product) {
+  if (storeNotFound || productNotFound) {
     notFound();
+  }
+
+  if (storeLoading || productLoading) {
+    return <PageLoader message="Loading dish…" />;
+  }
+
+  if (storeError || productError || !store || !product) {
+    return (
+      <div className="min-h-screen px-4 pt-24">
+        <ErrorState message={storeError ?? productError ?? "Couldn't load this dish."} />
+      </div>
+    );
   }
 
   return <ProductPageContent store={store} product={product} />;

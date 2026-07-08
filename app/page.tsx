@@ -9,26 +9,28 @@ import { CategoryPills } from "@/components/home/CategoryPills";
 import { AdBanner } from "@/components/home/AdBanner";
 import { FeaturedItems } from "@/components/home/FeaturedItems";
 import { StoreCard } from "@/components/home/StoreCard";
-import { getFeaturedProducts, getStoresByCategory } from "@/data/mockData";
+import { ContentLoader } from "@/components/ui/Loaders";
+import { EmptyState, ErrorState } from "@/components/ui/EmptyState";
 import { useBanners } from "@/context/BannersContext";
-import type { CategoryId } from "@/types";
 import { useCatalog } from "@/context/CatalogContext";
+import { useFeaturedProducts } from "@/hooks/useCatalogQueries";
+import type { CategoryId } from "@/types";
 
 export default function HomePage() {
-  const { stores } = useCatalog();
+  const { stores, loading: storesLoading, error: storesError, refetch } = useCatalog();
   const { banners } = useBanners();
+  const { products: featuredProducts, loading: featuredLoading } = useFeaturedProducts();
   const [category, setCategory] = useState<CategoryId>("all");
 
   const featuredStores = useMemo(
     () => stores.filter((s) => s.isFeatured),
-    [stores],
+    [stores]
   );
-  const featuredProducts = useMemo(() => getFeaturedProducts(), [stores]);
 
-  const filteredStores = useMemo(
-    () => getStoresByCategory(category),
-    [category, stores],
-  );
+  const filteredStores = useMemo(() => {
+    if (category === "all") return stores;
+    return stores.filter((s) => s.categories.includes(category));
+  }, [category, stores]);
 
   return (
     <div className="min-h-screen pb-24 lg:pb-12">
@@ -38,16 +40,22 @@ export default function HomePage() {
         <div className="lg:grid lg:grid-cols-[1.05fr_1fr] lg:items-center lg:gap-10 lg:pt-6">
           <HeroBanner />
 
-          <div className="pt-1 pb-2 lg:p-0">
-            <AdBanner slides={banners} />
-          </div>
+          {banners.length > 0 && (
+            <div className="pt-1 pb-2 lg:p-0">
+              <AdBanner slides={banners} />
+            </div>
+          )}
         </div>
 
         <div className="pt-2 lg:pt-6">
           <CategoryPills active={category} onChange={setCategory} />
         </div>
 
-        {featuredProducts.length > 0 && (
+        {featuredLoading ? (
+          <div className="pt-4">
+            <ContentLoader message="Finding this week's favourites…" />
+          </div>
+        ) : featuredProducts.length > 0 ? (
           <div className="pt-4">
             <FeaturedItems
               title="Fresh from your ìlú"
@@ -55,7 +63,7 @@ export default function HomePage() {
               items={featuredProducts}
             />
           </div>
-        )}
+        ) : null}
 
         {featuredStores.length > 0 && (
           <section className="px-4 pt-5">
@@ -93,8 +101,15 @@ export default function HomePage() {
             </div>
           </div>
 
-          {filteredStores.length === 0 ? (
-            <EmptyState category={category} />
+          {storesLoading ? (
+            <ContentLoader message="Loading stores near you…" />
+          ) : storesError ? (
+            <ErrorState message={storesError} onRetry={refetch} />
+          ) : filteredStores.length === 0 ? (
+            <EmptyState
+              title="Nothing here yet"
+              description={`No stores yet for the ${category} category. Check back soon.`}
+            />
           ) : (
             <div className="grid grid-cols-1 gap-8 lg:grid-cols-3 lg:gap-x-6 lg:gap-y-9">
               {filteredStores.map((s, idx) => (
@@ -108,26 +123,6 @@ export default function HomePage() {
       </main>
 
       <BottomNav />
-    </div>
-  );
-}
-
-function EmptyState({ category }: { category: CategoryId }) {
-  return (
-    <div className="relative overflow-hidden rounded-[1.35rem] border border-[var(--color-line)] bg-gradient-to-b from-[var(--color-surface)] to-[var(--color-bg)] p-6 text-center shadow-crisp">
-      <div
-        className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-[var(--color-primary)]/[0.07] blur-2xl"
-        aria-hidden
-      />
-      <div className="relative mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--color-primary-soft)] text-2xl shadow-[inset_0_1px_0_rgb(255_255_255/0.65)] ring-1 ring-[var(--color-primary)]/10">
-        🍽️
-      </div>
-      <h3 className="relative text-[16px] font-extrabold tracking-tight text-[var(--color-ink)]">
-        Nothing here yet
-      </h3>
-      <p className="relative mt-2 text-[13px] leading-relaxed text-[var(--color-ink-muted)]">
-        No stores yet for the {category} category. Check back soon.
-      </p>
     </div>
   );
 }

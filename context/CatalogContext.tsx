@@ -2,66 +2,88 @@
 
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
-  useSyncExternalStore,
+  useState,
 } from "react";
 import type { Product, Store } from "@/types";
+import { ApiError } from "@/lib/api/client";
 import {
-  addMenuItem as catalogAddMenuItem,
-  addStore as catalogAddStore,
-  getCatalogServerSnapshot,
-  getCatalogSnapshot,
-  hydrateCatalogFromStorage,
+  createMenuItem as apiCreateMenuItem,
+  createStore as apiCreateStore,
+  deleteMenuItem as apiDeleteMenuItem,
+  fetchStores,
+  updateMenuItem as apiUpdateMenuItem,
+  updateStoreApi,
   type MenuItemPayload,
-  removeMenuItem as catalogRemoveMenuItem,
-  resetCatalogToSeed,
-  subscribeCatalog,
-  updateMenuItem as catalogUpdateMenuItem,
-  updateStore as catalogUpdateStore,
   type StoreUpsertPayload,
-} from "@/lib/catalogStore";
+} from "@/lib/api/catalog";
+
+export type { MenuItemPayload, StoreUpsertPayload } from "@/lib/api/catalog";
 
 type CatalogContextValue = {
   stores: Store[];
-  products: Product[];
-  addStore: (input: StoreUpsertPayload) => Store;
-  updateStore: (storeId: string, input: Partial<StoreUpsertPayload>) => void;
-  addMenuItem: (store: Store, input: MenuItemPayload) => Product;
+  loading: boolean;
+  error: string | null;
+  refetch: () => Promise<void>;
+  addStore: (input: StoreUpsertPayload) => Promise<Store>;
+  updateStore: (storeId: string, input: Partial<StoreUpsertPayload>) => Promise<Store>;
+  addMenuItem: (store: Store, input: MenuItemPayload) => Promise<Product>;
   updateMenuItem: (
     productId: string,
     input: Partial<MenuItemPayload>
-  ) => Product | undefined;
-  removeMenuItem: (productId: string) => void;
-  resetToSeed: () => void;
+  ) => Promise<Product>;
+  removeMenuItem: (productId: string) => Promise<void>;
 };
 
 const CatalogContext = createContext<CatalogContextValue | null>(null);
 
 export function CatalogProvider({ children }: { children: React.ReactNode }) {
-  const snapshot = useSyncExternalStore(
-    subscribeCatalog,
-    getCatalogSnapshot,
-    getCatalogServerSnapshot
-  );
+  const [stores, setStores] = useState<Store[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      setStores(await fetchStores());
+    } catch (err) {
+      setError(
+        err instanceof ApiError ? err.message : "Couldn't load stores."
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    hydrateCatalogFromStorage();
-  }, []);
+    load();
+  }, [load]);
 
   const value = useMemo<CatalogContextValue>(
     () => ({
-      stores: snapshot.stores,
-      products: snapshot.products,
-      addStore: catalogAddStore,
-      updateStore: catalogUpdateStore,
-      addMenuItem: catalogAddMenuItem,
-      updateMenuItem: catalogUpdateMenuItem,
-      removeMenuItem: catalogRemoveMenuItem,
-      resetToSeed: resetCatalogToSeed,
+      stores,
+      loading,
+      error,
+      refetch: load,
+      addStore: async (input) => {
+        const created = await apiCreateStore(input);
+        await load();
+        return created;
+      },
+      updateStore: async (storeId, input) => {
+        const updated = await updateStoreApi(storeId, input);
+        await load();
+        return updated;
+      },
+      addMenuItem: (store, input) => apiCreateMenuItem(store.id, input),
+      updateMenuItem: (productId, input) => apiUpdateMenuItem(productId, input),
+      removeMenuItem: (productId) => apiDeleteMenuItem(productId),
     }),
-    [snapshot.products, snapshot.stores]
+    [stores, loading, error, load]
   );
 
   return (

@@ -15,7 +15,10 @@ import {
 } from "@heroicons/react/24/outline";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { StoreCard } from "@/components/home/StoreCard";
+import { ContentLoader } from "@/components/ui/Loaders";
+import { ErrorState } from "@/components/ui/EmptyState";
 import { useCatalog } from "@/context/CatalogContext";
+import { useSearchCatalog } from "@/hooks/useCatalogQueries";
 import { formatDeliveryTime, formatPrice } from "@/lib/utils";
 import type { Store } from "@/types";
 
@@ -39,7 +42,7 @@ export default function SearchPage() {
 
 function SearchPageInner() {
   const router = useRouter();
-  const { stores, products } = useCatalog();
+  const { stores } = useCatalog();
   const params = useSearchParams();
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -54,32 +57,12 @@ function SearchPageInner() {
   const trimmed = query.trim();
   const isSearching = trimmed.length > 0;
 
-  const matchingProducts = useMemo(() => {
-    if (!isSearching) return [];
-    const q = trimmed.toLowerCase();
-    return products.filter(
-      (p) =>
-        p.name.toLowerCase().includes(q) ||
-        p.description.toLowerCase().includes(q)
-    );
-  }, [trimmed, isSearching, products]);
-
-  const matchingStores = useMemo(() => {
-    if (!isSearching) return [];
-    const q = trimmed.toLowerCase();
-    return stores.filter(
-      (s) =>
-        s.name.toLowerCase().includes(q) ||
-        s.tagline.toLowerCase().includes(q) ||
-        s.tags?.some((t) => t.toLowerCase().includes(q)) ||
-        products.some(
-          (p) =>
-            p.storeId === s.id &&
-            (p.name.toLowerCase().includes(q) ||
-              p.description.toLowerCase().includes(q))
-        )
-    );
-  }, [trimmed, isSearching, products, stores]);
+  const {
+    stores: matchingStores,
+    products: matchingProducts,
+    loading: searchLoading,
+    error: searchError,
+  } = useSearchCatalog(query);
 
   const totalResults = matchingProducts.length + matchingStores.length;
 
@@ -197,6 +180,10 @@ function SearchPageInner() {
               router.replace(`/search?q=${encodeURIComponent(t)}`)
             }
           />
+        ) : searchLoading ? (
+          <ContentLoader message={`Searching for “${trimmed}”…`} />
+        ) : searchError ? (
+          <ErrorState message={searchError} />
         ) : totalResults === 0 ? (
           <NoResults query={trimmed} />
         ) : (

@@ -8,11 +8,10 @@ import { BottomNav } from "@/components/layout/BottomNav";
 import { StoreHeader } from "@/components/store/StoreHeader";
 import { MenuSection } from "@/components/store/MenuSection";
 import { CartFooter } from "@/components/cart/CartFooter";
-import { useCatalog } from "@/context/CatalogContext";
-import {
-  categories,
-  getStoreBySlug,
-} from "@/data/mockData";
+import { PageLoader, ContentLoader } from "@/components/ui/Loaders";
+import { EmptyState, ErrorState } from "@/components/ui/EmptyState";
+import { useStore, useStoreProducts } from "@/hooks/useCatalogQueries";
+import { categories } from "@/data/mockData";
 import { cn } from "@/lib/utils";
 import type { CategoryId } from "@/types";
 
@@ -22,17 +21,13 @@ interface PageProps {
 
 export default function StorePage({ params }: PageProps) {
   const { store: storeSlug } = use(params);
-  const { stores, products } = useCatalog();
-
-  const store = useMemo(
-    () => getStoreBySlug(storeSlug),
-    [stores, storeSlug]
-  );
-
-  const allProducts = useMemo(
-    () => (store ? products.filter((p) => p.storeId === store.id) : []),
-    [store, products]
-  );
+  const { store, loading: storeLoading, error: storeError, notFound: storeNotFound } =
+    useStore(storeSlug);
+  const {
+    products: allProducts,
+    loading: productsLoading,
+    error: productsError,
+  } = useStoreProducts(storeSlug);
 
   // Build category list from product categories that exist on this store
   const availableCategoryIds = useMemo(() => {
@@ -64,8 +59,20 @@ export default function StorePage({ params }: PageProps) {
     return Array.from(map.entries());
   }, [visible]);
 
-  if (!store) {
+  if (storeNotFound) {
     notFound();
+  }
+
+  if (storeLoading) {
+    return <PageLoader message="Loading store…" />;
+  }
+
+  if (storeError || !store) {
+    return (
+      <div className="min-h-screen px-4 pt-24">
+        <ErrorState message={storeError ?? "Couldn't load this store."} />
+      </div>
+    );
   }
 
   return (
@@ -107,19 +114,19 @@ export default function StorePage({ params }: PageProps) {
           transition={{ duration: 0.3 }}
           className="space-y-6 pt-2"
         >
-          {grouped.length === 0 ? (
+          {productsLoading ? (
+            <ContentLoader message="Loading the menu…" />
+          ) : productsError ? (
             <div className="px-4">
-              <div className="rounded-2xl bg-white p-6 text-center ring-1 ring-[var(--color-line)]">
-                <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-[var(--color-primary-soft)] text-2xl">
-                  🥡
-                </div>
-                <h3 className="text-[15px] font-bold tracking-tight">
-                  No items match
-                </h3>
-                <p className="mt-1 text-[13px] text-[var(--color-ink-muted)]">
-                  Try another category or clear the search.
-                </p>
-              </div>
+              <ErrorState message={productsError} />
+            </div>
+          ) : grouped.length === 0 ? (
+            <div className="px-4">
+              <EmptyState
+                icon="🥡"
+                title="No items match"
+                description="Try another category or clear the search."
+              />
             </div>
           ) : (
             grouped.map(([catId, items]) => {

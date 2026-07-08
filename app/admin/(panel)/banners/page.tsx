@@ -63,9 +63,13 @@ export default function AdminBannersPage() {
         mode="add"
         initial={null}
         onClose={() => setAddOpen(false)}
-        onSave={(payload) => {
-          const created = addBanner(payload);
-          success("Banner added", `${created.title} will show on the home feed.`);
+        onSave={async (payload, file) => {
+          try {
+            const created = await addBanner(payload, file);
+            success("Banner added", `${created.title} will show on the home feed.`);
+          } catch {
+            errorToast("Couldn't add banner", "Please check the image and try again.");
+          }
         }}
       />
 
@@ -74,15 +78,23 @@ export default function AdminBannersPage() {
         mode="edit"
         initial={editSlide}
         onClose={() => setEditSlide(null)}
-        onSave={(payload) => {
+        onSave={async (payload, file) => {
           if (!editSlide) return;
-          updateBanner(editSlide.id, payload);
-          success("Banner updated", `${payload.title.trim()} saved.`);
-          setEditSlide(null);
+          try {
+            await updateBanner(editSlide.id, payload, file);
+            success("Banner updated", `${payload.title.trim()} saved.`);
+            setEditSlide(null);
+          } catch {
+            errorToast("Couldn't update banner", "Please try again.");
+          }
         }}
       />
 
-      {banners.length === 0 ? (
+      {loading ? (
+        <ContentLoader message="Loading banners…" />
+      ) : error ? (
+        <ErrorState message={error} onRetry={refetch} />
+      ) : banners.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-[var(--color-line)] bg-[var(--color-surface)] p-10 text-center">
           <p className="text-[14px] font-semibold text-[var(--color-ink)]">
             No banners yet

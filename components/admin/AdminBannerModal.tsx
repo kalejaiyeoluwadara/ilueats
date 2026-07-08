@@ -6,7 +6,7 @@ import { Modal } from "@/components/ui/Modal";
 import { cn } from "@/lib/utils";
 import type { AdSlide } from "@/types";
 
-const MAX_BYTES = 900 * 1024;
+const MAX_BYTES = 5 * 1024 * 1024;
 const ACCEPT = "image/jpeg,image/png,image/webp";
 
 export type BannerModalMode = "add" | "edit";
@@ -16,7 +16,10 @@ export type AdminBannerModalProps = {
   mode: BannerModalMode;
   initial: AdSlide | null;
   onClose: () => void;
-  onSave: (slide: Omit<AdSlide, "id"> & { id?: string }) => void;
+  onSave: (
+    slide: Omit<AdSlide, "id" | "image"> & { image?: string },
+    file?: File | null
+  ) => void;
 };
 
 export function AdminBannerModal({
@@ -32,7 +35,10 @@ export function AdminBannerModal({
   const [cta, setCta] = useState("");
   const [href, setHref] = useState("");
   const [badge, setBadge] = useState("");
-  const [imageDataUrl, setImageDataUrl] = useState<string | null>(null);
+  const [imageSource, setImageSource] = useState<"url" | "file">("url");
+  const [imageUrl, setImageUrl] = useState("");
+  const [file, setFile] = useState<File | null>(null);
+  const [previewSrc, setPreviewSrc] = useState<string | null>(null);
   const [fileHint, setFileHint] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
@@ -40,13 +46,16 @@ export function AdminBannerModal({
     if (!open) return;
     setErr(null);
     setFileHint(null);
+    setFile(null);
+    setImageSource("url");
     if (mode === "edit" && initial) {
       setTitle(initial.title);
       setSubtitle(initial.subtitle);
       setCta(initial.cta);
       setHref(initial.href);
       setBadge(initial.badge ?? "");
-      setImageDataUrl(initial.image || null);
+      setImageUrl(initial.image || "");
+      setPreviewSrc(initial.image || null);
       return;
     }
     setTitle("");
@@ -54,33 +63,30 @@ export function AdminBannerModal({
     setCta("Shop now");
     setHref("/");
     setBadge("");
-    setImageDataUrl(null);
+    setImageUrl("");
+    setPreviewSrc(null);
   }, [open, mode, initial]);
 
-  const previewSrc = imageDataUrl ?? "";
-
-  const onPickFile = (file: File | null) => {
+  const onPickFile = (picked: File | null) => {
     setErr(null);
     setFileHint(null);
-    if (!file) return;
-    if (!/^image\/(jpeg|jpg|png|webp)$/i.test(file.type)) {
+    if (!picked) return;
+    if (!/^image\/(jpeg|jpg|png|webp)$/i.test(picked.type)) {
       setErr("Please choose a JPG, PNG, or WebP image.");
       return;
     }
-    if (file.size > MAX_BYTES) {
-      setErr("Image is too large. Use a file under about 900KB.");
+    if (picked.size > MAX_BYTES) {
+      setErr("Image is too large. Use a file under 5MB.");
       return;
     }
+    setFile(picked);
+    setFileHint(picked.name);
     const reader = new FileReader();
     reader.onload = () => {
       const r = reader.result;
-      if (typeof r === "string") {
-        setImageDataUrl(r);
-        setFileHint(file.name);
-      }
+      if (typeof r === "string") setPreviewSrc(r);
     };
-    reader.onerror = () => setErr("Could not read this file.");
-    reader.readAsDataURL(file);
+    reader.readAsDataURL(picked);
   };
 
   const canSubmit =
@@ -88,21 +94,23 @@ export function AdminBannerModal({
     subtitle.trim().length > 0 &&
     cta.trim().length > 0 &&
     href.trim().length > 0 &&
-    !!imageDataUrl;
+    (imageSource === "file" ? !!file : imageUrl.trim().length > 0);
 
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!canSubmit || !imageDataUrl) return;
+    if (!canSubmit) return;
     setErr(null);
-    onSave({
-      ...(mode === "edit" && initial ? { id: initial.id } : {}),
-      title: title.trim(),
-      subtitle: subtitle.trim(),
-      cta: cta.trim(),
-      href: href.trim(),
-      badge: badge.trim() || undefined,
-      image: imageDataUrl,
-    });
+    onSave(
+      {
+        title: title.trim(),
+        subtitle: subtitle.trim(),
+        cta: cta.trim(),
+        href: href.trim(),
+        badge: badge.trim() || undefined,
+        image: imageSource === "url" ? imageUrl.trim() : undefined,
+      },
+      imageSource === "file" ? file : undefined
+    );
     onClose();
   };
 
@@ -136,7 +144,7 @@ export function AdminBannerModal({
       open={open}
       onClose={onClose}
       title={mode === "add" ? "New promo banner" : "Edit banner"}
-      description="Upload artwork (JPG, PNG, WebP — max ~900KB). Shown as the carousel on the home feed."
+      description="Upload a file or paste an image URL. Shown as the carousel on the home feed."
       footer={footer}
     >
       <form id={formId} onSubmit={onSubmit} className="space-y-4 pb-2">
@@ -160,31 +168,67 @@ export function AdminBannerModal({
                 />
               ) : (
                 <div className="flex h-full items-center justify-center px-6 text-center text-[12.5px] text-[var(--color-ink-muted)]">
-                  No image yet — choose a file below
+                  No image yet
                 </div>
               )}
             </div>
-            <div className="flex flex-wrap items-center gap-2 border-t border-[var(--color-line)] p-3">
-              <label className="inline-flex cursor-pointer items-center rounded-xl bg-[var(--color-primary)] px-4 py-2 text-[12.5px] font-bold text-white">
+            <div className="flex flex-wrap items-center gap-1.5 border-t border-[var(--color-line)] p-2.5">
+              <button
+                type="button"
+                onClick={() => setImageSource("url")}
+                className={cn(
+                  "h-9 rounded-lg px-3 text-[12px] font-bold transition-colors",
+                  imageSource === "url"
+                    ? "bg-[var(--color-primary)] text-white"
+                    : "bg-[var(--color-bg)] text-[var(--color-ink)]"
+                )}
+              >
+                Image URL
+              </button>
+              <button
+                type="button"
+                onClick={() => setImageSource("file")}
+                className={cn(
+                  "h-9 rounded-lg px-3 text-[12px] font-bold transition-colors",
+                  imageSource === "file"
+                    ? "bg-[var(--color-primary)] text-white"
+                    : "bg-[var(--color-bg)] text-[var(--color-ink)]"
+                )}
+              >
                 Upload file
+              </button>
+            </div>
+            <div className="border-t border-[var(--color-line)] p-3">
+              {imageSource === "url" ? (
                 <input
-                  type="file"
-                  accept={ACCEPT}
-                  className="hidden"
-                  onChange={(ev) =>
-                    onPickFile(ev.target.files?.[0] ?? null)
-                  }
+                  type="url"
+                  value={imageUrl}
+                  onChange={(e) => {
+                    setImageUrl(e.target.value);
+                    setPreviewSrc(e.target.value || null);
+                  }}
+                  placeholder="https://images.example.com/banner.jpg"
+                  className="h-11 w-full rounded-xl border border-[var(--color-line)] bg-[var(--color-bg)] px-3 text-[13.5px] outline-none ring-[var(--color-primary)] focus:ring-2"
                 />
-              </label>
-              {fileHint && (
-                <span className="text-[11px] text-[var(--color-ink-soft)] truncate max-w-[200px]">
-                  {fileHint}
-                </span>
-              )}
-              {mode === "edit" && initial?.image?.startsWith("http") && (
-                <span className="text-[11px] text-[var(--color-ink-muted)]">
-                  Built-in demos use URLs; uploading replaces with your file.
-                </span>
+              ) : (
+                <div className="flex flex-wrap items-center gap-2">
+                  <label className="inline-flex cursor-pointer items-center rounded-xl bg-[var(--color-primary)] px-4 py-2 text-[12.5px] font-bold text-white">
+                    Choose file
+                    <input
+                      type="file"
+                      accept={ACCEPT}
+                      className="hidden"
+                      onChange={(ev) =>
+                        onPickFile(ev.target.files?.[0] ?? null)
+                      }
+                    />
+                  </label>
+                  {fileHint && (
+                    <span className="max-w-[200px] truncate text-[11px] text-[var(--color-ink-soft)]">
+                      {fileHint}
+                    </span>
+                  )}
+                </div>
               )}
             </div>
           </div>

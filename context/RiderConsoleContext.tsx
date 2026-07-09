@@ -99,7 +99,11 @@ export function RiderConsoleProvider({
     return () => {
       cancelled = true;
     };
-  }, [user, refreshToken]);
+    // Key on user?.id (a stable string), not the user object: apiFetch's
+    // getSession() broadcasts a session event that hands back a new user
+    // identity each call, which would otherwise re-trigger this effect forever.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, refreshToken]);
 
   const setOnline = useCallback(async (next: boolean) => {
     const res = await setRiderOnline(next);

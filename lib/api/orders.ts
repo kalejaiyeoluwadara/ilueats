@@ -197,3 +197,10 @@ export function assignRider(orderCode: string, riderId: string) {
     body: { riderId },
   });
 }
+
+export function setRiderPassword(riderId: string, password: string) {
+  return apiFetch<{ ok: true }>(`/admin/riders/${riderId}/password`, {
+    method: "PATCH",
+    body: { password },
+  });
+}

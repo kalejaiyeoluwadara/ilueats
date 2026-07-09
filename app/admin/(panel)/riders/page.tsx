@@ -1,12 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { PlusIcon } from "@heroicons/react/24/outline";
+import { KeyIcon, PlusIcon, TruckIcon } from "@heroicons/react/24/outline";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { ErrorState, EmptyState } from "@/components/ui/EmptyState";
-import { TruckIcon } from "@heroicons/react/24/outline";
-import { getAdminRiders, createRider } from "@/lib/api/orders";
+import {
+  getAdminRiders,
+  createRider,
+  setRiderPassword,
+} from "@/lib/api/orders";
 import type { AdminRider, CreateRiderInput } from "@/lib/api/orders";
 import { ApiError } from "@/lib/api/client";
 import { useToast } from "@/hooks/useToast";
@@ -31,6 +34,10 @@ export default function AdminRidersPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [form, setForm] = useState<CreateRiderInput>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
+
+  const [passwordRider, setPasswordRider] = useState<AdminRider | null>(null);
+  const [newPassword, setNewPassword] = useState("");
+  const [resettingPassword, setResettingPassword] = useState(false);
 
   const fetchRiders = useCallback(async () => {
     setLoading(true);
@@ -75,6 +82,28 @@ export default function AdminRidersPage() {
       );
     } finally {
       setSaving(false);
+    }
+  };
+
+  const onResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!passwordRider) return;
+    setResettingPassword(true);
+    try {
+      await setRiderPassword(passwordRider.riderId, newPassword);
+      success(
+        "Password updated",
+        `${passwordRider.name} can sign in with the new password now.`
+      );
+      setPasswordRider(null);
+      setNewPassword("");
+    } catch (err) {
+      toastError(
+        "Couldn't update password",
+        err instanceof ApiError ? err.message : "Something went wrong."
+      );
+    } finally {
+      setResettingPassword(false);
     }
   };
 
@@ -125,6 +154,9 @@ export default function AdminRidersPage() {
                   <th className="px-4 py-3 font-bold">Contact</th>
                   <th className="px-4 py-3 font-bold">Vehicle</th>
                   <th className="px-4 py-3 font-bold">Status</th>
+                  <th className="w-14 px-2 py-3 text-center font-bold">
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--color-line)]">
@@ -132,7 +164,7 @@ export default function AdminRidersPage() {
                   <tr>
                     <td
                       className="px-4 py-10 text-center text-[13px] font-medium text-[var(--color-ink-muted)]"
-                      colSpan={4}
+                      colSpan={5}
                     >
                       Loading riders…
                     </td>
@@ -188,6 +220,20 @@ export default function AdminRidersPage() {
                           />
                           {r.isOnline ? "Online" : "Offline"}
                         </span>
+                      </td>
+                      <td className="px-2 py-3.5 text-center">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPasswordRider(r);
+                            setNewPassword("");
+                          }}
+                          className="inline-flex h-9 w-9 items-center justify-center rounded-full text-[var(--color-ink-muted)] outline-none ring-[var(--color-ink)]/0 transition hover:bg-black/[0.05] hover:text-[var(--color-ink)] focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/35"
+                          aria-label={`Reset password for ${r.name}`}
+                          title="Reset password"
+                        >
+                          <KeyIcon className="h-4.5 w-4.5" />
+                        </button>
                       </td>
                     </tr>
                   ))
@@ -277,6 +323,56 @@ export default function AdminRidersPage() {
               placeholder="ABJ-123-XY"
             />
           </div>
+        </form>
+      </Modal>
+
+      <Modal
+        open={!!passwordRider}
+        onClose={() => !resettingPassword && setPasswordRider(null)}
+        variant="sheet"
+        className="sm:max-w-sm"
+        title={passwordRider ? `Reset password · ${passwordRider.name}` : undefined}
+        description="They'll need this new password next time they sign in at /rider/login."
+        footer={
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              fullWidth
+              size="md"
+              onClick={() => setPasswordRider(null)}
+              disabled={resettingPassword}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              form="reset-rider-password-form"
+              variant="primary"
+              fullWidth
+              size="md"
+              loading={resettingPassword}
+            >
+              Update password
+            </Button>
+          </div>
+        }
+      >
+        <form
+          id="reset-rider-password-form"
+          className="space-y-4"
+          onSubmit={onResetPassword}
+        >
+          <Field
+            label="New password"
+            type="text"
+            required
+            minLength={8}
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+            placeholder="At least 8 characters"
+            hint="Share it with the rider privately."
+          />
         </form>
       </Modal>
     </div>

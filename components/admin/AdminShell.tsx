@@ -10,6 +10,7 @@ import {
   Cog6ToothIcon,
   PhotoIcon,
   ShoppingBagIcon,
+  TruckIcon,
   XMarkIcon,
 } from "@heroicons/react/24/outline";
 import { useState } from "react";
@@ -20,6 +21,7 @@ import { useAuth } from "@/hooks/useAuth";
 const nav = [
   { href: "/admin", label: "Overview", icon: ChartPieIcon, end: true },
   { href: "/admin/orders", label: "Orders", icon: ShoppingBagIcon },
+  { href: "/admin/riders", label: "Riders", icon: TruckIcon },
   { href: "/admin/stores", label: "Stores", icon: BuildingStorefrontIcon },
   { href: "/admin/banners", label: "Banners", icon: PhotoIcon },
   { href: "/admin/settings", label: "Settings", icon: Cog6ToothIcon },

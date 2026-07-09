@@ -170,7 +170,39 @@ export function updateAdminOrderStatus(orderCode: string, status: OrderStatus) {
 }
 
 export function getAvailableRiders() {
-  return apiFetch<AvailableRider[]>("/admin/riders");
+  return apiFetch<AvailableRider[]>("/admin/riders", {
+    query: { online: true },
+  });
+}
+
+export interface AdminRider {
+  riderId: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  isOnline: boolean;
+  vehicleType: string;
+  plateNumber: string;
+}
+
+export function getAdminRiders() {
+  return apiFetch<AdminRider[]>("/admin/riders");
+}
+
+export interface CreateRiderInput {
+  name: string;
+  email: string;
+  password: string;
+  phone: string;
+  vehicleType?: string;
+  plateNumber?: string;
+}
+
+export function createRider(input: CreateRiderInput) {
+  return apiFetch<AdminRider>("/admin/riders", {
+    method: "POST",
+    body: input,
+  });
 }
 
 export function assignRider(orderCode: string, riderId: string) {

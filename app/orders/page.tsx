@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   ClockIcon,
   ChevronDownIcon,
@@ -9,17 +10,23 @@ import {
   MapPinIcon,
   CreditCardIcon,
   ShoppingBagIcon,
+  ShoppingCartIcon,
   LockClosedIcon,
+  ArrowRightIcon,
+  TrashIcon,
 } from "@heroicons/react/24/outline";
 import { Navbar } from "@/components/layout/Navbar";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { Button } from "@/components/ui/Button";
 import { EmptyState, ErrorState } from "@/components/ui/EmptyState";
+import { CartItem } from "@/components/cart/CartItem";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/useToast";
+import { useCart } from "@/hooks/useCart";
+import { useCatalog } from "@/context/CatalogContext";
 import { getMyOrders, getOrder } from "@/lib/api/orders";
 import { formatPlacedAgo, orderStatusBadge } from "@/lib/ordersStore";
-import { formatPrice } from "@/lib/utils";
+import { cn, formatPrice } from "@/lib/utils";
 import { ApiError } from "@/lib/api/client";
 
 interface OrderSummary {
@@ -62,13 +69,38 @@ interface OrderDetail {
   placedAt: string;
 }
 
+const ONGOING_STATUSES: OrderSummary["status"][] = ["new", "preparing", "out"];
+
+type OrderTab = "cart" | "ongoing" | "completed";
+
 export default function OrdersPage() {
   const { user, ready: authReady } = useAuth();
   const { error: toastError } = useToast();
 
+  const {
+    items: cartItems,
+    count: cartCount,
+    subtotal: cartSubtotal,
+    storeSlug: cartStoreSlug,
+    storeName: cartStoreName,
+    updateQuantity: updateCartQuantity,
+    removeItem: removeCartItem,
+    clearCart,
+  } = useCart();
+  const { stores } = useCatalog();
+  const cartStore = useMemo(
+    () => (cartStoreSlug ? stores.find((s) => s.slug === cartStoreSlug) : undefined),
+    [cartStoreSlug, stores]
+  );
+  const cartDeliveryFee = cartStore?.deliveryFee ?? 0;
+  const cartMinOrder = cartStore?.minOrder ?? 0;
+  const cartBelowMin = cartSubtotal < cartMinOrder;
+
   const [orders, setOrders] = useState<OrderSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const [tab, setTab] = useState<OrderTab>("ongoing");
 
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
   const [details, setDetails] = useState<
@@ -78,12 +110,38 @@ export default function OrdersPage() {
     >
   >({});
 
+  const ongoingOrders = useMemo(
+    () => orders.filter((o) => ONGOING_STATUSES.includes(o.status)),
+    [orders]
+  );
+  const completedOrders = useMemo(
+    () => orders.filter((o) => o.status === "delivered"),
+    [orders]
+  );
+
+  const TAB_CHIPS: { id: OrderTab; label: string; count: number }[] = [
+    { id: "cart", label: "My Cart", count: cartCount },
+    { id: "ongoing", label: "Ongoing", count: ongoingOrders.length },
+    { id: "completed", label: "Completed", count: completedOrders.length },
+  ];
+
+  const visibleOrders = tab === "ongoing" ? ongoingOrders : tab === "completed" ? completedOrders : [];
+
+  const [hasSetInitialTab, setHasSetInitialTab] = useState(false);
+
   const fetchOrders = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
       const res = (await getMyOrders(1, 20)) as { items: OrderSummary[] };
-      setOrders(res.items || []);
+      const items = res.items || [];
+      setOrders(items);
+      setHasSetInitialTab((already) => {
+        if (already) return true;
+        const hasOngoing = items.some((o) => ONGOING_STATUSES.includes(o.status));
+        setTab(hasOngoing ? "ongoing" : items.length > 0 ? "completed" : "ongoing");
+        return true;
+      });
     } catch (err) {
       console.error(err);
       setError(
@@ -206,23 +264,127 @@ export default function OrdersPage() {
   }
 
   return (
-    <div className="min-h-screen pb-24">
+    <div className={cn("min-h-screen", tab === "cart" && cartCount > 0 ? "pb-40" : "pb-24")}>
       <Navbar variant="page" title="Your orders" showSearch={false} />
       <main className="mx-auto max-w-2xl px-4 pt-4">
-        {orders.length === 0 ? (
-          <EmptyState
-            icon={<ShoppingBagIcon className="h-6 w-6" />}
-            title="No orders yet"
-            description="All your active and previous orders will appear here. Place your first order to get started!"
-            action={
-              <Link href="/">
-                <Button size="lg">Explore stores</Button>
-              </Link>
-            }
-          />
+        <div
+          className="flex gap-2 overflow-x-auto pb-1"
+          role="tablist"
+          aria-label="Filter orders"
+        >
+          {TAB_CHIPS.map((chip) => {
+            const selected = tab === chip.id;
+            return (
+              <button
+                key={chip.id}
+                type="button"
+                role="tab"
+                aria-selected={selected}
+                onClick={() => setTab(chip.id)}
+                className={cn(
+                  "inline-flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2 text-[12.5px] font-bold transition-colors",
+                  selected
+                    ? "bg-[var(--color-ink)] text-white"
+                    : "bg-white text-[var(--color-ink)] ring-1 ring-inset ring-[var(--color-line)] hover:bg-black/[0.03]"
+                )}
+              >
+                {chip.id === "cart" && <ShoppingCartIcon className="h-3.5 w-3.5" />}
+                {chip.label}
+                <span
+                  className={cn(
+                    "min-w-[1.25rem] rounded-md px-1 py-0.5 text-center text-[11px] font-extrabold tabular-nums",
+                    selected
+                      ? "bg-white/20 text-white"
+                      : "bg-[var(--color-bg)] text-[var(--color-ink-muted)]"
+                  )}
+                >
+                  {chip.count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="pt-4">
+        {tab === "cart" ? (
+          cartCount === 0 ? (
+            <EmptyState
+              icon={<ShoppingCartIcon className="h-6 w-6" />}
+              title="Your cart is empty"
+              description="Items you add from a store will show up here, ready for checkout."
+              action={
+                <Link href="/">
+                  <Button size="lg">Browse stores</Button>
+                </Link>
+              }
+            />
+          ) : (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="min-w-0">
+                  <p className="text-[12px] font-semibold uppercase tracking-wider text-[var(--color-primary)]">
+                    {cartCount} item{cartCount === 1 ? "" : "s"}
+                  </p>
+                  <h2 className="font-display truncate text-[17px] font-bold tracking-tight text-[var(--color-ink)]">
+                    {cartStoreName ?? cartStore?.name ?? "Your bag"}
+                  </h2>
+                </div>
+                <button
+                  type="button"
+                  onClick={clearCart}
+                  className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-[12px] font-semibold text-red-600 hover:bg-red-50"
+                >
+                  <TrashIcon className="h-3.5 w-3.5" />
+                  Clear
+                </button>
+              </div>
+
+              <ul className="space-y-2.5">
+                <AnimatePresence initial={false}>
+                  {cartItems.map((item) => (
+                    <motion.li key={item.id} layout>
+                      <CartItem
+                        item={item}
+                        onIncrement={() =>
+                          updateCartQuantity(item.id, item.quantity + 1)
+                        }
+                        onDecrement={() =>
+                          updateCartQuantity(item.id, item.quantity - 1)
+                        }
+                        onRemove={() => removeCartItem(item.id)}
+                      />
+                    </motion.li>
+                  ))}
+                </AnimatePresence>
+              </ul>
+            </div>
+          )
+        ) : visibleOrders.length === 0 ? (
+          orders.length === 0 ? (
+            <EmptyState
+              icon={<ShoppingBagIcon className="h-6 w-6" />}
+              title="No orders yet"
+              description="All your active and previous orders will appear here. Place your first order to get started!"
+              action={
+                <Link href="/">
+                  <Button size="lg">Explore stores</Button>
+                </Link>
+              }
+            />
+          ) : (
+            <EmptyState
+              icon={<ClockIcon className="h-6 w-6" />}
+              title={tab === "ongoing" ? "No ongoing orders" : "No completed orders yet"}
+              description={
+                tab === "ongoing"
+                  ? "Orders you place will appear here until they're delivered."
+                  : "Orders you've received will show up here."
+              }
+            />
+          )
         ) : (
           <ul className="space-y-3">
-            {orders.map((o) => {
+            {visibleOrders.map((o) => {
               const isExpanded = expandedOrderId === o.id;
               const badge = orderStatusBadge[o.status];
               const detail = details[o.id];
@@ -397,7 +559,31 @@ export default function OrdersPage() {
             })}
           </ul>
         )}
+        </div>
       </main>
+
+      {tab === "cart" && cartCount > 0 && (
+        <div className="fixed inset-x-0 bottom-[68px] z-50 border-t border-[var(--color-line)] bg-white px-4 pb-3 pt-3 sm:bottom-[72px]">
+          <div className="mx-auto max-w-2xl">
+            {cartBelowMin && (
+              <p className="mb-2 rounded-xl bg-[var(--color-accent-soft)] px-3 py-2 text-[12px] font-semibold text-[#8a4f00]">
+                Add {formatPrice(cartMinOrder - cartSubtotal)} more to meet minimum order.
+              </p>
+            )}
+            <Link href={cartBelowMin ? "/cart" : "/checkout"} className="block">
+              <Button
+                size="lg"
+                fullWidth
+                disabled={cartBelowMin}
+                rightIcon={<ArrowRightIcon className="h-4 w-4" />}
+              >
+                Checkout · {formatPrice(cartSubtotal + cartDeliveryFee)}
+              </Button>
+            </Link>
+          </div>
+        </div>
+      )}
+
       <BottomNav />
     </div>
   );

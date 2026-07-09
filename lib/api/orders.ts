@@ -1,6 +1,6 @@
 import { apiFetch } from "./client";
 
-export type BackendPaymentMethod = "card" | "transfer" | "cash";
+export type BackendPaymentMethod = "card" | "transfer" | "cash" | "wallet";
 export type BackendDeliveryMode = "door" | "landmark";
 export type BackendPaymentStatus = "pending" | "paid" | "failed" | "not_applicable";
 

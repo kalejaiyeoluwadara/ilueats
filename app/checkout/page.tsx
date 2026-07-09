@@ -14,6 +14,7 @@ import {
   MapPinIcon,
   PencilSquareIcon,
   LockClosedIcon,
+  WalletIcon,
 } from "@heroicons/react/24/outline";
 import { useSession } from "next-auth/react";
 import { Navbar } from "@/components/layout/Navbar";
@@ -22,6 +23,7 @@ import { CartSummary } from "@/components/cart/CartSummary";
 import { useCart } from "@/hooks/useCart";
 import { useAuth } from "@/hooks/useAuth";
 import { useAddresses } from "@/hooks/useAddresses";
+import { useWallet } from "@/hooks/useWallet";
 import { useToast } from "@/hooks/useToast";
 import { useCatalog } from "@/context/CatalogContext";
 import { useOrders } from "@/context/OrdersContext";
@@ -37,7 +39,7 @@ import {
   formatPrice,
 } from "@/lib/utils";
 
-type PayMethod = "card" | "transfer" | "cash";
+type PayMethod = "card" | "transfer" | "cash" | "wallet";
 type DeliveryMode = "door" | "landmark";
 
 type OrderReceipt = {
@@ -56,6 +58,11 @@ export default function CheckoutPage() {
   const { user, ready: authReady } = useAuth();
   const { data: session } = useSession();
   const { addresses, defaultAddress, ready: addrReady } = useAddresses();
+  const {
+    balance: walletBalance,
+    ready: walletReady,
+    refresh: refreshWallet,
+  } = useWallet();
   const { success, error: toastError } = useToast();
   const { stores } = useCatalog();
   const { placeOrder } = useOrders();
@@ -124,7 +131,17 @@ export default function CheckoutPage() {
     card: "Card (demo)",
     transfer: "Bank transfer (verified)",
     cash: "Pay on delivery",
+    wallet: "Wallet",
   };
+
+  const walletCoversTotal = (walletBalance ?? 0) >= total;
+
+  // Don't leave wallet selected if the basket grows past the balance.
+  useEffect(() => {
+    if (method === "wallet" && walletReady && !walletCoversTotal) {
+      setMethod("transfer");
+    }
+  }, [method, walletReady, walletCoversTotal]);
 
   const recordLocalOrder = (finalPaymentLabel: string) => {
     const landmark = pickupLandmarks.find((l) => l.id === landmarkId);
@@ -262,7 +279,15 @@ export default function CheckoutPage() {
         setReceipt(buildReceipt(backendOrder.total));
         setStep("done");
         clearCart();
-        success("Order placed!", `Order ${backendOrder.orderId} is on its way.`);
+        if (method === "wallet") {
+          void refreshWallet();
+          success(
+            "Paid from wallet!",
+            `Order ${backendOrder.orderId} is on its way.`,
+          );
+        } else {
+          success("Order placed!", `Order ${backendOrder.orderId} is on its way.`);
+        }
       }
     } catch (err) {
       toastError(
@@ -469,16 +494,38 @@ export default function CheckoutPage() {
           <SectionHeader
             icon={<CreditCardIcon className="h-4 w-4" />}
             title="Payment method"
-            subtitle="Complete your payment using secure bank transfer."
+            subtitle="Pay by bank transfer or straight from your wallet."
           />
-          <div className="mt-3">
+          <div className="mt-3 grid gap-2">
             <PaymentOption
-              active={true}
+              active={method === "transfer"}
               icon={<DevicePhoneMobileIcon className="h-5 w-5" />}
               title="Bank transfer"
               subtitle="Get a one-time account number via Paystack"
-              onClick={() => {}}
+              onClick={() => setMethod("transfer")}
             />
+            <PaymentOption
+              active={method === "wallet"}
+              icon={<WalletIcon className="h-5 w-5" />}
+              title="Wallet"
+              subtitle={
+                !walletReady
+                  ? "Checking balance…"
+                  : walletCoversTotal
+                    ? `Balance: ${formatPrice(walletBalance ?? 0)} — paid instantly`
+                    : `Balance: ${formatPrice(walletBalance ?? 0)} — not enough for this order`
+              }
+              disabled={!walletReady || !walletCoversTotal}
+              onClick={() => setMethod("wallet")}
+            />
+            {walletReady && !walletCoversTotal && (
+              <Link
+                href="/wallet"
+                className="px-1 text-[12px] font-bold text-[var(--color-primary)]"
+              >
+                Top up your wallet →
+              </Link>
+            )}
           </div>
         </section>
         </div>
@@ -539,6 +586,8 @@ export default function CheckoutPage() {
               ? "Placing order…"
               : method === "cash"
               ? "Place order"
+              : method === "wallet"
+              ? "Pay from wallet"
               : "Pay & place order"}
           </Button>
         </div>
@@ -568,6 +617,8 @@ export default function CheckoutPage() {
               ? "Placing order…"
               : method === "cash"
               ? "Place order"
+              : method === "wallet"
+              ? "Pay from wallet"
               : "Pay & place order"}
           </Button>
         </div>
@@ -657,22 +708,26 @@ function PaymentOption({
   title,
   subtitle,
   onClick,
+  disabled,
 }: {
   active: boolean;
   icon: React.ReactNode;
   title: string;
   subtitle: string;
   onClick: () => void;
+  disabled?: boolean;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
+      disabled={disabled}
       className={cn(
         "flex w-full items-center gap-3 rounded-2xl bg-white p-3 text-left ring-1 transition-colors",
         active
           ? "ring-2 ring-[var(--color-primary)] bg-[var(--color-primary-soft)]"
-          : "ring-[var(--color-line)] hover:bg-black/[0.02]"
+          : "ring-[var(--color-line)] hover:bg-black/[0.02]",
+        disabled && "cursor-not-allowed opacity-60 hover:bg-white"
       )}
       aria-pressed={active}
     >

@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils";
 import { useCart } from "@/hooks/useCart";
 import { useSearch } from "@/context/SearchContext";
 import { useAuth } from "@/hooks/useAuth";
+import { FoodAvatar } from "@/components/account/FoodAvatar";
 
 const desktopLinks = [
   { href: "/", label: "Home" },
@@ -165,10 +166,6 @@ export function Navbar({
             const active =
               l.href === "/" ? pathname === "/" : pathname?.startsWith(l.href);
 
-            const initial = user?.name
-              ? user.name.trim().charAt(0).toUpperCase()
-              : "U";
-
             return (
               <Link
                 key={l.href}
@@ -196,15 +193,15 @@ export function Navbar({
                   />
                 )}
                 {showEllipse ? (
-                  <span
+                  <FoodAvatar
+                    size={32}
                     className={cn(
-                      "flex h-8 w-8 items-center justify-center rounded-full bg-[var(--color-primary)] text-[12.5px] font-extrabold text-white shadow-sm ring-2 transition-transform hover:scale-105",
-                      active ? "ring-[var(--color-primary)]/30" : "ring-white/10"
+                      "shadow-sm ring-2 transition-transform hover:scale-105",
+                      active
+                        ? "ring-[var(--color-primary)]/30"
+                        : "ring-white/10"
                     )}
-                    title={user?.name || "Account"}
-                  >
-                    {initial}
-                  </span>
+                  />
                 ) : (
                   <span className="relative z-10">{l.label}</span>
                 )}

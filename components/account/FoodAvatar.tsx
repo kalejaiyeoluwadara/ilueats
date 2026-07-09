@@ -6,11 +6,19 @@
  * mounded rice, pepper flecks); life comes from a slow bob plus three staggered
  * steam wisps. Honours prefers-reduced-motion via the global animation clamp.
  */
-export function FoodAvatar({ className }: { className?: string }) {
+export function FoodAvatar({
+  size = 48,
+  className,
+}: {
+  /** Diameter of the round avatar in px. */
+  size?: number;
+  className?: string;
+}) {
   return (
     <div
+      style={{ width: size, height: size }}
       className={cx(
-        "relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full",
+        "relative flex shrink-0 items-center justify-center rounded-full",
         "bg-[radial-gradient(120%_120%_at_30%_20%,#fef1e8_0%,#fbdcc8_100%)]",
         "ring-1 ring-inset ring-[var(--color-primary)]/10",
         className,
@@ -18,7 +26,7 @@ export function FoodAvatar({ className }: { className?: string }) {
     >
       <svg
         viewBox="0 0 48 48"
-        className="h-11 w-11 animate-food-bob overflow-visible drop-shadow-[0_4px_6px_rgba(196,62,4,0.25)]"
+        className="h-[92%] w-[92%] animate-food-bob overflow-visible drop-shadow-[0_4px_6px_rgba(196,62,4,0.25)]"
         aria-hidden
       >
         <defs>

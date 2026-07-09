@@ -71,14 +71,6 @@ export interface AdminOrderSummary {
   lineItems: OrderDetailLineItem[];
 }
 
-export interface AvailableRider {
-  riderId: string;
-  name: string;
-  phone: string | null;
-  vehicleType: string;
-  plateNumber: string;
-}
-
 export interface CreateOrderItemInput {
   productId: string;
   quantity: number;
@@ -166,12 +158,6 @@ export function updateAdminOrderStatus(orderCode: string, status: OrderStatus) {
   return apiFetch<OrderDetail>(`/admin/orders/${orderCode}/status`, {
     method: "PATCH",
     body: { status },
-  });
-}
-
-export function getAvailableRiders() {
-  return apiFetch<AvailableRider[]>("/admin/riders", {
-    query: { online: true },
   });
 }
 

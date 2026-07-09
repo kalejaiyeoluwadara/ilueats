@@ -8,10 +8,10 @@ import { ErrorState } from "@/components/ui/EmptyState";
 import {
   getAdminOrder,
   updateAdminOrderStatus,
-  getAvailableRiders,
+  getAdminRiders,
   assignRider,
 } from "@/lib/api/orders";
-import type { OrderDetail, AvailableRider } from "@/lib/api/orders";
+import type { OrderDetail, AdminRider } from "@/lib/api/orders";
 import { ApiError } from "@/lib/api/client";
 import { formatPlacedAgo, orderStatusBadge } from "@/lib/ordersStore";
 import { cn, formatPrice } from "@/lib/utils";
@@ -35,7 +35,7 @@ export function AdminOrderDetailModal({
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
 
-  const [riders, setRiders] = useState<AvailableRider[]>([]);
+  const [riders, setRiders] = useState<AdminRider[]>([]);
   const [ridersLoading, setRidersLoading] = useState(false);
   const [selectedRiderId, setSelectedRiderId] = useState("");
 
@@ -64,7 +64,7 @@ export function AdminOrderDetailModal({
   useEffect(() => {
     if (order?.status === "preparing" && riders.length === 0 && !ridersLoading) {
       setRidersLoading(true);
-      getAvailableRiders()
+      getAdminRiders()
         .then(setRiders)
         .catch(() => setRiders([]))
         .finally(() => setRidersLoading(false));
@@ -147,11 +147,7 @@ export function AdminOrderDetailModal({
       }
     >
       {loading ? (
-        <div className="space-y-3 py-2">
-          <div className="h-4 w-full rounded bg-[var(--color-line)] skeleton" />
-          <div className="h-4 w-5/6 rounded bg-[var(--color-line)] skeleton" />
-          <div className="h-4 w-2/3 rounded bg-[var(--color-line)] skeleton" />
-        </div>
+        <AdminOrderDetailSkeleton />
       ) : error ? (
         <ErrorState message={error} onRetry={() => orderId && loadOrder(orderId)} />
       ) : order && badge ? (
@@ -169,6 +165,32 @@ export function AdminOrderDetailModal({
   );
 }
 
+/** Mirrors AdminOrderDetailBody's section heights so the panel doesn't jump when the fetch resolves mid-animation. */
+function AdminOrderDetailSkeleton() {
+  return (
+    <div className="space-y-5" aria-hidden>
+      <div className="h-5 w-20 rounded-full bg-[var(--color-line)] skeleton" />
+
+      <div className="space-y-2">
+        <div className="h-3 w-32 rounded bg-[var(--color-line)] skeleton" />
+        <div className="h-3.5 w-40 rounded bg-[var(--color-line)] skeleton" />
+        <div className="h-3.5 w-48 rounded bg-[var(--color-line)] skeleton" />
+      </div>
+
+      <div className="h-16 rounded-2xl bg-[var(--color-line)] skeleton" />
+      <div className="h-16 rounded-2xl bg-[var(--color-line)] skeleton" />
+
+      <div className="space-y-2 rounded-2xl border border-[var(--color-line)] p-3">
+        {Array.from({ length: 2 }).map((_, i) => (
+          <div key={i} className="h-9 rounded-lg bg-[var(--color-line)] skeleton" />
+        ))}
+      </div>
+
+      <div className="h-32 rounded-2xl bg-[var(--color-line)] skeleton" />
+    </div>
+  );
+}
+
 function AdminOrderDetailBody({
   order,
   statusClassName,
@@ -181,7 +203,7 @@ function AdminOrderDetailBody({
   order: OrderDetail;
   statusClassName: string;
   statusLabel: string;
-  riders: AvailableRider[];
+  riders: AdminRider[];
   ridersLoading: boolean;
   selectedRiderId: string;
   onSelectRider: (id: string) => void;
@@ -245,11 +267,11 @@ function AdminOrderDetailBody({
           <div className="mt-2">
             {ridersLoading ? (
               <p className="text-[12.5px] text-[var(--color-ink-muted)]">
-                Loading available riders…
+                Loading riders…
               </p>
             ) : riders.length === 0 ? (
               <p className="text-[12.5px] text-[var(--color-ink-muted)]">
-                No riders are online right now.
+                No rider accounts yet — create one from the Riders page.
               </p>
             ) : (
               <select
@@ -262,6 +284,7 @@ function AdminOrderDetailBody({
                   <option key={r.riderId} value={r.riderId}>
                     {r.name}
                     {r.vehicleType ? ` · ${r.vehicleType}` : ""}
+                    {r.isOnline ? "" : " (offline)"}
                   </option>
                 ))}
               </select>

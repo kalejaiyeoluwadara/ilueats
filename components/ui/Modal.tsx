@@ -59,7 +59,7 @@ export function Modal({
             type="button"
             aria-label="Close"
             onClick={onClose}
-            className="absolute inset-0 cursor-default bg-black/45 backdrop-blur-[2px]"
+            className="absolute inset-0 cursor-default bg-black/45"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}

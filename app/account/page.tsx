@@ -11,19 +11,18 @@ import {
   MapPinIcon,
   ShieldCheckIcon,
   QuestionMarkCircleIcon,
-  UserIcon,
   ArrowRightOnRectangleIcon,
-  WalletIcon,
-  PlusIcon,
 } from "@heroicons/react/24/outline";
 import { Navbar } from "@/components/layout/Navbar";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { Button } from "@/components/ui/Button";
+import { WalletCard } from "@/components/wallet/WalletCard";
+import { FoodAvatar } from "@/components/account/FoodAvatar";
 import { ErrorState } from "@/components/ui/EmptyState";
 import { useAuth } from "@/hooks/useAuth";
 import { useWallet } from "@/hooks/useWallet";
 import { useToast } from "@/hooks/useToast";
-import { cn, formatPrice } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
 const links = [
   { href: "/orders", label: "Order history", icon: ClockIcon },
@@ -121,9 +120,7 @@ function AccountPageContent() {
           <>
             <section className="rounded-2xl bg-white p-4 ring-1 ring-[var(--color-line)]">
               <div className="flex items-start gap-3">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[var(--color-primary-soft)] text-[var(--color-primary)]">
-                  <UserIcon className="h-6 w-6" />
-                </div>
+                <FoodAvatar />
                 <div className="min-w-0 flex-1">
                   <p className="text-[15px] font-extrabold tracking-tight">
                     {user.name}
@@ -198,30 +195,7 @@ function AccountPageContent() {
               )}
             </section>
 
-            <Link
-              href="/wallet"
-              className="mt-3 flex items-center gap-3 rounded-2xl bg-[var(--color-primary)] p-4 text-white transition-opacity hover:opacity-95"
-            >
-              <span className="flex h-11 w-11 flex-none items-center justify-center rounded-xl bg-white/15">
-                <WalletIcon className="h-6 w-6" />
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block text-[11px] font-bold uppercase tracking-wider text-white/70">
-                  Wallet balance
-                </span>
-                {walletReady ? (
-                  <span className="font-display block text-[18px] font-extrabold tracking-tight">
-                    {formatPrice(balance ?? 0)}
-                  </span>
-                ) : (
-                  <span className="mt-1 block h-5 w-20 rounded bg-white/20 skeleton" />
-                )}
-              </span>
-              <span className="flex items-center gap-1 rounded-full bg-white px-3 py-1.5 text-[12.5px] font-bold text-[var(--color-primary)]">
-                <PlusIcon className="h-4 w-4" />
-                Top up
-              </span>
-            </Link>
+            <WalletCard balance={balance} ready={walletReady} />
           </>
         ) : (
           <section className="rounded-2xl bg-white p-4 ring-1 ring-[var(--color-line)]">

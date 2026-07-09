@@ -148,7 +148,7 @@ export interface AuthUser {
 /* Orders — single canonical shape shared by customer, admin, and rider.      */
 /* -------------------------------------------------------------------------- */
 
-export type OrderStatus = "new" | "preparing" | "out" | "delivered";
+export type OrderStatus = "new" | "preparing" | "assigned" | "out" | "delivered";
 
 /**
  * A settled order line. `modifiers` are display-ready strings that already

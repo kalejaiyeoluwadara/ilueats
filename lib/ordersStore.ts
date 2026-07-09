@@ -108,6 +108,7 @@ export function updateOrderStatus(orderId: string, status: OrderStatus) {
 export const ORDER_STATUS_FLOW: OrderStatus[] = [
   "new",
   "preparing",
+  "assigned",
   "out",
   "delivered",
 ];
@@ -151,6 +152,10 @@ export const orderStatusBadge: Record<
   preparing: {
     label: "Preparing",
     className: "bg-amber-50 text-amber-800 ring-amber-200/80",
+  },
+  assigned: {
+    label: "Rider assigned",
+    className: "bg-violet-50 text-violet-800 ring-violet-200/80",
   },
   out: {
     label: "Out for delivery",

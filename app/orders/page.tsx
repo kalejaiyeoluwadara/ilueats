@@ -25,51 +25,17 @@ import { useToast } from "@/hooks/useToast";
 import { useCart } from "@/hooks/useCart";
 import { useCatalog } from "@/context/CatalogContext";
 import { getMyOrders, getOrder } from "@/lib/api/orders";
+import type { OrderSummary, OrderDetail } from "@/lib/api/orders";
 import { formatPlacedAgo, orderStatusBadge } from "@/lib/ordersStore";
 import { cn, formatPrice } from "@/lib/utils";
 import { ApiError } from "@/lib/api/client";
 
-interface OrderSummary {
-  id: string;
-  status: "new" | "preparing" | "out" | "delivered";
-  paymentStatus: "pending" | "paid" | "failed" | "not_applicable";
-  subtotal: number;
-  deliveryFee: number;
-  serviceFee: number;
-  total: number;
-  storeName: string;
-  placedAt: string;
-}
-
-interface OrderDetailLineItem {
-  name: string;
-  qty: number;
-  unitPrice: number;
-  modifiers?: string[];
-}
-
-interface OrderDetail {
-  id: string;
-  status: string;
-  storeId: string;
-  storeSlug: string;
-  storeName: string;
-  storeAddress: string;
-  customer: string;
-  customerPhone: string;
-  deliveryAddress: string;
-  paymentLabel: string;
-  paymentStatus: string;
-  paymentReference?: string;
-  lineItems: OrderDetailLineItem[];
-  subtotal: number;
-  deliveryFee: number;
-  serviceFee: number;
-  total: number;
-  placedAt: string;
-}
-
-const ONGOING_STATUSES: OrderSummary["status"][] = ["new", "preparing", "out"];
+const ONGOING_STATUSES: OrderSummary["status"][] = [
+  "new",
+  "preparing",
+  "assigned",
+  "out",
+];
 
 type OrderTab = "cart" | "ongoing" | "completed";
 
@@ -133,7 +99,7 @@ export default function OrdersPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = (await getMyOrders(1, 20)) as { items: OrderSummary[] };
+      const res = await getMyOrders(1, 20);
       const items = res.items || [];
       setOrders(items);
       setHasSetInitialTab((already) => {
@@ -170,7 +136,7 @@ export default function OrdersPage() {
     }));
 
     try {
-      const res = (await getOrder(orderId)) as OrderDetail;
+      const res = await getOrder(orderId);
       setDetails((prev) => ({
         ...prev,
         [orderId]: { loading: false, data: res },

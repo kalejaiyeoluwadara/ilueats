@@ -1,106 +1,82 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   EllipsisHorizontalIcon,
   MagnifyingGlassIcon,
 } from "@heroicons/react/24/outline";
 import { AdminOrderDetailModal } from "@/components/admin/AdminOrderDetailModal";
 import { Pagination } from "@/components/ui/Pagination";
-import { useOrders } from "@/context/OrdersContext";
+import { ErrorState } from "@/components/ui/EmptyState";
+import { getAdminOrders } from "@/lib/api/orders";
+import type { AdminOrderSummary } from "@/lib/api/orders";
+import { ApiError } from "@/lib/api/client";
 import { formatPlacedAgo, orderStatusBadge } from "@/lib/ordersStore";
-import { usePaginatedList } from "@/hooks/usePaginatedList";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { cn, formatPrice } from "@/lib/utils";
-import type { Order, OrderStatus } from "@/types";
+import type { OrderStatus } from "@/types";
 
 const ORDER_PAGE_SIZE = 10;
 
-type OrdersFilter = "all" | "open" | OrderStatus;
+type OrdersFilter = "all" | OrderStatus;
 
 const ORDER_FILTER_CHIPS: { id: OrdersFilter; label: string }[] = [
   { id: "all", label: "All" },
-  { id: "open", label: "Open" },
   { id: "new", label: "New" },
   { id: "preparing", label: "Preparing" },
+  { id: "assigned", label: "Assigned" },
   { id: "out", label: "Out" },
   { id: "delivered", label: "Delivered" },
 ];
 
-function applyOrderStatusFilter(
-  rows: Order[],
-  filter: OrdersFilter
-): Order[] {
-  if (filter === "all") return rows;
-  if (filter === "open") {
-    return rows.filter((r) => r.status !== "delivered");
-  }
-  return rows.filter((r) => r.status === filter);
-}
-
-function applyOrderSearch(rows: Order[], q: string): Order[] {
-  const needle = q.trim().toLowerCase();
-  if (!needle) return rows;
-  return rows.filter((r) => {
-    if (
-      r.id.toLowerCase().includes(needle) ||
-      r.customer.toLowerCase().includes(needle) ||
-      r.store.toLowerCase().includes(needle) ||
-      r.deliveryAddress.toLowerCase().includes(needle)
-    ) {
-      return true;
-    }
-    return r.lineItems.some(
-      (line) =>
-        line.name.toLowerCase().includes(needle) ||
-        line.modifiers?.some((m) => m.toLowerCase().includes(needle))
-    );
-  });
-}
-
-function countOrdersMatchingFilter(
-  rows: readonly Order[],
-  filter: OrdersFilter
-): number {
-  return applyOrderStatusFilter([...rows], filter).length;
-}
-
 export default function AdminOrdersPage() {
-  const { orders: rows } = useOrders();
-
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search, 350);
   const [statusFilter, setStatusFilter] = useState<OrdersFilter>("all");
+  const [page, setPage] = useState(1);
+
+  const [rows, setRows] = useState<AdminOrderSummary[]>([]);
+  const [totalItems, setTotalItems] = useState(0);
+  const [pageCount, setPageCount] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
   const [detailOrderId, setDetailOrderId] = useState<string | null>(null);
-  // Resolve from live rows so status changes made in the modal render immediately.
-  const detailOrder = useMemo(
-    () => rows.find((r) => r.id === detailOrderId) ?? null,
-    [rows, detailOrderId]
-  );
-
-  const filteredRows = useMemo(() => {
-    const byStatus = applyOrderStatusFilter(rows, statusFilter);
-    return applyOrderSearch(byStatus, search);
-  }, [rows, statusFilter, search]);
-
-  const {
-    page,
-    setPage,
-    pageCount,
-    pageItems: pagedRows,
-    total: orderTotal,
-    pageSize,
-  } = usePaginatedList(filteredRows, ORDER_PAGE_SIZE);
+  const [refreshToken, setRefreshToken] = useState(0);
 
   useEffect(() => {
     setPage(1);
-  }, [search, statusFilter, setPage]);
+  }, [debouncedSearch, statusFilter]);
 
-  const chipCounts = useMemo(() => {
-    const map = new Map<OrdersFilter, number>();
-    for (const chip of ORDER_FILTER_CHIPS) {
-      map.set(chip.id, countOrdersMatchingFilter(rows, chip.id));
-    }
-    return map;
-  }, [rows]);
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    getAdminOrders({
+      page,
+      pageSize: ORDER_PAGE_SIZE,
+      status: statusFilter === "all" ? undefined : statusFilter,
+      q: debouncedSearch || undefined,
+    })
+      .then((res) => {
+        if (cancelled) return;
+        setRows(res.items);
+        setTotalItems(res.totalItems);
+        setPageCount(res.pageCount);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setError(err instanceof ApiError ? err.message : "Failed to load orders.");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [page, statusFilter, debouncedSearch, refreshToken]);
+
+  const refresh = () => setRefreshToken((n) => n + 1);
 
   return (
     <div className="space-y-6">
@@ -110,15 +86,9 @@ export default function AdminOrdersPage() {
             Orders
           </h1>
           <p className="mt-1 text-[13px] text-[var(--color-ink-muted)]">
-            Filter by fulfilment stage and search the mock board below.
+            Filter by fulfilment stage, search, and assign riders to orders.
           </p>
         </div>
-        <button
-          type="button"
-          className="inline-flex h-10 items-center rounded-full bg-[var(--color-ink)] px-4 text-[13px] font-semibold text-white"
-        >
-          Export CSV
-        </button>
       </div>
 
       <div className="rounded-[1.25rem] bg-[var(--color-surface)] shadow-crisp ring-1 ring-[var(--color-line)]">
@@ -146,7 +116,6 @@ export default function AdminOrdersPage() {
             >
               {ORDER_FILTER_CHIPS.map((chip) => {
                 const selected = statusFilter === chip.id;
-                const count = chipCounts.get(chip.id) ?? 0;
                 return (
                   <button
                     key={chip.id}
@@ -162,16 +131,6 @@ export default function AdminOrdersPage() {
                     )}
                   >
                     {chip.label}
-                    <span
-                      className={cn(
-                        "min-w-[1.25rem] rounded-md px-1 py-0.5 text-center text-[11px] font-extrabold tabular-nums",
-                        selected
-                          ? "bg-white/20 text-white"
-                          : "bg-[var(--color-bg)] text-[var(--color-ink-muted)]"
-                      )}
-                    >
-                      {count}
-                    </span>
                   </button>
                 );
               })}
@@ -179,90 +138,105 @@ export default function AdminOrdersPage() {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[640px] text-left text-[13px]">
-            <thead>
-              <tr className="border-b border-[var(--color-line)] text-[11px] font-bold uppercase tracking-wide text-[var(--color-ink-soft)]">
-                <th className="px-4 py-3 font-bold">Order</th>
-                <th className="px-4 py-3 font-bold">Customer</th>
-                <th className="px-4 py-3 font-bold">Store</th>
-                <th className="px-4 py-3 font-bold">Total</th>
-                <th className="px-4 py-3 font-bold">Status</th>
-                <th className="px-4 py-3 font-bold text-right">Placed</th>
-                <th className="w-14 px-2 py-3 text-center font-bold">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[var(--color-line)]">
-              {pagedRows.length === 0 ? (
-                <tr>
-                  <td
-                    className="px-4 py-10 text-center text-[13px] font-medium text-[var(--color-ink-muted)]"
-                    colSpan={7}
-                  >
-                    No orders match your filters — try widening the status or
-                    clearing search.
-                  </td>
+        {error ? (
+          <div className="p-4">
+            <ErrorState message={error} onRetry={refresh} />
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[640px] text-left text-[13px]">
+              <thead>
+                <tr className="border-b border-[var(--color-line)] text-[11px] font-bold uppercase tracking-wide text-[var(--color-ink-soft)]">
+                  <th className="px-4 py-3 font-bold">Order</th>
+                  <th className="px-4 py-3 font-bold">Customer</th>
+                  <th className="px-4 py-3 font-bold">Store</th>
+                  <th className="px-4 py-3 font-bold">Total</th>
+                  <th className="px-4 py-3 font-bold">Status</th>
+                  <th className="px-4 py-3 font-bold text-right">Placed</th>
+                  <th className="w-14 px-2 py-3 text-center font-bold">
+                    Actions
+                  </th>
                 </tr>
-              ) : (
-                pagedRows.map((r) => {
-                  const badge = orderStatusBadge[r.status];
-                  return (
-                    <tr
-                      key={r.id}
-                      className="bg-white transition hover:bg-[var(--color-bg)]/50"
+              </thead>
+              <tbody className="divide-y divide-[var(--color-line)]">
+                {loading ? (
+                  <tr>
+                    <td
+                      className="px-4 py-10 text-center text-[13px] font-medium text-[var(--color-ink-muted)]"
+                      colSpan={7}
                     >
-                      <td className="px-4 py-3.5 font-mono text-[12px] font-bold text-[var(--color-ink)]">
-                        {r.id}
-                      </td>
-                      <td className="px-4 py-3.5 font-semibold text-[var(--color-ink)]">
-                        {r.customer}
-                      </td>
-                      <td className="px-4 py-3.5 text-[var(--color-ink-muted)]">
-                        {r.store}
-                      </td>
-                      <td className="px-4 py-3.5 font-bold text-[var(--color-ink)]">
-                        {formatPrice(r.total)}
-                      </td>
-                      <td className="px-4 py-3.5">
-                        <span
-                          className={cn(
-                            "inline-flex rounded-full px-2.5 py-1 text-[11px] font-bold ring-1 ring-inset",
-                            badge.className
-                          )}
-                        >
-                          {badge.label}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3.5 text-right text-[12px] font-medium text-[var(--color-ink-muted)]">
-                        {formatPlacedAgo(r.placedAt)}
-                      </td>
-                      <td className="px-2 py-3.5 text-center">
-                        <button
-                          type="button"
-                          onClick={() => setDetailOrderId(r.id)}
-                          className="inline-flex h-9 w-9 items-center justify-center rounded-full text-[var(--color-ink-muted)] outline-none ring-[var(--color-ink)]/0 transition hover:bg-black/[0.05] hover:text-[var(--color-ink)] focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/35"
-                          aria-label={`Full details for ${r.id}`}
-                        >
-                          <EllipsisHorizontalIcon className="h-5 w-5" />
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+                      Loading orders…
+                    </td>
+                  </tr>
+                ) : rows.length === 0 ? (
+                  <tr>
+                    <td
+                      className="px-4 py-10 text-center text-[13px] font-medium text-[var(--color-ink-muted)]"
+                      colSpan={7}
+                    >
+                      No orders match your filters — try widening the status or
+                      clearing search.
+                    </td>
+                  </tr>
+                ) : (
+                  rows.map((r) => {
+                    const badge = orderStatusBadge[r.status];
+                    return (
+                      <tr
+                        key={r.id}
+                        className="bg-white transition hover:bg-[var(--color-bg)]/50"
+                      >
+                        <td className="px-4 py-3.5 font-mono text-[12px] font-bold text-[var(--color-ink)]">
+                          {r.id}
+                        </td>
+                        <td className="px-4 py-3.5 font-semibold text-[var(--color-ink)]">
+                          {r.customer}
+                        </td>
+                        <td className="px-4 py-3.5 text-[var(--color-ink-muted)]">
+                          {r.store}
+                        </td>
+                        <td className="px-4 py-3.5 font-bold text-[var(--color-ink)]">
+                          {formatPrice(r.total)}
+                        </td>
+                        <td className="px-4 py-3.5">
+                          <span
+                            className={cn(
+                              "inline-flex rounded-full px-2.5 py-1 text-[11px] font-bold ring-1 ring-inset",
+                              badge.className
+                            )}
+                          >
+                            {badge.label}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3.5 text-right text-[12px] font-medium text-[var(--color-ink-muted)]">
+                          {formatPlacedAgo(r.placedAt)}
+                        </td>
+                        <td className="px-2 py-3.5 text-center">
+                          <button
+                            type="button"
+                            onClick={() => setDetailOrderId(r.id)}
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-full text-[var(--color-ink-muted)] outline-none ring-[var(--color-ink)]/0 transition hover:bg-black/[0.05] hover:text-[var(--color-ink)] focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/35"
+                            aria-label={`Full details for ${r.id}`}
+                          >
+                            <EllipsisHorizontalIcon className="h-5 w-5" />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
 
-        {orderTotal > 0 ? (
+        {totalItems > 0 ? (
           <div className="border-t border-[var(--color-line)] p-4">
             <Pagination
               page={page}
               pageCount={pageCount}
-              totalItems={orderTotal}
-              pageSize={pageSize}
+              totalItems={totalItems}
+              pageSize={ORDER_PAGE_SIZE}
               onPageChange={setPage}
             />
           </div>
@@ -270,9 +244,10 @@ export default function AdminOrdersPage() {
       </div>
 
       <AdminOrderDetailModal
-        open={!!detailOrder}
-        order={detailOrder}
+        open={!!detailOrderId}
+        orderId={detailOrderId}
         onClose={() => setDetailOrderId(null)}
+        onChanged={refresh}
       />
     </div>
   );

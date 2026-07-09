@@ -27,8 +27,10 @@ import { useCatalog } from "@/context/CatalogContext";
 import { getMyOrders, getOrder } from "@/lib/api/orders";
 import type { OrderSummary, OrderDetail } from "@/lib/api/orders";
 import { formatPlacedAgo, orderStatusBadge } from "@/lib/ordersStore";
+import { stepIndexForStatus } from "@/components/orders/OrderStatusStepper";
 import { cn, formatPrice } from "@/lib/utils";
 import { ApiError } from "@/lib/api/client";
+import type { OrderStatus } from "@/types";
 
 const ONGOING_STATUSES: OrderSummary["status"][] = [
   "new",
@@ -36,6 +38,44 @@ const ONGOING_STATUSES: OrderSummary["status"][] = [
   "assigned",
   "out",
 ];
+
+/** Text color for the status line under each card's stage strip. */
+const STATUS_TEXT_COLOR: Record<OrderStatus, string> = {
+  new: "text-[var(--color-primary)]",
+  preparing: "text-amber-700",
+  assigned: "text-violet-700",
+  out: "text-sky-700",
+  delivered: "text-[var(--color-success)]",
+};
+
+/** Four-segment strip mirroring the tracking timeline: placed → assigned → out → delivered. */
+function StageStrip({ status }: { status: OrderStatus }) {
+  const active = stepIndexForStatus(status);
+  const delivered = status === "delivered";
+  return (
+    <div
+      className="flex gap-1"
+      role="img"
+      aria-label={`Order stage: ${orderStatusBadge[status].label}`}
+    >
+      {Array.from({ length: 4 }).map((_, i) => (
+        <span
+          key={i}
+          className={cn(
+            "h-[5px] flex-1 rounded-full",
+            delivered
+              ? "bg-[var(--color-success)]"
+              : i < active
+                ? "bg-[var(--color-primary)]"
+                : i === active
+                  ? "bg-[var(--color-primary)] motion-safe:animate-pulse"
+                  : "bg-[var(--color-line)]"
+          )}
+        />
+      ))}
+    </div>
+  );
+}
 
 type OrderTab = "cart" | "ongoing" | "completed";
 
@@ -174,15 +214,27 @@ export default function OrdersPage() {
           {Array.from({ length: 3 }).map((_, idx) => (
             <div
               key={idx}
-              className="rounded-2xl bg-white p-4 ring-1 ring-[var(--color-line)] space-y-3"
+              className="rounded-3xl bg-white p-4 ring-1 ring-[var(--color-line)]"
             >
-              <div className="flex justify-between items-center">
-                <div className="h-5 w-40 rounded bg-[var(--color-line)] skeleton" />
-                <div className="h-4.5 w-16 rounded-full bg-[var(--color-line)] skeleton" />
+              <div className="flex items-center gap-3">
+                <div className="h-11 w-11 shrink-0 rounded-2xl bg-[var(--color-line)] skeleton" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 w-36 rounded bg-[var(--color-line)] skeleton" />
+                  <div className="h-3 w-44 rounded bg-[var(--color-line)] skeleton" />
+                </div>
+                <div className="h-8 w-8 shrink-0 rounded-full bg-[var(--color-line)] skeleton" />
               </div>
-              <div className="flex justify-between items-center pt-2">
-                <div className="h-4 w-24 rounded bg-[var(--color-line)] skeleton" />
-                <div className="h-4 w-12 rounded bg-[var(--color-line)] skeleton" />
+              <div className="mt-3.5 flex gap-1">
+                {Array.from({ length: 4 }).map((_, seg) => (
+                  <div
+                    key={seg}
+                    className="h-[5px] flex-1 rounded-full bg-[var(--color-line)] skeleton"
+                  />
+                ))}
+              </div>
+              <div className="mt-2 flex items-center justify-between">
+                <div className="h-3.5 w-24 rounded bg-[var(--color-line)] skeleton" />
+                <div className="h-4 w-16 rounded bg-[var(--color-line)] skeleton" />
               </div>
             </div>
           ))}
@@ -358,39 +410,65 @@ export default function OrdersPage() {
               return (
                 <li
                   key={o.id}
-                  className="overflow-hidden rounded-2xl bg-white ring-1 ring-[var(--color-line)] transition-all hover:shadow-crisp"
+                  className="overflow-hidden rounded-3xl bg-white ring-1 ring-[var(--color-line)] transition-all hover:shadow-crisp"
                 >
                   {/* Header summary info */}
                   <button
                     type="button"
                     onClick={() => toggleExpand(o.id)}
-                    className="flex w-full items-start justify-between p-4 text-left outline-none transition hover:bg-black/[0.01]"
+                    className="block w-full p-4 text-left outline-none transition hover:bg-black/[0.01]"
+                    aria-expanded={isExpanded}
                   >
-                    <div className="min-w-0 flex-1 pr-3">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <h2 className="text-[15px] font-extrabold tracking-tight text-[var(--color-ink)]">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#f96e22] to-[#c43e04] font-display text-[16px] font-extrabold text-white">
+                        {o.storeName.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h2 className="font-display truncate text-[15.5px] font-extrabold tracking-tight text-[var(--color-ink)]">
                           {o.storeName}
                         </h2>
-                        <span className="font-mono text-[11px] font-bold text-[var(--color-ink-soft)] bg-[var(--color-bg)] px-2 py-0.5 rounded-md">
-                          {o.id}
-                        </span>
+                        <p className="mt-0.5 text-[12px] font-medium text-[var(--color-ink-muted)]">
+                          <span className="font-mono font-bold text-[var(--color-ink-soft)]">
+                            {o.id}
+                          </span>
+                          {" · "}
+                          {formatPlacedAgo(o.placedAt)}
+                        </p>
                       </div>
-                      <p className="mt-1 text-[12.5px] font-medium text-[var(--color-ink-muted)]">
-                        {formatPrice(o.total)} · {formatPlacedAgo(o.placedAt)}
-                      </p>
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--color-bg)] text-[var(--color-ink-soft)]">
+                        {isExpanded ? (
+                          <ChevronUpIcon className="h-4 w-4" />
+                        ) : (
+                          <ChevronDownIcon className="h-4 w-4" />
+                        )}
+                      </div>
                     </div>
 
-                    <div className="flex items-center gap-2.5">
-                      <span
-                        className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-bold ring-1 ring-inset ${badge.className}`}
-                      >
-                        {badge.label}
-                      </span>
-                      {isExpanded ? (
-                        <ChevronUpIcon className="h-4.5 w-4.5 text-[var(--color-ink-soft)]" />
-                      ) : (
-                        <ChevronDownIcon className="h-4.5 w-4.5 text-[var(--color-ink-soft)]" />
-                      )}
+                    <div className="mt-3.5">
+                      <StageStrip status={o.status} />
+                      <div className="mt-2 flex items-center justify-between gap-3">
+                        <span
+                          className={cn(
+                            "flex items-center gap-1.5 text-[12px] font-bold",
+                            STATUS_TEXT_COLOR[o.status]
+                          )}
+                        >
+                          {badge.label}
+                          {o.paymentStatus === "pending" && (
+                            <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10.5px] font-bold text-amber-700 ring-1 ring-inset ring-amber-200/80">
+                              Payment pending
+                            </span>
+                          )}
+                          {o.paymentStatus === "failed" && (
+                            <span className="rounded-full bg-red-50 px-2 py-0.5 text-[10.5px] font-bold text-red-700 ring-1 ring-inset ring-red-200/80">
+                              Payment failed
+                            </span>
+                          )}
+                        </span>
+                        <span className="text-[14px] font-extrabold tabular-nums text-[var(--color-ink)]">
+                          {formatPrice(o.total)}
+                        </span>
+                      </div>
                     </div>
                   </button>
 
@@ -417,30 +495,35 @@ export default function OrdersPage() {
                           </Button>
                         </div>
                       ) : detail?.data ? (
-                        <div className="space-y-4">
+                        <div className="space-y-3">
                           {/* Item lines */}
-                          <div>
-                            <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--color-ink-soft)] mb-2">
-                              Items Ordered
+                          <div className="rounded-2xl bg-white p-3.5 ring-1 ring-[var(--color-line)]">
+                            <p className="mb-1 text-[11px] font-bold uppercase tracking-wider text-[var(--color-ink-soft)]">
+                              Your order
                             </p>
-                            <ul className="divide-y divide-[var(--color-line)]/50 rounded-xl bg-white px-3.5 py-2 ring-1 ring-[var(--color-line)]">
+                            <ul className="divide-y divide-[var(--color-line)]/60">
                               {detail.data.lineItems.map((item, idx) => (
                                 <li
                                   key={idx}
-                                  className="flex items-start justify-between py-2 gap-3"
+                                  className="flex items-start justify-between gap-3 py-2.5"
                                 >
-                                  <div className="min-w-0">
-                                    <p className="font-semibold text-[var(--color-ink)]">
-                                      {item.qty} × {item.name}
-                                    </p>
-                                    {item.modifiers &&
-                                      item.modifiers.length > 0 && (
-                                        <p className="text-[12px] text-[var(--color-ink-soft)] mt-0.5">
-                                          {item.modifiers.join(" · ")}
-                                        </p>
-                                      )}
+                                  <div className="flex min-w-0 gap-2.5">
+                                    <span className="mt-px shrink-0 rounded-md bg-[var(--color-bg)] px-1.5 py-0.5 text-[11.5px] font-extrabold tabular-nums text-[var(--color-ink-muted)]">
+                                      {item.qty}×
+                                    </span>
+                                    <div className="min-w-0">
+                                      <p className="font-semibold text-[var(--color-ink)]">
+                                        {item.name}
+                                      </p>
+                                      {item.modifiers &&
+                                        item.modifiers.length > 0 && (
+                                          <p className="mt-0.5 text-[12px] text-[var(--color-ink-soft)]">
+                                            {item.modifiers.join(" · ")}
+                                          </p>
+                                        )}
+                                    </div>
                                   </div>
-                                  <span className="font-bold shrink-0 text-[var(--color-ink)]">
+                                  <span className="shrink-0 font-bold tabular-nums text-[var(--color-ink)]">
                                     {formatPrice(item.unitPrice * item.qty)}
                                   </span>
                                 </li>
@@ -449,73 +532,97 @@ export default function OrdersPage() {
                           </div>
 
                           {/* Address / Delivery Details */}
-                          <div className="flex items-start gap-2.5 rounded-xl bg-white p-3 ring-1 ring-[var(--color-line)]">
-                            <MapPinIcon className="h-5 w-5 text-[var(--color-ink-soft)] mt-0.5 shrink-0" />
-                            <div className="min-w-0">
+                          <div className="flex items-start gap-3 rounded-2xl bg-white p-3.5 ring-1 ring-[var(--color-line)]">
+                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--color-bg)] text-[var(--color-ink-soft)]">
+                              <MapPinIcon className="h-4.5 w-4.5" />
+                            </div>
+                            <div className="min-w-0 pt-0.5">
                               <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--color-ink-soft)]">
                                 Deliver to
                               </p>
-                              <p className="font-semibold mt-0.5 text-[var(--color-ink)] leading-snug">
+                              <p className="mt-0.5 font-semibold leading-snug text-[var(--color-ink)]">
                                 {detail.data.deliveryAddress}
                               </p>
-                              <p className="text-[12px] text-[var(--color-ink-soft)] mt-0.5">
-                                Contact: {detail.data.customer} ({detail.data.customerPhone})
+                              <p className="mt-0.5 text-[12px] text-[var(--color-ink-soft)]">
+                                {detail.data.customer} · {detail.data.customerPhone}
                               </p>
                             </div>
                           </div>
 
                           {/* Payment status / method */}
-                          <div className="flex items-start gap-2.5 rounded-xl bg-white p-3 ring-1 ring-[var(--color-line)]">
-                            <CreditCardIcon className="h-5 w-5 text-[var(--color-ink-soft)] mt-0.5 shrink-0" />
-                            <div className="min-w-0">
+                          <div className="flex items-start gap-3 rounded-2xl bg-white p-3.5 ring-1 ring-[var(--color-line)]">
+                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--color-bg)] text-[var(--color-ink-soft)]">
+                              <CreditCardIcon className="h-4.5 w-4.5" />
+                            </div>
+                            <div className="min-w-0 flex-1 pt-0.5">
                               <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--color-ink-soft)]">
-                                Payment Method
+                                Payment
                               </p>
-                              <p className="font-semibold mt-0.5 text-[var(--color-ink)]">
-                                {detail.data.paymentLabel}
-                              </p>
-                              <p className="text-[12px] text-[var(--color-ink-soft)] mt-0.5 flex items-center gap-1.5">
-                                Status:{" "}
+                              <div className="mt-0.5 flex flex-wrap items-center gap-2">
+                                <p className="font-semibold text-[var(--color-ink)]">
+                                  {detail.data.paymentLabel}
+                                </p>
                                 <span
-                                  className={`font-bold ${
+                                  className={cn(
+                                    "rounded-full px-2 py-0.5 text-[10.5px] font-bold ring-1 ring-inset",
                                     detail.data.paymentStatus === "paid"
-                                      ? "text-emerald-600"
+                                      ? "bg-[var(--color-success-soft)] text-[var(--color-success)] ring-emerald-200/80"
                                       : detail.data.paymentStatus === "failed"
-                                      ? "text-red-600"
-                                      : "text-amber-600"
-                                  }`}
+                                        ? "bg-red-50 text-red-700 ring-red-200/80"
+                                        : "bg-amber-50 text-amber-700 ring-amber-200/80"
+                                  )}
                                 >
-                                  {detail.data.paymentStatus.toUpperCase()}
+                                  {detail.data.paymentStatus === "paid"
+                                    ? "Paid"
+                                    : detail.data.paymentStatus === "failed"
+                                      ? "Failed"
+                                      : "Pending"}
                                 </span>
-                              </p>
+                              </div>
                             </div>
                           </div>
 
                           {/* Receipt / Pricing Breakdown */}
-                          <div className="rounded-xl bg-white p-3.5 ring-1 ring-[var(--color-line)] space-y-2.5">
-                            <div className="flex justify-between text-[13px] text-[var(--color-ink-soft)]">
+                          <div className="rounded-2xl bg-white p-3.5 ring-1 ring-[var(--color-line)] space-y-2">
+                            <div className="flex justify-between text-[12.5px] text-[var(--color-ink-muted)]">
                               <span>Subtotal</span>
-                              <span className="font-medium">
+                              <span className="tabular-nums">
                                 {formatPrice(detail.data.subtotal)}
                               </span>
                             </div>
-                            <div className="flex justify-between text-[13px] text-[var(--color-ink-soft)]">
-                              <span>Delivery Fee</span>
-                              <span className="font-medium">
+                            <div className="flex justify-between text-[12.5px] text-[var(--color-ink-muted)]">
+                              <span>Delivery</span>
+                              <span className="tabular-nums">
                                 {formatPrice(detail.data.deliveryFee)}
                               </span>
                             </div>
-                            <div className="flex justify-between text-[13px] text-[var(--color-ink-soft)]">
-                              <span>Service Fee</span>
-                              <span className="font-medium">
+                            <div className="flex justify-between text-[12.5px] text-[var(--color-ink-muted)]">
+                              <span>Service fee</span>
+                              <span className="tabular-nums">
                                 {formatPrice(detail.data.serviceFee)}
                               </span>
                             </div>
-                            <div className="border-t border-[var(--color-line)] pt-2.5 flex justify-between font-extrabold text-[15px] text-[var(--color-ink)]">
+                            <div className="border-t border-[var(--color-line)] pt-2 flex justify-between font-extrabold text-[15px] text-[var(--color-ink)]">
                               <span>Total</span>
-                              <span>{formatPrice(detail.data.total)}</span>
+                              <span className="tabular-nums">
+                                {formatPrice(detail.data.total)}
+                              </span>
                             </div>
                           </div>
+
+                          {/* Track order CTA */}
+                          <Link href={`/orders/${o.id}`} className="block">
+                            <Button
+                              size="lg"
+                              fullWidth
+                              variant={o.status === "delivered" ? "outline" : "primary"}
+                              rightIcon={<ArrowRightIcon className="h-4 w-4" />}
+                            >
+                              {o.status === "delivered"
+                                ? "View order status"
+                                : "Track order"}
+                            </Button>
+                          </Link>
                         </div>
                       ) : null}
                     </div>

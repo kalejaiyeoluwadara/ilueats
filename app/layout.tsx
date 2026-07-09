@@ -3,6 +3,7 @@ import { Plus_Jakarta_Sans, Bricolage_Grotesque } from "next/font/google";
 import NextTopLoader from "nextjs-toploader";
 import "./globals.css";
 import { AppProviders } from "@/components/providers/AppProviders";
+import { Analytics } from "@vercel/analytics/next"
 
 const jakarta = Plus_Jakarta_Sans({
   variable: "--font-jakarta",
@@ -70,6 +71,7 @@ export default function RootLayout({
           showSpinner={false}
           shadow="0 0 10px #e8541a, 0 0 5px #e8541a"
         />
+        <Analytics />
         <AppProviders>{children}</AppProviders>
       </body>
     </html>

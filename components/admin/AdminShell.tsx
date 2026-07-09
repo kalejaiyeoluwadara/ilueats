@@ -75,6 +75,11 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     router.push("/admin/login");
   };
 
+  const onSwitchToRider = async () => {
+    await signOut();
+    router.push("/rider/login");
+  };
+
   return (
     <div className="min-h-screen bg-[var(--color-bg)] lg:flex lg:min-h-screen">
       {/* Desktop sidebar */}
@@ -109,6 +114,20 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           })}
         </nav>
         <div className="border-t border-zinc-800 p-3">
+          <p className="px-3 pb-1.5 pt-2 text-[10.5px] font-bold uppercase tracking-wide text-zinc-600">
+            Switch account
+          </p>
+          <button
+            type="button"
+            onClick={onSwitchToRider}
+            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-[13px] font-semibold text-zinc-400 transition-colors hover:bg-white/[0.04] hover:text-zinc-200"
+          >
+            <TruckIcon className="h-5 w-5 text-zinc-500" />
+            Rider console
+          </button>
+
+          <div className="my-2 h-px bg-zinc-800" />
+
           <button
             type="button"
             onClick={onSignOut}
@@ -199,6 +218,23 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                   })}
                 </nav>
                 <div className="border-t border-zinc-800 p-3">
+                  <p className="px-3 pb-1.5 pt-2 text-[10.5px] font-bold uppercase tracking-wide text-zinc-600">
+                    Switch account
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMobileOpen(false);
+                      onSwitchToRider();
+                    }}
+                    className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-[13px] font-semibold text-zinc-400 hover:bg-white/[0.04]"
+                  >
+                    <TruckIcon className="h-5 w-5" />
+                    Rider console
+                  </button>
+
+                  <div className="my-2 h-px bg-zinc-800" />
+
                   <button
                     type="button"
                     onClick={() => {

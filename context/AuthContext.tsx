@@ -62,7 +62,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
 
         if (res?.error) {
-          return { ok: false, error: "Incorrect credentials or unauthorized role." };
+          const message =
+            res.code === "role-not-allowed"
+              ? "This account isn't set up for this portal."
+              : "Incorrect email or password.";
+          return { ok: false, error: message };
         }
         return { ok: true };
       } catch (err: any) {

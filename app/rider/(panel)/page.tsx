@@ -11,6 +11,8 @@ import {
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { Pagination } from "@/components/ui/Pagination";
+import { PageLoader } from "@/components/ui/Loaders";
+import { ErrorState } from "@/components/ui/EmptyState";
 import {
   RiderOrderBagDetails,
   RiderOrderBagSummary,
@@ -25,6 +27,9 @@ const OFFERS_PAGE_SIZE = 5;
 
 export default function RiderTodayPage() {
   const {
+    ready,
+    error,
+    refresh,
     isOnline,
     setOnline,
     availableOffers,
@@ -33,9 +38,10 @@ export default function RiderTodayPage() {
     onTimePercent,
     acceptOffer,
   } = useRiderConsole();
-  const { success, info } = useToast();
+  const { success, info, error: toastError } = useToast();
   const [confirmOffer, setConfirmOffer] = useState<RiderOffer | null>(null);
   const [offerBagModal, setOfferBagModal] = useState<RiderOffer | null>(null);
+  const [accepting, setAccepting] = useState(false);
 
   const {
     page: offersPage,
@@ -46,10 +52,12 @@ export default function RiderTodayPage() {
     pageSize: offerPageSize,
   } = usePaginatedList(availableOffers, OFFERS_PAGE_SIZE);
 
-  const completeAccept = () => {
+  const completeAccept = async () => {
     if (!confirmOffer) return;
     const id = confirmOffer.id;
-    const ok = acceptOffer(id);
+    setAccepting(true);
+    const ok = await acceptOffer(id);
+    setAccepting(false);
     setConfirmOffer(null);
     if (ok) {
       success("Offer accepted", `${id} added to your queue.`);
@@ -57,6 +65,9 @@ export default function RiderTodayPage() {
       info("Can't accept", "That job may have just been taken or you're offline.");
     }
   };
+
+  if (!ready) return <PageLoader fillScreen={false} />;
+  if (error) return <ErrorState message={error} onRetry={refresh} />;
 
   return (
     <div className="space-y-6">
@@ -71,10 +82,14 @@ export default function RiderTodayPage() {
         </div>
         <OnlineToggle
           online={isOnline}
-          onChange={(next) => {
-            setOnline(next);
-            if (!next) info("You're offline", "You won't receive new offers.");
-            else success("You're online", "New offers can find you.");
+          onChange={async (next) => {
+            try {
+              await setOnline(next);
+              if (!next) info("You're offline", "You won't receive new offers.");
+              else success("You're online", "New offers can find you.");
+            } catch {
+              toastError("Couldn't update status", "Please try again.");
+            }
           }}
         />
       </div>
@@ -178,10 +193,6 @@ export default function RiderTodayPage() {
         <Stat label="Tips" value={formatPrice(tipsToday)} hint="So far today" />
       </section>
 
-      <p className="text-center text-[11px] font-medium text-[var(--color-ink-soft)]">
-        Job offers and progress save in this browser (demo).
-      </p>
-
       <Link
         href="/rider/deliveries"
         className="block rounded-2xl bg-[var(--color-surface)] p-4 text-center text-[13px] font-bold text-emerald-800 ring-1 ring-[var(--color-line)] hover:bg-emerald-50/50"
@@ -209,7 +220,13 @@ export default function RiderTodayPage() {
             >
               Cancel
             </Button>
-            <Button type="button" fullWidth size="md" onClick={completeAccept}>
+            <Button
+              type="button"
+              fullWidth
+              size="md"
+              loading={accepting}
+              onClick={completeAccept}
+            >
               Confirm accept
             </Button>
           </div>

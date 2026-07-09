@@ -4,121 +4,39 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
 } from "react";
-import type {
-  Order,
-  RiderJob,
-  RiderJobStatus,
-  RiderOffer,
-  RiderOrderLineItem,
-} from "@/types";
-import { useOrders } from "@/context/OrdersContext";
-import { readLocalStorage, writeLocalStorage } from "@/lib/utils";
-
-/**
- * Rider console derives everything from the shared orders store:
- * - Offers  = open orders (new/preparing) nobody has accepted yet.
- * - Jobs    = orders this rider accepted; job stage follows order status.
- * Accepting / picking up / delivering writes the status back, so the admin
- * board and the rider screen always agree.
- */
-
-const STORAGE_KEY = "ilueats:rider_console:v2";
-
-/** Seed acceptance so the demo console isn't empty on first load. */
-const SEED_ACCEPTED_ORDER_IDS = ["ILU-9K2K", "ILU-9K2H", "ILU-9K2G"];
-
-type PersistedShape = {
-  isOnline: boolean;
-  acceptedOrderIds: string[];
-  deliveriesToday: number;
-  tipsToday: number;
-};
-
-function defaultPersisted(): PersistedShape {
-  return {
-    isOnline: true,
-    acceptedOrderIds: SEED_ACCEPTED_ORDER_IDS,
-    deliveriesToday: 7,
-    tipsToday: 1200,
-  };
-}
-
-function loadPersisted(): PersistedShape {
-  const fallback = defaultPersisted();
-  const raw = readLocalStorage<PersistedShape | null>(STORAGE_KEY, null);
-  if (!raw || !Array.isArray(raw.acceptedOrderIds)) return fallback;
-  return {
-    isOnline: typeof raw.isOnline === "boolean" ? raw.isOnline : true,
-    acceptedOrderIds: raw.acceptedOrderIds.filter(
-      (id): id is string => typeof id === "string"
-    ),
-    deliveriesToday:
-      typeof raw.deliveriesToday === "number"
-        ? raw.deliveriesToday
-        : fallback.deliveriesToday,
-    tipsToday:
-      typeof raw.tipsToday === "number" ? raw.tipsToday : fallback.tipsToday,
-  };
-}
-
-function orderToRiderLines(order: Order): RiderOrderLineItem[] {
-  return order.lineItems.map((line) => ({
-    name: line.name,
-    qty: line.qty,
-    modifiers: [
-      ...(line.modifiers ?? []),
-      ...(line.notes ? [`Note: ${line.notes}`] : []),
-    ].slice(0, 8),
-  }));
-}
-
-function orderStatusToJobStatus(order: Order): RiderJobStatus {
-  if (order.status === "delivered") return "done";
-  if (order.status === "out") return "en_route";
-  return "pickup";
-}
-
-function orderToJob(order: Order): RiderJob {
-  return {
-    id: order.id,
-    store: order.store,
-    customer: order.customer,
-    address: order.deliveryAddress,
-    payout: order.deliveryFee,
-    status: orderStatusToJobStatus(order),
-    phone: order.customerPhone,
-    lineItems: orderToRiderLines(order),
-  };
-}
-
-function orderToOffer(order: Order): RiderOffer {
-  return {
-    id: order.id,
-    store: order.store,
-    customer: order.customer,
-    drop: order.deliveryAddress,
-    pay: order.deliveryFee,
-    etaMin: Math.max(4, Math.round(order.deliveryFee / 100)),
-    phone: order.customerPhone,
-    lineItems: orderToRiderLines(order),
-  };
-}
+import type { RiderJob, RiderOffer } from "@/types";
+import {
+  getRiderOffers,
+  acceptRiderOffer,
+  setRiderOnline,
+  getRiderJobs,
+  pickupRiderJob,
+  deliverRiderJob,
+  getRiderEarningsSummary,
+  getRiderProfile,
+} from "@/lib/api/rider";
+import { ApiError } from "@/lib/api/client";
+import { useAuth } from "@/hooks/useAuth";
 
 interface RiderConsoleContextValue {
+  ready: boolean;
+  error: string | null;
   isOnline: boolean;
-  setOnline: (next: boolean) => void;
+  setOnline: (next: boolean) => Promise<void>;
   jobs: RiderJob[];
   /** Offers you can pick up right now (open orders nobody accepted). */
   availableOffers: RiderOffer[];
   deliveriesToday: number;
   tipsToday: number;
   onTimePercent: string;
-  acceptOffer: (offerId: string) => boolean;
-  markPickedUp: (jobId: string) => void;
-  markDelivered: (jobId: string) => number | null;
+  acceptOffer: (offerId: string) => Promise<boolean>;
+  markPickedUp: (jobId: string) => Promise<boolean>;
+  markDelivered: (jobId: string) => Promise<number | null>;
+  refresh: () => void;
 }
 
 const RiderConsoleContext = createContext<RiderConsoleContextValue | null>(
@@ -130,118 +48,135 @@ export function RiderConsoleProvider({
 }: {
   children: React.ReactNode;
 }) {
-  const { orders, updateOrderStatus } = useOrders();
-  const init = useMemo(() => loadPersisted(), []);
-  const [isOnline, setIsOnlineState] = useState(init.isOnline);
-  const [acceptedOrderIds, setAcceptedOrderIds] = useState<string[]>(
-    init.acceptedOrderIds
-  );
-  const [deliveriesToday, setDeliveriesToday] = useState(init.deliveriesToday);
-  const [tipsToday, setTipsToday] = useState(init.tipsToday);
+  const { user } = useAuth();
 
-  const persist = useCallback(
-    (patch: Partial<PersistedShape>) => {
-      writeLocalStorage(STORAGE_KEY, {
-        isOnline,
-        acceptedOrderIds,
-        deliveriesToday,
-        tipsToday,
-        ...patch,
-      });
-    },
-    [isOnline, acceptedOrderIds, deliveriesToday, tipsToday]
-  );
+  const [ready, setReady] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const setOnline = useCallback(
-    (next: boolean) => {
-      setIsOnlineState(next);
-      persist({ isOnline: next });
-    },
-    [persist]
-  );
+  const [isOnline, setIsOnlineState] = useState(false);
+  const [jobs, setJobs] = useState<RiderJob[]>([]);
+  const [availableOffers, setAvailableOffers] = useState<RiderOffer[]>([]);
+  const [deliveriesToday, setDeliveriesToday] = useState(0);
+  const [tipsToday, setTipsToday] = useState(0);
+  const [onTimePercent, setOnTimePercent] = useState("—");
+  const [refreshToken, setRefreshToken] = useState(0);
 
-  const jobs = useMemo<RiderJob[]>(
-    () =>
-      acceptedOrderIds
-        .map((id) => orders.find((o) => o.id === id))
-        .filter((o): o is Order => !!o)
-        .map(orderToJob),
-    [acceptedOrderIds, orders]
-  );
+  const refresh = useCallback(() => setRefreshToken((n) => n + 1), []);
 
-  const availableOffers = useMemo<RiderOffer[]>(() => {
-    if (!isOnline) return [];
-    return orders
-      .filter(
-        (o) =>
-          (o.status === "new" || o.status === "preparing") &&
-          !acceptedOrderIds.includes(o.id)
-      )
-      .map(orderToOffer);
-  }, [isOnline, orders, acceptedOrderIds]);
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
 
-  const acceptOffer = useCallback(
-    (offerId: string): boolean => {
-      if (!isOnline) return false;
-      const order = orders.find((o) => o.id === offerId);
-      if (!order || acceptedOrderIds.includes(offerId)) return false;
+    (async () => {
+      setError(null);
+      try {
+        const profile = await getRiderProfile();
+        if (cancelled) return;
+        setIsOnlineState(profile.isOnline);
 
-      const next = [...acceptedOrderIds, offerId];
-      setAcceptedOrderIds(next);
-      persist({ acceptedOrderIds: next });
+        const [jobsRes, summary, offers] = await Promise.all([
+          getRiderJobs({ pageSize: 100 }),
+          getRiderEarningsSummary(),
+          profile.isOnline ? getRiderOffers() : Promise.resolve([]),
+        ]);
+        if (cancelled) return;
+
+        setJobs(jobsRes.items);
+        setDeliveriesToday(summary.deliveriesToday);
+        setTipsToday(summary.tips);
+        setOnTimePercent(`${summary.onTimePercent}%`);
+        setAvailableOffers(offers);
+      } catch (err) {
+        if (cancelled) return;
+        setError(
+          err instanceof ApiError ? err.message : "Failed to load rider console."
+        );
+      } finally {
+        if (!cancelled) setReady(true);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user, refreshToken]);
+
+  const setOnline = useCallback(async (next: boolean) => {
+    const res = await setRiderOnline(next);
+    setIsOnlineState(res.isOnline);
+    if (res.isOnline) {
+      setAvailableOffers(await getRiderOffers());
+    } else {
+      setAvailableOffers([]);
+    }
+  }, []);
+
+  const acceptOffer = useCallback(async (offerId: string): Promise<boolean> => {
+    try {
+      const job = await acceptRiderOffer(offerId);
+      setJobs((prev) => [job, ...prev]);
+      setAvailableOffers((prev) => prev.filter((o) => o.id !== offerId));
       return true;
-    },
-    [isOnline, orders, acceptedOrderIds, persist]
-  );
+    } catch {
+      return false;
+    }
+  }, []);
 
-  const markPickedUp = useCallback(
-    (jobId: string) => {
-      const order = orders.find((o) => o.id === jobId);
-      if (!order || orderStatusToJobStatus(order) !== "pickup") return;
-      updateOrderStatus(jobId, "out");
-    },
-    [orders, updateOrderStatus]
-  );
+  const markPickedUp = useCallback(async (jobId: string): Promise<boolean> => {
+    try {
+      const job = await pickupRiderJob(jobId);
+      setJobs((prev) => prev.map((j) => (j.id === jobId ? job : j)));
+      return true;
+    } catch {
+      return false;
+    }
+  }, []);
 
   const markDelivered = useCallback(
-    (jobId: string): number | null => {
-      const order = orders.find((o) => o.id === jobId);
-      if (!order || orderStatusToJobStatus(order) !== "en_route") return null;
-      const tip = 150 + Math.floor(Math.random() * 200);
-      updateOrderStatus(jobId, "delivered");
-      const d = deliveriesToday + 1;
-      const t = tipsToday + tip;
-      setDeliveriesToday(d);
-      setTipsToday(t);
-      persist({ deliveriesToday: d, tipsToday: t });
-      return tip;
+    async (jobId: string): Promise<number | null> => {
+      try {
+        const { job, tip } = await deliverRiderJob(jobId);
+        setJobs((prev) => prev.map((j) => (j.id === jobId ? job : j)));
+        setDeliveriesToday((d) => d + 1);
+        setTipsToday((t) => t + tip);
+        return tip;
+      } catch {
+        return null;
+      }
     },
-    [orders, updateOrderStatus, deliveriesToday, tipsToday, persist]
+    []
   );
 
   const value = useMemo<RiderConsoleContextValue>(
     () => ({
+      ready,
+      error,
       isOnline,
       setOnline,
       jobs,
       availableOffers,
       deliveriesToday,
       tipsToday,
-      onTimePercent: "94%",
+      onTimePercent,
       acceptOffer,
       markPickedUp,
       markDelivered,
+      refresh,
     }),
     [
+      ready,
+      error,
       isOnline,
       setOnline,
       jobs,
       availableOffers,
       deliveriesToday,
       tipsToday,
+      onTimePercent,
       acceptOffer,
       markPickedUp,
       markDelivered,
+      refresh,
     ]
   );
 

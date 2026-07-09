@@ -1,9 +1,23 @@
 import NextAuth from "next-auth";
+import { CredentialsSignin } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 import { signIn as backendSignIn } from "@/lib/api/auth";
 import { ApiError, apiFetch } from "@/lib/api/client";
 import type { BackendRole } from "@/lib/api/auth";
+
+/**
+ * Auth.js deliberately strips the authorize() error message for credentials
+ * providers (to avoid leaking account existence), only passing through a
+ * `code`. We map our backend's actual failure reason onto a code here so the
+ * sign-in form can show something more useful than "sign in failed".
+ */
+class WrongCredentials extends CredentialsSignin {
+  code = "invalid-credentials";
+}
+class RoleNotAllowed extends CredentialsSignin {
+  code = "role-not-allowed";
+}
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   session: { strategy: "jwt" },
@@ -46,7 +60,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             accessToken: token,
           };
         } catch (err) {
-          if (err instanceof ApiError) return null;
+          if (err instanceof ApiError) {
+            if (err.status === 403) throw new RoleNotAllowed();
+            throw new WrongCredentials();
+          }
           throw err;
         }
       },

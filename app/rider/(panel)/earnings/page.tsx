@@ -1,60 +1,84 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { BanknotesIcon, CalendarDaysIcon, MapPinIcon } from "@heroicons/react/24/outline";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { Pagination } from "@/components/ui/Pagination";
+import { PageLoader } from "@/components/ui/Loaders";
+import { ErrorState } from "@/components/ui/EmptyState";
+import { RiderOrderBagSummary } from "@/components/rider/RiderOrderBag";
 import {
-  RiderOrderBagSummary,
-} from "@/components/rider/RiderOrderBag";
-import { useRiderConsole } from "@/context/RiderConsoleContext";
-import { usePaginatedList } from "@/hooks/usePaginatedList";
+  getRiderEarningsSummary,
+  getRiderEarningsLedger,
+  downloadRiderStatement,
+} from "@/lib/api/rider";
+import type { RiderEarningsSummary } from "@/lib/api/rider";
+import { ApiError } from "@/lib/api/client";
 import { useToast } from "@/hooks/useToast";
 import { formatPrice } from "@/lib/utils";
+import type { RiderJob } from "@/types";
 
 const LEDGER_PAGE_SIZE = 5;
 
 export default function RiderEarningsPage() {
-  const { tipsToday, jobs } = useRiderConsole();
-  const { success } = useToast();
+  const { success, error: toastError } = useToast();
   const [downloadOpen, setDownloadOpen] = useState(false);
+  const [downloading, setDownloading] = useState(false);
 
-  const doneJobs = useMemo(
-    () =>
-      [...jobs]
-        .filter((j) => j.status === "done")
-        .sort((a, b) => b.id.localeCompare(a.id)),
-    [jobs]
-  );
+  const [summary, setSummary] = useState<RiderEarningsSummary | null>(null);
+  const [ledgerPage, setLedgerPage] = useState(1);
+  const [ledgerItems, setLedgerItems] = useState<RiderJob[]>([]);
+  const [ledgerTotal, setLedgerTotal] = useState(0);
+  const [ledgerPageCount, setLedgerPageCount] = useState(1);
 
-  const {
-    page: ledgerPage,
-    setPage: setLedgerPage,
-    pageCount: ledgerPageCount,
-    pageItems: ledgerPageItems,
-    total: ledgerTotal,
-    pageSize: ledgerPageSize,
-  } = usePaginatedList(doneJobs, LEDGER_PAGE_SIZE);
+  const [ready, setReady] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const breakdown = useMemo(
-    () => [
-      { label: "Base payouts", amount: 18_400 },
-      { label: "Peak bonuses", amount: 2100 },
-      { label: "Tips from customers", amount: tipsToday },
-    ],
-    [tipsToday]
-  );
+  const load = useCallback(async () => {
+    setError(null);
+    try {
+      const [summaryRes, ledgerRes] = await Promise.all([
+        getRiderEarningsSummary(),
+        getRiderEarningsLedger({ page: ledgerPage, pageSize: LEDGER_PAGE_SIZE }),
+      ]);
+      setSummary(summaryRes);
+      setLedgerItems(ledgerRes.items);
+      setLedgerTotal(ledgerRes.totalItems);
+      setLedgerPageCount(ledgerRes.pageCount);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Failed to load earnings.");
+    } finally {
+      setReady(true);
+    }
+  }, [ledgerPage]);
 
-  const total = useMemo(
-    () => breakdown.reduce((s, r) => s + r.amount, 0),
-    [breakdown]
-  );
+  useEffect(() => {
+    load();
+  }, [load]);
 
-  const onDownload = () => {
-    setDownloadOpen(false);
-    success("Statement ready", "Saved as ilueats-rider-statement-demo.pdf (simulated).");
+  const onDownload = async () => {
+    setDownloading(true);
+    try {
+      await downloadRiderStatement();
+      setDownloadOpen(false);
+      success("Statement downloaded", "Saved to your downloads folder.");
+    } catch {
+      toastError("Couldn't download", "Please try again.");
+    } finally {
+      setDownloading(false);
+    }
   };
+
+  if (!ready) return <PageLoader fillScreen={false} />;
+  if (error || !summary) return <ErrorState message={error ?? undefined} onRetry={load} />;
+
+  const breakdown = [
+    { label: "Base payouts", amount: summary.basePayouts },
+    { label: "Peak bonuses", amount: summary.peakBonuses },
+    { label: "Tips from customers", amount: summary.tips },
+  ];
+  const total = breakdown.reduce((s, r) => s + r.amount, 0);
 
   return (
     <div className="space-y-6">
@@ -63,20 +87,20 @@ export default function RiderEarningsPage() {
           Earnings
         </h1>
         <p className="mt-1 text-[13px] text-[var(--color-ink-muted)]">
-          Tips update when you complete drops. Other lines are sample figures.
+          Updates as you complete drops today.
         </p>
       </div>
 
       <section className="rounded-[1.25rem] bg-[var(--color-surface)] p-5 shadow-crisp ring-1 ring-[var(--color-line)]">
         <div className="flex items-center gap-2 text-[12px] font-bold uppercase tracking-wide text-[var(--color-ink-soft)]">
           <CalendarDaysIcon className="h-4 w-4" />
-          This week
+          Today
         </div>
         <p className="mt-3 text-[34px] font-extrabold tabular-nums tracking-tight text-[var(--color-ink)]">
           {formatPrice(total)}
         </p>
         <p className="mt-1 text-[12px] font-medium text-[var(--color-ink-muted)]">
-          Est. settlement Friday · demo totals
+          {summary.deliveriesToday} delivered · {summary.onTimePercent}% on-time
         </p>
       </section>
 
@@ -99,40 +123,48 @@ export default function RiderEarningsPage() {
 
       <section className="space-y-3 rounded-[1.25rem] bg-[var(--color-surface)] p-5 shadow-crisp ring-1 ring-[var(--color-line)]">
         <h2 className="text-[12px] font-bold uppercase tracking-wide text-[var(--color-ink-soft)]">
-          Completed drops (live queue)
+          Completed drops
         </h2>
-        <ul className="space-y-2">
-          {ledgerPageItems.map((j) => (
-            <li
-              key={j.id}
-              className="rounded-2xl border border-[var(--color-line)] bg-[var(--color-bg)]/60 px-4 py-3"
-            >
-              <div className="flex items-start justify-between gap-2">
-                <p className="font-mono text-[12px] font-bold text-emerald-700">
-                  {j.id}
+        {ledgerItems.length === 0 ? (
+          <p className="py-4 text-center text-[13px] text-[var(--color-ink-muted)]">
+            No completed drops yet.
+          </p>
+        ) : (
+          <ul className="space-y-2">
+            {ledgerItems.map((j) => (
+              <li
+                key={j.id}
+                className="rounded-2xl border border-[var(--color-line)] bg-[var(--color-bg)]/60 px-4 py-3"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <p className="font-mono text-[12px] font-bold text-emerald-700">
+                    {j.id}
+                  </p>
+                  <p className="text-[13px] font-extrabold tabular-nums text-[var(--color-ink)]">
+                    {formatPrice(j.payout)}
+                  </p>
+                </div>
+                <p className="mt-1 text-[13px] font-bold text-[var(--color-ink)]">
+                  {j.store}
                 </p>
-                <p className="text-[13px] font-extrabold tabular-nums text-[var(--color-ink)]">
-                  {formatPrice(j.payout)}
+                <p className="mt-1 flex items-start gap-1.5 text-[12px] font-medium text-[var(--color-ink-muted)]">
+                  <MapPinIcon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-600/90" />
+                  {j.customer} · {j.address}
                 </p>
-              </div>
-              <p className="mt-1 text-[13px] font-bold text-[var(--color-ink)]">
-                {j.store}
-              </p>
-              <p className="mt-1 flex items-start gap-1.5 text-[12px] font-medium text-[var(--color-ink-muted)]">
-                <MapPinIcon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-600/90" />
-                {j.customer} · {j.address}
-              </p>
-              <RiderOrderBagSummary items={j.lineItems} className="mt-2 border-t border-[var(--color-line)] pt-2" />
-            </li>
-          ))}
-        </ul>
-        <Pagination
-          page={ledgerPage}
-          pageCount={ledgerPageCount}
-          totalItems={ledgerTotal}
-          pageSize={ledgerPageSize}
-          onPageChange={setLedgerPage}
-        />
+                <RiderOrderBagSummary items={j.lineItems} className="mt-2 border-t border-[var(--color-line)] pt-2" />
+              </li>
+            ))}
+          </ul>
+        )}
+        {ledgerTotal > 0 ? (
+          <Pagination
+            page={ledgerPage}
+            pageCount={ledgerPageCount}
+            totalItems={ledgerTotal}
+            pageSize={LEDGER_PAGE_SIZE}
+            onPageChange={setLedgerPage}
+          />
+        ) : null}
       </section>
 
       <button
@@ -145,9 +177,9 @@ export default function RiderEarningsPage() {
 
       <Modal
         open={downloadOpen}
-        onClose={() => setDownloadOpen(false)}
-        title="Download weekly statement?"
-        description="Generates a PDF summary for your records (demo)."
+        onClose={() => !downloading && setDownloadOpen(false)}
+        title="Download statement?"
+        description="Generates a CSV of your completed drops for your records."
         footer={
           <div className="flex gap-2">
             <Button
@@ -156,19 +188,19 @@ export default function RiderEarningsPage() {
               fullWidth
               size="md"
               onClick={() => setDownloadOpen(false)}
+              disabled={downloading}
             >
               Cancel
             </Button>
-            <Button type="button" fullWidth size="md" onClick={onDownload}>
+            <Button type="button" fullWidth size="md" loading={downloading} onClick={onDownload}>
               Download
             </Button>
           </div>
         }
       >
         <p className="text-[13px] leading-relaxed text-[var(--color-ink-muted)]">
-          In production this would include job IDs, distance bands, and
-          adjustments. Here we only confirm the action and show a success
-          toast.
+          Includes job IDs, store, customer, payout, tip, and delivery time for
+          every drop you&apos;ve completed.
         </p>
       </Modal>
     </div>

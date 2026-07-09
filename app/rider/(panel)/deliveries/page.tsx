@@ -9,6 +9,8 @@ import {
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { Pagination } from "@/components/ui/Pagination";
+import { PageLoader } from "@/components/ui/Loaders";
+import { ErrorState } from "@/components/ui/EmptyState";
 import {
   RiderOrderBagDetails,
   RiderOrderBagSummary,
@@ -78,7 +80,8 @@ function countByFilter(jobs: RiderJob[], filter: DeliveriesFilter): number {
 }
 
 export default function RiderDeliveriesPage() {
-  const { jobs, markPickedUp, markDelivered } = useRiderConsole();
+  const { ready, error: loadError, refresh, jobs, markPickedUp, markDelivered } =
+    useRiderConsole();
   const { success, error: toastError } = useToast();
   const [filter, setFilter] = useState<DeliveriesFilter>("all");
 
@@ -123,18 +126,23 @@ export default function RiderDeliveriesPage() {
     }
   };
 
-  const confirmPickup = () => {
+  const confirmPickup = async () => {
     if (!pickupModal) return;
     const id = pickupModal.id;
     const customer = pickupModal.customer;
-    markPickedUp(id);
+    const ok = await markPickedUp(id);
     setPickupModal(null);
+    if (!ok) {
+      toastError("Couldn't update", "This job may already have moved on.");
+      return;
+    }
     success("Picked up", `Heading to ${customer}.`);
   };
 
-  const confirmDeliver = () => {
+  const confirmDeliver = async () => {
     if (!completeModal) return;
-    const tip = markDelivered(completeModal.id);
+    const orderCode = completeModal.id;
+    const tip = await markDelivered(orderCode);
     setCompleteModal(null);
     if (tip === null) {
       toastError("Couldn't complete", "This job wasn't out for delivery.");
@@ -142,9 +150,12 @@ export default function RiderDeliveriesPage() {
     }
     success(
       "Delivered",
-      `${completeModal.id} closed. Tip ~${formatPrice(tip)} added to your tally.`
+      `${orderCode} closed. Tip ~${formatPrice(tip)} added to your tally.`
     );
   };
+
+  if (!ready) return <PageLoader fillScreen={false} />;
+  if (loadError) return <ErrorState message={loadError} onRetry={refresh} />;
 
   return (
     <div className="space-y-6">
@@ -280,11 +291,6 @@ export default function RiderDeliveriesPage() {
               </div>
             </div>
 
-            {j.status === "pickup" && (
-              <p className="mt-3 text-[11px] font-medium text-[var(--color-ink-soft)]">
-                Call is routed to the customer demo line ({j.phone}).
-              </p>
-            )}
           </li>
         ))}
       </ul>

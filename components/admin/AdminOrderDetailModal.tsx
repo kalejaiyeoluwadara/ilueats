@@ -59,7 +59,6 @@ export function AdminOrderDetailModal({
       setOrder(null);
       setError(null);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, orderId]);
 
   useEffect(() => {

@@ -845,6 +845,7 @@ export interface AdminStoreMenuModalProps {
   error?: string | null;
   onClose: () => void;
   onRemoveItem?: (productId: string) => void;
+  onDuplicateItem?: (productId: string) => void;
   onUpsertAdd: (payload: MenuItemPayload) => void;
   onUpsertEdit: (productId: string, payload: Partial<MenuItemPayload>) => void;
 }
@@ -857,6 +858,7 @@ export function AdminStoreMenuModal({
   error,
   onClose,
   onRemoveItem,
+  onDuplicateItem,
   onUpsertAdd,
   onUpsertEdit,
 }: AdminStoreMenuModalProps) {
@@ -954,6 +956,17 @@ export function AdminStoreMenuModal({
                   >
                     Edit
                   </Button>
+                  {onDuplicateItem && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      className="h-9 min-w-[4.5rem] px-3 text-[12px]"
+                      onClick={() => onDuplicateItem(p.id)}
+                    >
+                      Duplicate
+                    </Button>
+                  )}
                   {onRemoveItem && (
                     <Button
                       type="button"

@@ -1,4 +1,5 @@
 import { apiFetch } from "./client";
+import type { PaginatedResult } from "./orders";
 import type { CategoryId, Product, ProductOptionGroup, Store } from "@/types";
 
 export type MenuCategoryId = Exclude<CategoryId, "all">;
@@ -131,4 +132,50 @@ export async function updateMenuItem(
 
 export async function deleteMenuItem(productId: string): Promise<void> {
   await apiFetch<void>(`/menu-items/${productId}`, { method: "DELETE" });
+}
+
+export async function deleteStoreApi(storeId: string): Promise<void> {
+  await apiFetch<void>(`/stores/${storeId}`, { method: "DELETE" });
+}
+
+/** Get-or-create the hidden house store that owns independent items. */
+export async function ensurePlatformStore(): Promise<Store> {
+  return apiFetch<Store>("/platform-store", { method: "POST" });
+}
+
+export type AdminMenuItem = Product & {
+  storeName: string;
+  storeIsPlatform?: boolean;
+};
+
+export type AdminMenuItemsQuery = {
+  q?: string;
+  category?: MenuCategoryId;
+  storeId?: string;
+  page?: number;
+  pageSize?: number;
+};
+
+export async function fetchAdminMenuItems(
+  params: AdminMenuItemsQuery = {}
+): Promise<PaginatedResult<AdminMenuItem>> {
+  return apiFetch<PaginatedResult<AdminMenuItem>>("/menu-items", {
+    query: {
+      q: params.q || undefined,
+      category: params.category,
+      storeId: params.storeId,
+      page: params.page ?? 1,
+      pageSize: params.pageSize ?? 12,
+    },
+  });
+}
+
+export async function duplicateMenuItem(
+  productId: string,
+  targetStoreId?: string
+): Promise<Product> {
+  return apiFetch<Product>(`/menu-items/${productId}/duplicate`, {
+    method: "POST",
+    body: targetStoreId ? { storeId: targetStoreId } : {},
+  });
 }

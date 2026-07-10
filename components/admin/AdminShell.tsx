@@ -10,6 +10,7 @@ import {
   Cog6ToothIcon,
   PhotoIcon,
   ShoppingBagIcon,
+  Squares2X2Icon,
   TruckIcon,
   XMarkIcon,
 } from "@heroicons/react/24/outline";
@@ -23,6 +24,7 @@ const nav = [
   { href: "/admin/orders", label: "Orders", icon: ShoppingBagIcon },
   { href: "/admin/riders", label: "Riders", icon: TruckIcon },
   { href: "/admin/stores", label: "Stores", icon: BuildingStorefrontIcon },
+  { href: "/admin/items", label: "Items", icon: Squares2X2Icon },
   { href: "/admin/banners", label: "Banners", icon: PhotoIcon },
   { href: "/admin/settings", label: "Settings", icon: Cog6ToothIcon },
 ] as const;

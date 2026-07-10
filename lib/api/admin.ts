@@ -12,6 +12,21 @@ export function getDashboardKpis() {
   return apiFetch<DashboardKpis>("/admin/dashboard/kpis");
 }
 
+export interface StoreOrderStats {
+  storeId: string;
+  orders7d: number;
+  revenue7d: number;
+  ordersTotal: number;
+}
+
+/** Per-store order stats computed from real orders (keyed by store id). */
+export async function getStoreStats(): Promise<Map<string, StoreOrderStats>> {
+  const { items } = await apiFetch<{ items: StoreOrderStats[] }>(
+    "/admin/stores/stats"
+  );
+  return new Map(items.map((s) => [s.storeId, s]));
+}
+
 export type ActivitySegment = "orders" | "stores" | "finance" | "platform";
 
 export interface ActivityItem {

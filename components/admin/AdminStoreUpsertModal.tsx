@@ -32,7 +32,6 @@ type FormState = {
   minOrder: string;
   rating: string;
   reviews: string;
-  orders7d: string;
   tagsRaw: string;
   isOpen: boolean;
   isFeatured: boolean;
@@ -56,7 +55,6 @@ function storeToForm(s: Store): FormState {
     minOrder: String(s.minOrder),
     rating: String(s.rating),
     reviews: String(s.reviews),
-    orders7d: String(typeof s.orders7d === "number" ? s.orders7d : 0),
     tagsRaw: (s.tags ?? []).join(", "),
     isOpen: s.isOpen,
     isFeatured: !!s.isFeatured,
@@ -81,7 +79,6 @@ function defaultForm(): FormState {
     minOrder: "2000",
     rating: "4.6",
     reviews: "120",
-    orders7d: "0",
     tagsRaw: "",
     isOpen: true,
     isFeatured: false,
@@ -190,7 +187,6 @@ export function AdminStoreUpsertModal({
           .split(",")
           .map((t) => t.trim())
           .filter(Boolean),
-        orders7d: Math.max(0, Math.round(parseNum(form.orders7d, 0))),
       };
       onSave(payload);
       onClose();
@@ -204,7 +200,7 @@ export function AdminStoreUpsertModal({
       open={open}
       onClose={onClose}
       title={title}
-      description="Details sync to the customer app and admin list (saved in this browser)."
+      description="Details sync to the customer app and admin list."
       variant="dialog"
       className="sm:max-w-2xl"
       footer={footer}
@@ -403,19 +399,6 @@ export function AdminStoreUpsertModal({
               value={form.reviews}
               onChange={(e) =>
                 setForm((f) => ({ ...f, reviews: e.target.value }))
-              }
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-[var(--color-ink-soft)]">
-              Orders (7d) — admin metric
-            </label>
-            <input
-              className={field}
-              inputMode="numeric"
-              value={form.orders7d}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, orders7d: e.target.value }))
               }
             />
           </div>

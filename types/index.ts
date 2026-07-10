@@ -34,8 +34,10 @@ export interface Store {
   isNew?: boolean;
   location: string;
   tags?: string[];
-  /** Client-persisted admin metric (catalog demo); optional on seed stores. */
+  /** @deprecated Legacy seeded metric — admin now reads real stats from /admin/stores/stats. */
   orders7d?: number;
+  /** Hidden house store that owns independent items (excluded from public listings). */
+  isPlatform?: boolean;
 }
 
 export interface Product {

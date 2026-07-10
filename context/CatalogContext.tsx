@@ -14,6 +14,7 @@ import {
   createMenuItem as apiCreateMenuItem,
   createStore as apiCreateStore,
   deleteMenuItem as apiDeleteMenuItem,
+  deleteStoreApi,
   fetchStores,
   updateMenuItem as apiUpdateMenuItem,
   updateStoreApi,
@@ -30,6 +31,7 @@ type CatalogContextValue = {
   refetch: () => Promise<void>;
   addStore: (input: StoreUpsertPayload) => Promise<Store>;
   updateStore: (storeId: string, input: Partial<StoreUpsertPayload>) => Promise<Store>;
+  removeStore: (storeId: string) => Promise<void>;
   addMenuItem: (store: Store, input: MenuItemPayload) => Promise<Product>;
   updateMenuItem: (
     productId: string,
@@ -78,6 +80,10 @@ export function CatalogProvider({ children }: { children: React.ReactNode }) {
         const updated = await updateStoreApi(storeId, input);
         await load();
         return updated;
+      },
+      removeStore: async (storeId) => {
+        await deleteStoreApi(storeId);
+        await load();
       },
       addMenuItem: (store, input) => apiCreateMenuItem(store.id, input),
       updateMenuItem: (productId, input) => apiUpdateMenuItem(productId, input),

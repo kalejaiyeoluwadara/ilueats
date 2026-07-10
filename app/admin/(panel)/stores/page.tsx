@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { MagnifyingGlassIcon, PlusIcon } from "@heroicons/react/24/outline";
 import { AdminStoreUpsertModal } from "@/components/admin/AdminStoreUpsertModal";
 import { AdminStoreMenuModal } from "@/components/admin/AdminStoreMenuModal";
@@ -9,10 +10,12 @@ import { ContentLoader } from "@/components/ui/Loaders";
 import { ErrorState } from "@/components/ui/EmptyState";
 import { useCatalog } from "@/context/CatalogContext";
 import { categories as menuCategories } from "@/data/mockData";
+import { getStoreStats, type StoreOrderStats } from "@/lib/api/admin";
+import { duplicateMenuItem } from "@/lib/api/catalog";
 import { useStoreProducts } from "@/hooks/useCatalogQueries";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { useToast } from "@/hooks/useToast";
-import { cn } from "@/lib/utils";
+import { cn, formatPrice } from "@/lib/utils";
 import type { CategoryId, Store } from "@/types";
 
 const STORES_PAGE_SIZE = 6;
@@ -79,11 +82,67 @@ export default function AdminStoresPage() {
     refetch: refetchStores,
     addStore,
     updateStore,
+    removeStore,
     addMenuItem,
     updateMenuItem,
     removeMenuItem,
   } = useCatalog();
   const { success, error: errorToast } = useToast();
+
+  const [storeStats, setStoreStats] = useState<Map<
+    string,
+    StoreOrderStats
+  > | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    getStoreStats()
+      .then((stats) => {
+        if (!cancelled) setStoreStats(stats);
+      })
+      .catch(() => {
+        // Cards fall back to 0 orders when stats can't load.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const [togglingStoreId, setTogglingStoreId] = useState<string | null>(null);
+
+  const toggleLive = async (s: Store) => {
+    setTogglingStoreId(s.id);
+    try {
+      await updateStore(s.id, { isOpen: !s.isOpen });
+      success(
+        !s.isOpen ? "Store is live" : "Store paused",
+        !s.isOpen
+          ? `${s.name} now takes orders.`
+          : `${s.name} is hidden from checkout.`
+      );
+    } catch {
+      errorToast("Couldn't update status", "Please try again.");
+    } finally {
+      setTogglingStoreId(null);
+    }
+  };
+
+  const onDeleteStore = async (s: Store) => {
+    if (
+      typeof window !== "undefined" &&
+      !window.confirm(
+        `Delete "${s.name}" and all its menu items? This can't be undone.`
+      )
+    ) {
+      return;
+    }
+    try {
+      await removeStore(s.id);
+      success("Store deleted", `${s.name} and its items were removed.`);
+    } catch {
+      errorToast("Couldn't delete store", "Please try again.");
+    }
+  };
 
   const catalogCategoryIds = useMemo(() => {
     const ids = new Set<string>();
@@ -155,8 +214,8 @@ export default function AdminStoresPage() {
             Stores
           </h1>
           <p className="mt-1 text-[13px] text-[var(--color-ink-muted)]">
-            Manage live catalog, storefronts, and menus — saved locally in this
-            browser until you plug in an API.
+            Manage storefronts and menus — changes go live in the customer app
+            instantly.
           </p>
         </div>
         <button
@@ -215,6 +274,15 @@ export default function AdminStoresPage() {
             success("Removed", "Dish dropped from menu.");
           } catch {
             errorToast("Couldn't remove dish", "Please try again.");
+          }
+        }}
+        onDuplicateItem={async (id) => {
+          try {
+            const copy = await duplicateMenuItem(id);
+            await refetchMenuItems();
+            success("Dish duplicated", `${copy.name} copied — edit it to tweak details.`);
+          } catch {
+            errorToast("Couldn't duplicate dish", "Please try again.");
           }
         }}
         onUpsertAdd={async (payload) => {
@@ -375,13 +443,25 @@ export default function AdminStoresPage() {
                   ★ {s.rating.toFixed(1)}
                 </p>
               </div>
-              <div className="mt-4 rounded-2xl bg-[var(--color-bg)] px-3 py-3 ring-1 ring-[var(--color-line)]">
-                <p className="text-[11px] font-bold uppercase tracking-wide text-[var(--color-ink-soft)]">
-                  Orders (7d)
-                </p>
-                <p className="mt-1 text-[20px] font-extrabold tabular-nums text-[var(--color-ink)]">
-                  {typeof s.orders7d === "number" ? s.orders7d : 0}
-                </p>
+              <div className="mt-4 grid grid-cols-2 gap-2">
+                <div className="rounded-2xl bg-[var(--color-bg)] px-3 py-3 ring-1 ring-[var(--color-line)]">
+                  <p className="text-[11px] font-bold uppercase tracking-wide text-[var(--color-ink-soft)]">
+                    Orders (7d)
+                  </p>
+                  <p className="mt-1 text-[20px] font-extrabold tabular-nums text-[var(--color-ink)]">
+                    {storeStats ? (storeStats.get(s.id)?.orders7d ?? 0) : "…"}
+                  </p>
+                </div>
+                <div className="rounded-2xl bg-[var(--color-bg)] px-3 py-3 ring-1 ring-[var(--color-line)]">
+                  <p className="text-[11px] font-bold uppercase tracking-wide text-[var(--color-ink-soft)]">
+                    Revenue (7d)
+                  </p>
+                  <p className="mt-1 text-[16px] font-extrabold tabular-nums text-[var(--color-ink)]">
+                    {storeStats
+                      ? formatPrice(storeStats.get(s.id)?.revenue7d ?? 0)
+                      : "…"}
+                  </p>
+                </div>
               </div>
               <div className="mt-4 grid grid-cols-2 gap-2">
                 <button
@@ -398,7 +478,37 @@ export default function AdminStoresPage() {
                 >
                   Edit
                 </button>
+                <button
+                  type="button"
+                  disabled={togglingStoreId === s.id}
+                  onClick={() => toggleLive(s)}
+                  className={cn(
+                    "h-10 rounded-full text-[12px] font-bold ring-1 ring-inset transition-colors disabled:opacity-60",
+                    s.isOpen
+                      ? "bg-white text-amber-700 ring-amber-200 hover:bg-amber-50"
+                      : "bg-white text-emerald-700 ring-emerald-200 hover:bg-emerald-50"
+                  )}
+                >
+                  {togglingStoreId === s.id
+                    ? "Saving…"
+                    : s.isOpen
+                      ? "Pause orders"
+                      : "Go live"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onDeleteStore(s)}
+                  className="h-10 rounded-full bg-white text-[12px] font-bold text-red-600 ring-1 ring-inset ring-red-200 hover:bg-red-50"
+                >
+                  Delete
+                </button>
               </div>
+              <Link
+                href={`/admin/items?store=${s.id}`}
+                className="mt-3 block text-center text-[12px] font-bold text-[var(--color-primary)] hover:underline"
+              >
+                Manage items →
+              </Link>
             </article>
           ))}
         </div>

@@ -198,3 +198,13 @@ input[type="search"]::-ms-reveal {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Platform closed — grey the storefront so it reads as inactive without breaking
+   fixed/sticky layout (filter is scoped to media, not layout containers). */
+.platform-closed-dim img,
+.platform-closed-dim video {
+  filter: grayscale(1) opacity(0.75);
+}
+.platform-closed-dim {
+  --color-primary: #6b7280;
+}

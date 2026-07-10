@@ -9,8 +9,10 @@ import { CatalogProvider } from "@/context/CatalogContext";
 import { CartProvider } from "@/context/CartContext";
 import { FavoritesProvider } from "@/context/FavoritesContext";
 import { OrdersProvider } from "@/context/OrdersContext";
+import { PlatformStatusProvider } from "@/context/PlatformStatusContext";
 import { SearchProvider } from "@/context/SearchContext";
 import { ToastProvider } from "@/context/ToastContext";
+import { PlatformClosedFrame } from "@/components/layout/PlatformClosedFrame";
 import { PWAInstallPrompt } from "@/components/layout/PWAInstallPrompt";
 
 /**
@@ -44,8 +46,10 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
               <FavoritesProvider>
                 <AddressesProvider>
                   <CartProvider>
-                    {children}
-                    <PWAInstallPrompt />
+                    <PlatformStatusProvider>
+                      <PlatformClosedFrame>{children}</PlatformClosedFrame>
+                      <PWAInstallPrompt />
+                    </PlatformStatusProvider>
                   </CartProvider>
                 </AddressesProvider>
               </FavoritesProvider>

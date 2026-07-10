@@ -27,6 +27,7 @@ import { useWallet } from "@/hooks/useWallet";
 import { useToast } from "@/hooks/useToast";
 import { useCatalog } from "@/context/CatalogContext";
 import { useOrders } from "@/context/OrdersContext";
+import { usePlatformStatus } from "@/context/PlatformStatusContext";
 import { pickupLandmarks } from "@/data/mockData";
 import { createOrder as createBackendOrder } from "@/lib/api/orders";
 import { initializePayment, verifyPayment } from "@/lib/api/payments";
@@ -66,6 +67,7 @@ export default function CheckoutPage() {
   const { success, error: toastError } = useToast();
   const { stores } = useCatalog();
   const { placeOrder } = useOrders();
+  const { isOpen: platformOpen, status: platformStatus } = usePlatformStatus();
 
   const store = useMemo(
     () => (storeSlug ? stores.find((s) => s.slug === storeSlug) : undefined),
@@ -118,6 +120,7 @@ export default function CheckoutPage() {
   }, [addrReady, defaultAddress, deliveryMode]);
 
   const canSubmit = useMemo(() => {
+    if (!platformOpen) return false;
     const contactOk =
       name.trim().length > 1 && phone.trim().length >= 7;
     if (!contactOk) return false;
@@ -125,7 +128,7 @@ export default function CheckoutPage() {
       return address.trim().length > 4;
     }
     return landmarkId !== null;
-  }, [name, phone, address, deliveryMode, landmarkId]);
+  }, [platformOpen, name, phone, address, deliveryMode, landmarkId]);
 
   const paymentLabels: Record<PayMethod, string> = {
     card: "Card (demo)",
@@ -563,6 +566,13 @@ export default function CheckoutPage() {
           deliveryFee={deliveryFee}
           serviceFee={serviceFee}
         />
+
+        {!platformOpen ? (
+          <p className="rounded-2xl bg-zinc-900 px-4 py-3 text-[13px] font-semibold text-zinc-100">
+            {platformStatus?.message ??
+              "We're currently closed — ordering will resume shortly."}
+          </p>
+        ) : null}
 
         {/* Desktop inline pay */}
         <div className="hidden lg:flex lg:items-center lg:gap-3 lg:rounded-2xl lg:bg-white lg:p-4 lg:ring-1 lg:ring-[var(--color-line)]">

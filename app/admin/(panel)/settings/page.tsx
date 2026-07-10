@@ -1,10 +1,16 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { MagnifyingGlassIcon } from "@heroicons/react/24/outline";
+import { MagnifyingGlassIcon, MoonIcon, SunIcon } from "@heroicons/react/24/outline";
 import { Button } from "@/components/ui/Button";
 import { Pagination } from "@/components/ui/Pagination";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
+import { useToast } from "@/hooks/useToast";
+import {
+  getPlatformSettings,
+  updatePlatformSettings,
+  type PlatformStatus,
+} from "@/lib/api/platform";
 import { cn } from "@/lib/utils";
 
 type FlagDef = {
@@ -110,9 +116,11 @@ export default function AdminSettingsPage() {
           Settings
         </h1>
         <p className="mt-1 max-w-xl text-[13px] text-[var(--color-ink-muted)]">
-          Platform controls are visual only for now — nothing is persisted.
+          Availability is live — fees and flags below are visual only for now.
         </p>
       </div>
+
+      <AvailabilitySection />
 
       <section className="rounded-[1.25rem] bg-[var(--color-surface)] p-5 shadow-crisp ring-1 ring-[var(--color-line)] sm:p-6">
         <h2 className="text-[15px] font-extrabold text-[var(--color-ink)]">
@@ -208,6 +216,276 @@ export default function AdminSettingsPage() {
         ) : null}
       </section>
     </div>
+  );
+}
+
+const fieldCls =
+  "h-12 w-full rounded-2xl border border-[var(--color-line)] bg-[var(--color-bg)] px-4 text-[14px] font-semibold text-[var(--color-ink)] outline-none transition focus:border-[var(--color-primary)]/40 focus:ring-2 focus:ring-[var(--color-primary)]/20";
+
+function Toggle({
+  on,
+  onToggle,
+  disabled,
+  label,
+}: {
+  on: boolean;
+  onToggle: () => void;
+  disabled?: boolean;
+  label: string;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={on}
+      aria-label={label}
+      disabled={disabled}
+      onClick={onToggle}
+      className={cn(
+        "relative h-7 w-12 shrink-0 rounded-full transition-colors disabled:opacity-50",
+        on ? "bg-[var(--color-primary)]" : "bg-zinc-300"
+      )}
+    >
+      <span
+        className={cn(
+          "absolute left-0.5 top-0.5 h-6 w-6 rounded-full bg-white shadow transition-transform",
+          on ? "translate-x-5" : "translate-x-0"
+        )}
+      />
+    </button>
+  );
+}
+
+/** Platform-wide open/closed control — manual kill switch + auto opening hours. */
+function AvailabilitySection() {
+  const { success, error: errorToast } = useToast();
+  const [status, setStatus] = useState<PlatformStatus | null>(null);
+  const [loadError, setLoadError] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  // Draft schedule fields (saved explicitly with the button).
+  const [openTime, setOpenTime] = useState("08:00");
+  const [closeTime, setCloseTime] = useState("22:00");
+  const [closedMessage, setClosedMessage] = useState("");
+
+  const load = async () => {
+    setLoadError(false);
+    try {
+      const s = await getPlatformSettings();
+      setStatus(s);
+      setOpenTime(s.openTime);
+      setCloseTime(s.closeTime);
+    } catch {
+      setLoadError(true);
+    }
+  };
+
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const apply = async (
+    patch: Parameters<typeof updatePlatformSettings>[0],
+    toast: { title: string; body: string }
+  ) => {
+    setSaving(true);
+    try {
+      const s = await updatePlatformSettings(patch);
+      setStatus(s);
+      setOpenTime(s.openTime);
+      setCloseTime(s.closeTime);
+      success(toast.title, toast.body);
+    } catch {
+      errorToast("Couldn't save availability", "Please try again.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const open = status?.isOpen ?? true;
+
+  return (
+    <section className="rounded-[1.25rem] bg-[var(--color-surface)] p-5 shadow-crisp ring-1 ring-[var(--color-line)] sm:p-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="text-[15px] font-extrabold text-[var(--color-ink)]">
+            Platform availability
+          </h2>
+          <p className="mt-0.5 text-[12.5px] text-[var(--color-ink-muted)]">
+            Closing pauses ordering everywhere — customers see the catalog
+            greyed out with a &ldquo;we&rsquo;re closed&rdquo; notice.
+          </p>
+        </div>
+        {status ? (
+          <span
+            className={cn(
+              "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-bold ring-1 ring-inset",
+              open
+                ? "bg-[var(--color-success-soft)] text-[var(--color-success)] ring-emerald-200/80"
+                : "bg-zinc-900 text-zinc-100 ring-zinc-700"
+            )}
+          >
+            {open ? (
+              <SunIcon className="h-4 w-4" />
+            ) : (
+              <MoonIcon className="h-4 w-4" />
+            )}
+            {open
+              ? "Open now"
+              : status.reason === "manual"
+                ? "Closed — manual switch"
+                : "Closed — outside opening hours"}
+          </span>
+        ) : null}
+      </div>
+
+      {loadError ? (
+        <div className="mt-5 flex items-center justify-between gap-3 rounded-2xl border border-dashed border-[var(--color-line)] px-4 py-4">
+          <p className="text-[13px] font-medium text-[var(--color-ink-muted)]">
+            Couldn&rsquo;t load availability settings.
+          </p>
+          <Button type="button" variant="outline" size="sm" onClick={load}>
+            Retry
+          </Button>
+        </div>
+      ) : !status ? (
+        <p className="mt-5 text-[13px] font-medium text-[var(--color-ink-muted)]">
+          Loading availability…
+        </p>
+      ) : (
+        <>
+          <div className="mt-5 flex items-center justify-between gap-4 rounded-2xl border border-[var(--color-line)] bg-[var(--color-bg)]/60 px-4 py-4">
+            <div>
+              <p className="text-[13px] font-bold text-[var(--color-ink)]">
+                Accepting orders
+              </p>
+              <p className="mt-0.5 text-[12px] text-[var(--color-ink-muted)]">
+                Manual kill switch — overrides the schedule, e.g. close early
+                when no riders are left tonight.
+              </p>
+            </div>
+            <Toggle
+              on={!status.manualClosed}
+              disabled={saving}
+              label="Accepting orders"
+              onToggle={() =>
+                apply(
+                  { manualClosed: !status.manualClosed },
+                  status.manualClosed
+                    ? {
+                        title: "Platform reopened",
+                        body: "Customers can order again.",
+                      }
+                    : {
+                        title: "Platform closed",
+                        body: "Ordering is paused everywhere.",
+                      }
+                )
+              }
+            />
+          </div>
+
+          <div className="mt-4 rounded-2xl border border-[var(--color-line)] bg-[var(--color-bg)]/60 px-4 py-4">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-[13px] font-bold text-[var(--color-ink)]">
+                  Auto opening hours
+                </p>
+                <p className="mt-0.5 text-[12px] text-[var(--color-ink-muted)]">
+                  Outside this window the platform closes itself — no need to
+                  flip the switch every night. Times are Africa/Lagos.
+                </p>
+              </div>
+              <Toggle
+                on={status.autoScheduleEnabled}
+                disabled={saving}
+                label="Auto opening hours"
+                onToggle={() =>
+                  apply(
+                    { autoScheduleEnabled: !status.autoScheduleEnabled },
+                    status.autoScheduleEnabled
+                      ? {
+                          title: "Schedule off",
+                          body: "Open around the clock unless closed manually.",
+                        }
+                      : {
+                          title: "Schedule on",
+                          body: `Open ${openTime}–${closeTime} daily.`,
+                        }
+                  )
+                }
+              />
+            </div>
+
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <label className="block">
+                <span className="text-[12px] font-bold text-[var(--color-ink)]">
+                  Opens at
+                </span>
+                <input
+                  type="time"
+                  value={openTime}
+                  onChange={(e) => setOpenTime(e.target.value)}
+                  className={cn(fieldCls, "mt-2")}
+                />
+              </label>
+              <label className="block">
+                <span className="text-[12px] font-bold text-[var(--color-ink)]">
+                  Closes at
+                </span>
+                <input
+                  type="time"
+                  value={closeTime}
+                  onChange={(e) => setCloseTime(e.target.value)}
+                  className={cn(fieldCls, "mt-2")}
+                />
+              </label>
+              <label className="block sm:col-span-2">
+                <span className="text-[12px] font-bold text-[var(--color-ink)]">
+                  Closed message (shown to customers)
+                </span>
+                <input
+                  value={closedMessage}
+                  onChange={(e) => setClosedMessage(e.target.value)}
+                  placeholder={status.message}
+                  maxLength={200}
+                  className={cn(fieldCls, "mt-2")}
+                />
+              </label>
+            </div>
+            <p className="mt-2 text-[11.5px] text-[var(--color-ink-muted)]">
+              A close time before the open time spans midnight (e.g. 18:00 →
+              02:00).
+            </p>
+            <div className="mt-4">
+              <Button
+                type="button"
+                size="md"
+                disabled={saving || !openTime || !closeTime}
+                onClick={() =>
+                  apply(
+                    {
+                      openTime,
+                      closeTime,
+                      ...(closedMessage.trim()
+                        ? { closedMessage: closedMessage.trim() }
+                        : {}),
+                    },
+                    {
+                      title: "Hours saved",
+                      body: `Open ${openTime}–${closeTime} daily.`,
+                    }
+                  )
+                }
+              >
+                Save hours
+              </Button>
+            </div>
+          </div>
+        </>
+      )}
+    </section>
   );
 }
 

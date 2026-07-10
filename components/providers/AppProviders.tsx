@@ -14,12 +14,21 @@ import { SearchProvider } from "@/context/SearchContext";
 import { ToastProvider } from "@/context/ToastContext";
 import { PlatformClosedFrame } from "@/components/layout/PlatformClosedFrame";
 import { PWAInstallPrompt } from "@/components/layout/PWAInstallPrompt";
+import type { AdSlide, Store } from "@/types";
 
 /**
  * Composes all client-side React contexts. Nested order matters where hooks
  * might interact (e.g. checkout uses auth + addresses + cart).
  */
-export function AppProviders({ children }: { children: React.ReactNode }) {
+export function AppProviders({
+  children,
+  initialStores,
+  initialBanners,
+}: {
+  children: React.ReactNode;
+  initialStores?: Store[];
+  initialBanners?: AdSlide[];
+}) {
   useEffect(() => {
     if (
       typeof window !== "undefined" &&
@@ -38,10 +47,10 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
     <ToastProvider>
       <AuthProvider>
         {/* Catalog must wrap SearchProvider so SearchModal (sibling to pages) sees the same snapshot. */}
-        <CatalogProvider>
+        <CatalogProvider initialStores={initialStores}>
           {/* Orders wrap everything order-adjacent: checkout writes, admin + rider read. */}
           <OrdersProvider>
-          <BannerProvider>
+          <BannerProvider initialBanners={initialBanners}>
             <SearchProvider>
               <FavoritesProvider>
                 <AddressesProvider>

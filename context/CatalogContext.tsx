@@ -6,6 +6,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import type { Product, Store } from "@/types";
@@ -42,10 +43,18 @@ type CatalogContextValue = {
 
 const CatalogContext = createContext<CatalogContextValue | null>(null);
 
-export function CatalogProvider({ children }: { children: React.ReactNode }) {
-  const [stores, setStores] = useState<Store[]>([]);
-  const [loading, setLoading] = useState(true);
+export function CatalogProvider({
+  children,
+  initialStores,
+}: {
+  children: React.ReactNode;
+  /** Server-rendered snapshot. When present the first paint already has stores. */
+  initialStores?: Store[];
+}) {
+  const [stores, setStores] = useState<Store[]>(initialStores ?? []);
+  const [loading, setLoading] = useState(!initialStores);
   const [error, setError] = useState<string | null>(null);
+  const seeded = useRef(!!initialStores);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -62,6 +71,10 @@ export function CatalogProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
+    if (seeded.current) {
+      seeded.current = false;
+      return;
+    }
     load();
   }, [load]);
 

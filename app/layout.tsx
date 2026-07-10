@@ -4,6 +4,28 @@ import NextTopLoader from "nextjs-toploader";
 import "./globals.css";
 import { AppProviders } from "@/components/providers/AppProviders";
 import { Analytics } from "@vercel/analytics/next"
+import { fetchStores } from "@/lib/api/catalog";
+import { fetchBanners } from "@/lib/api/banners";
+
+/** Public catalog reads are identical for every visitor, so they cache well. */
+const CATALOG_REVALIDATE_SECONDS = 60;
+
+/**
+ * Seed the catalog on the server so store cards are in the first HTML response
+ * rather than behind a bundle download + hydrate + fetch. A failure here is not
+ * fatal: the providers fall back to fetching on mount.
+ */
+async function loadCatalogSnapshot() {
+  const [stores, banners] = await Promise.all([
+    fetchStores(undefined, { revalidate: CATALOG_REVALIDATE_SECONDS }).catch(
+      () => undefined
+    ),
+    fetchBanners({ revalidate: CATALOG_REVALIDATE_SECONDS }).catch(
+      () => undefined
+    ),
+  ]);
+  return { stores, banners };
+}
 
 const jakarta = Plus_Jakarta_Sans({
   variable: "--font-jakarta",
@@ -57,11 +79,13 @@ export const viewport: Viewport = {
   maximumScale: 1,
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const { stores, banners } = await loadCatalogSnapshot();
+
   return (
     <html lang="en" className={`${jakarta.variable} ${bricolage.variable}`}>
       <body className="min-h-screen bg-[var(--color-bg)] text-[var(--color-ink)] antialiased">
@@ -72,7 +96,9 @@ export default function RootLayout({
           shadow="0 0 10px #e8541a, 0 0 5px #e8541a"
         />
         <Analytics />
-        <AppProviders>{children}</AppProviders>
+        <AppProviders initialStores={stores} initialBanners={banners}>
+          {children}
+        </AppProviders>
       </body>
     </html>
   );

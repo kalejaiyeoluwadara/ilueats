@@ -10,13 +10,26 @@ export type StoreQuery = {
   q?: string;
 };
 
-export async function fetchStores(query?: StoreQuery): Promise<Store[]> {
-  const { items } = await apiFetch<{ items: Store[] }>("/stores", { query });
+/** CatalogController serves every read below without a guard. */
+const PUBLIC = { auth: false } as const;
+
+/** Extra options callers pass when reading the catalog during a server render. */
+export type PublicReadOptions = { revalidate?: number };
+
+export async function fetchStores(
+  query?: StoreQuery,
+  opts: PublicReadOptions = {}
+): Promise<Store[]> {
+  const { items } = await apiFetch<{ items: Store[] }>("/stores", {
+    ...PUBLIC,
+    ...opts,
+    query,
+  });
   return items;
 }
 
 export async function fetchStore(slug: string): Promise<Store> {
-  return apiFetch<Store>(`/stores/${encodeURIComponent(slug)}`);
+  return apiFetch<Store>(`/stores/${encodeURIComponent(slug)}`, PUBLIC);
 }
 
 export async function fetchStoreProducts(
@@ -25,19 +38,25 @@ export async function fetchStoreProducts(
 ): Promise<Product[]> {
   const { items } = await apiFetch<{ items: Product[] }>(
     `/stores/${encodeURIComponent(slug)}/products`,
-    { query: { category } }
+    { ...PUBLIC, query: { category } }
   );
   return items;
 }
 
-export async function fetchFeaturedProducts(): Promise<Product[]> {
-  const { items } = await apiFetch<{ items: Product[] }>("/products/featured");
+export async function fetchFeaturedProducts(
+  opts: PublicReadOptions = {}
+): Promise<Product[]> {
+  const { items } = await apiFetch<{ items: Product[] }>("/products/featured", {
+    ...PUBLIC,
+    ...opts,
+  });
   return items;
 }
 
 export async function fetchProductsByIds(ids: string[]): Promise<Product[]> {
   if (!ids.length) return [];
   const { items } = await apiFetch<{ items: Product[] }>("/products/by-ids", {
+    ...PUBLIC,
     query: { ids: ids.join(",") },
   });
   return items;
@@ -48,7 +67,8 @@ export async function fetchProduct(
   productSlug: string
 ): Promise<Product> {
   return apiFetch<Product>(
-    `/products/${encodeURIComponent(storeSlug)}/${encodeURIComponent(productSlug)}`
+    `/products/${encodeURIComponent(storeSlug)}/${encodeURIComponent(productSlug)}`,
+    PUBLIC
   );
 }
 
@@ -58,6 +78,7 @@ export async function searchCatalog(
 ): Promise<{ stores: Store[]; products: Product[] }> {
   if (!q.trim()) return { stores: [], products: [] };
   return apiFetch<{ stores: Store[]; products: Product[] }>("/search", {
+    ...PUBLIC,
     query: { q, type },
   });
 }

@@ -6,6 +6,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import type { AdSlide } from "@/types";
@@ -38,10 +39,18 @@ type BannersContextValue = {
 
 const BannersContext = createContext<BannersContextValue | null>(null);
 
-export function BannerProvider({ children }: { children: React.ReactNode }) {
-  const [banners, setBanners] = useState<AdSlide[]>([]);
-  const [loading, setLoading] = useState(true);
+export function BannerProvider({
+  children,
+  initialBanners,
+}: {
+  children: React.ReactNode;
+  /** Server-rendered snapshot. When present the first paint already has banners. */
+  initialBanners?: AdSlide[];
+}) {
+  const [banners, setBanners] = useState<AdSlide[]>(initialBanners ?? []);
+  const [loading, setLoading] = useState(!initialBanners);
   const [error, setError] = useState<string | null>(null);
+  const seeded = useRef(!!initialBanners);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -58,6 +67,10 @@ export function BannerProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
+    if (seeded.current) {
+      seeded.current = false;
+      return;
+    }
     load();
   }, [load]);
 

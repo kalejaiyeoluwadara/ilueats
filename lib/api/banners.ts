@@ -1,8 +1,14 @@
 import { apiFetch } from "./client";
 import type { AdSlide } from "@/types";
 
-export async function fetchBanners(): Promise<AdSlide[]> {
-  const { items } = await apiFetch<{ items: AdSlide[] }>("/banners");
+/** BannersController serves GET /banners without a guard. */
+export async function fetchBanners(
+  opts: { revalidate?: number } = {}
+): Promise<AdSlide[]> {
+  const { items } = await apiFetch<{ items: AdSlide[] }>("/banners", {
+    auth: false,
+    ...opts,
+  });
   return items;
 }
 

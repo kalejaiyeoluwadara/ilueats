@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError } from "@/lib/api/client";
 import {
   fetchFeaturedProducts,
@@ -107,10 +107,11 @@ export function useProduct(storeSlug: string, productSlug: string) {
 }
 
 /** Crowd-favourite dishes for the home page. */
-export function useFeaturedProducts() {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
+export function useFeaturedProducts(initialProducts?: Product[]) {
+  const [products, setProducts] = useState<Product[]>(initialProducts ?? []);
+  const [loading, setLoading] = useState(!initialProducts);
   const [error, setError] = useState<string | null>(null);
+  const seeded = useRef(!!initialProducts);
 
   const refetch = useCallback(async () => {
     setLoading(true);
@@ -125,6 +126,10 @@ export function useFeaturedProducts() {
   }, []);
 
   useEffect(() => {
+    if (seeded.current) {
+      seeded.current = false;
+      return;
+    }
     refetch();
   }, [refetch]);
 

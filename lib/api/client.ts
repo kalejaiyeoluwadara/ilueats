@@ -17,6 +17,14 @@ type ApiFetchOptions = {
   /** Bearer token to use instead of the browser session (e.g. from a server component). */
   token?: string;
   query?: Record<string, string | number | boolean | undefined>;
+  /**
+   * Set false for endpoints the API serves without a guard. `getSession()` is an
+   * uncached network round-trip to /api/auth/session, so requiring it on a public
+   * read doubles that read's latency for no benefit.
+   */
+  auth?: boolean;
+  /** Seconds to cache the response for when called during a server render. */
+  revalidate?: number;
 };
 
 function buildUrl(path: string, query?: ApiFetchOptions["query"]) {
@@ -34,9 +42,11 @@ export async function apiFetch<T>(
   path: string,
   options: ApiFetchOptions = {},
 ): Promise<T> {
+  const needsAuth = options.auth ?? true;
+
   const token =
     options.token ??
-    (typeof window !== "undefined"
+    (needsAuth && typeof window !== "undefined"
       ? (await getSession())?.accessToken
       : undefined);
 
@@ -54,6 +64,9 @@ export async function apiFetch<T>(
       : options.body !== undefined
         ? JSON.stringify(options.body)
         : undefined,
+    ...(options.revalidate !== undefined && {
+      next: { revalidate: options.revalidate },
+    }),
   });
 
   const isJson = res.headers.get("content-type")?.includes("application/json");

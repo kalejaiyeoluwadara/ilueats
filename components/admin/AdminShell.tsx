@@ -12,6 +12,7 @@ import {
   ShoppingBagIcon,
   Squares2X2Icon,
   TruckIcon,
+  UsersIcon,
   XMarkIcon,
 } from "@heroicons/react/24/outline";
 import { useState } from "react";
@@ -23,6 +24,7 @@ const nav = [
   { href: "/admin", label: "Overview", icon: ChartPieIcon, end: true },
   { href: "/admin/orders", label: "Orders", icon: ShoppingBagIcon },
   { href: "/admin/riders", label: "Riders", icon: TruckIcon },
+  { href: "/admin/users", label: "Users", icon: UsersIcon },
   { href: "/admin/stores", label: "Stores", icon: BuildingStorefrontIcon },
   { href: "/admin/items", label: "Items", icon: Squares2X2Icon },
   { href: "/admin/banners", label: "Banners", icon: PhotoIcon },

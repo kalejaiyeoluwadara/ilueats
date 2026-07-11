@@ -1,5 +1,6 @@
 import { apiFetch } from "./client";
 import type { PaginatedResult } from "./orders";
+import type { WalletTransaction } from "./wallet";
 
 export interface DashboardKpis {
   ordersToday: number;
@@ -51,5 +52,73 @@ export function getActivity(params: ActivityQuery = {}) {
       page: params.page ?? 1,
       pageSize: params.pageSize ?? 10,
     },
+  });
+}
+
+export type UserRole = "customer" | "admin" | "rider";
+export type UserStatus = "active" | "blocked";
+
+export interface AdminUser {
+  id: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  role: UserRole;
+  isBlocked: boolean;
+  blockedAt: string | null;
+  addressCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UsersQuery {
+  q?: string;
+  role?: UserRole;
+  status?: UserStatus;
+  page?: number;
+  pageSize?: number;
+}
+
+export function getAdminUsers(params: UsersQuery = {}) {
+  return apiFetch<PaginatedResult<AdminUser>>("/admin/users", {
+    query: {
+      q: params.q,
+      role: params.role,
+      status: params.status,
+      page: params.page ?? 1,
+      pageSize: params.pageSize ?? 20,
+    },
+  });
+}
+
+export function getAdminUser(id: string) {
+  return apiFetch<AdminUser>(`/admin/users/${id}`);
+}
+
+export function getAdminUserTransactions(
+  id: string,
+  params: { page?: number; pageSize?: number } = {}
+) {
+  return apiFetch<PaginatedResult<WalletTransaction>>(
+    `/admin/users/${id}/transactions`,
+    {
+      query: {
+        page: params.page ?? 1,
+        pageSize: params.pageSize ?? 10,
+      },
+    }
+  );
+}
+
+export function setAdminUserBlocked(id: string, blocked: boolean) {
+  return apiFetch<AdminUser>(`/admin/users/${id}/block`, {
+    method: "PATCH",
+    body: { blocked },
+  });
+}
+
+export function deleteAdminUser(id: string) {
+  return apiFetch<{ id: string; deleted: boolean }>(`/admin/users/${id}`, {
+    method: "DELETE",
   });
 }

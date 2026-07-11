@@ -6,7 +6,7 @@ import { MagnifyingGlassIcon, PlusIcon } from "@heroicons/react/24/outline";
 import { AdminStoreUpsertModal } from "@/components/admin/AdminStoreUpsertModal";
 import { AdminStoreMenuModal } from "@/components/admin/AdminStoreMenuModal";
 import { Pagination } from "@/components/ui/Pagination";
-import { ContentLoader } from "@/components/ui/Loaders";
+import { AdminStoreGridSkeleton } from "@/components/ui/Skeletons";
 import { ErrorState } from "@/components/ui/EmptyState";
 import { useCatalog } from "@/context/CatalogContext";
 import { categories as menuCategories } from "@/data/mockData";
@@ -203,7 +203,7 @@ export default function AdminStoresPage() {
     products: menuItems,
     loading: menuItemsLoading,
     error: menuItemsError,
-    refetch: refetchMenuItems,
+    setProducts: setMenuItems,
   } = useStoreProducts(menuStore?.slug ?? null);
 
   return (
@@ -268,18 +268,21 @@ export default function AdminStoresPage() {
         error={menuItemsError}
         onClose={() => setMenuStore(null)}
         onRemoveItem={async (id) => {
+          // Optimistically drop it; restore on failure. No loader flash.
+          const snapshot = menuItems;
+          setMenuItems((cur) => cur.filter((p) => p.id !== id));
           try {
             await removeMenuItem(id);
-            await refetchMenuItems();
             success("Removed", "Dish dropped from menu.");
           } catch {
+            setMenuItems(snapshot);
             errorToast("Couldn't remove dish", "Please try again.");
           }
         }}
         onDuplicateItem={async (id) => {
           try {
             const copy = await duplicateMenuItem(id);
-            await refetchMenuItems();
+            setMenuItems((cur) => [copy, ...cur]);
             success("Dish duplicated", `${copy.name} copied — edit it to tweak details.`);
           } catch {
             errorToast("Couldn't duplicate dish", "Please try again.");
@@ -288,8 +291,8 @@ export default function AdminStoresPage() {
         onUpsertAdd={async (payload) => {
           if (!menuStore) return;
           try {
-            await addMenuItem(menuStore, payload);
-            await refetchMenuItems();
+            const created = await addMenuItem(menuStore, payload);
+            setMenuItems((cur) => [created, ...cur]);
             success("Dish added", "Menu updated — check the live storefront.");
           } catch {
             errorToast("Couldn't add dish", "Please check the details and try again.");
@@ -297,8 +300,10 @@ export default function AdminStoresPage() {
         }}
         onUpsertEdit={async (productId, payload) => {
           try {
-            await updateMenuItem(productId, payload);
-            await refetchMenuItems();
+            const updated = await updateMenuItem(productId, payload);
+            setMenuItems((cur) =>
+              cur.map((p) => (p.id === productId ? { ...p, ...updated } : p))
+            );
             success("Dish updated", "Changes saved.");
           } catch {
             errorToast("Couldn't update dish", "Please try again.");
@@ -399,7 +404,7 @@ export default function AdminStoresPage() {
       </section>
 
       {storesLoading ? (
-        <ContentLoader message="Loading stores…" />
+        <AdminStoreGridSkeleton count={STORES_PAGE_SIZE} />
       ) : storesError ? (
         <ErrorState message={storesError} onRetry={refetchStores} />
       ) : storeTotal === 0 ? (

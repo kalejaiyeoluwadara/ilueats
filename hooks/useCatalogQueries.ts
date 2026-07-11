@@ -72,7 +72,9 @@ export function useStoreProducts(slug: string | null) {
     refetch();
   }, [refetch]);
 
-  return { products, loading, error, refetch };
+  // setProducts lets callers patch the list optimistically (admin menu builder)
+  // without triggering a loader-flashing refetch.
+  return { products, loading, error, refetch, setProducts };
 }
 
 /** Single product by store + product slug — product detail page. */

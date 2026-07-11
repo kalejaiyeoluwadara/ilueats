@@ -84,19 +84,23 @@ export function CatalogProvider({
       loading,
       error,
       refetch: load,
+      // Mutations patch local state directly so the stores grid never flashes
+      // its full-page loader — the changed card updates in place.
       addStore: async (input) => {
         const created = await apiCreateStore(input);
-        await load();
+        setStores((prev) => [created, ...prev]);
         return created;
       },
       updateStore: async (storeId, input) => {
         const updated = await updateStoreApi(storeId, input);
-        await load();
+        setStores((prev) =>
+          prev.map((s) => (s.id === storeId ? updated : s))
+        );
         return updated;
       },
       removeStore: async (storeId) => {
         await deleteStoreApi(storeId);
-        await load();
+        setStores((prev) => prev.filter((s) => s.id !== storeId));
       },
       addMenuItem: (store, input) => apiCreateMenuItem(store.id, input),
       updateMenuItem: (productId, input) => apiUpdateMenuItem(productId, input),

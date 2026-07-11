@@ -12,7 +12,7 @@ import { AdminMenuItemModal } from "@/components/admin/AdminStoreMenuModal";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { Pagination } from "@/components/ui/Pagination";
-import { ContentLoader } from "@/components/ui/Loaders";
+import { AdminItemGridSkeleton } from "@/components/ui/Skeletons";
 import { ErrorState } from "@/components/ui/EmptyState";
 import { useCatalog } from "@/context/CatalogContext";
 import { categories as menuCategories } from "@/data/mockData";
@@ -30,7 +30,7 @@ import { ApiError } from "@/lib/api/client";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useToast } from "@/hooks/useToast";
 import { cn, formatPrice } from "@/lib/utils";
-import type { Store } from "@/types";
+import type { Product, Store } from "@/types";
 
 const ITEMS_PAGE_SIZE = 12;
 const INDEPENDENT = "independent";
@@ -89,9 +89,9 @@ function AdminItemsPageInner() {
 
   const waitingForPlatform = storeFilter === INDEPENDENT && !platformStore;
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (opts?: { silent?: boolean }) => {
     if (waitingForPlatform) return;
-    setLoading(true);
+    if (!opts?.silent) setLoading(true);
     setError(null);
     try {
       const result = await fetchAdminMenuItems({
@@ -156,12 +156,39 @@ function AdminItemsPageInner() {
     setAddStoreTarget(store);
   };
 
+  // Whether a freshly added/edited item still belongs in the current view.
+  const matchesFilters = useCallback(
+    (item: Pick<AdminMenuItem, "category" | "storeId">) => {
+      if (category !== "all" && item.category !== category) return false;
+      if (filterStoreId && item.storeId !== filterStoreId) return false;
+      return true;
+    },
+    [category, filterStoreId]
+  );
+
+  const toAdminItem = (p: Product, store: Store): AdminMenuItem => ({
+    ...p,
+    storeName: store.name,
+    storeIsPlatform: store.id === platformStore?.id,
+  });
+
   const onDuplicate = async (item: AdminMenuItem) => {
     setBusyId(item.id);
     try {
       const copy = await duplicateMenuItem(item.id);
-      await load();
-      success("Item duplicated", `${copy.name} copied — edit it to tweak details.`);
+      // Surface the copy right where the admin is looking instead of letting
+      // it land on the last page — no full-list reload, no loader flash.
+      const adminCopy: AdminMenuItem = {
+        ...copy,
+        storeName: item.storeName,
+        storeIsPlatform: item.storeIsPlatform,
+      };
+      setItems((cur) => [adminCopy, ...cur]);
+      setTotalItems((n) => n + 1);
+      success(
+        "Item duplicated",
+        `${copy.name} added to the top of the list — edit it to tweak details.`
+      );
     } catch {
       errorToast("Couldn't duplicate item", "Please try again.");
     } finally {
@@ -177,11 +204,20 @@ function AdminItemsPageInner() {
       return;
     }
     setBusyId(item.id);
+    // Optimistically drop the card; restore it if the request fails.
+    const snapshot = items;
+    setItems((cur) => cur.filter((i) => i.id !== item.id));
+    setTotalItems((n) => Math.max(0, n - 1));
     try {
       await deleteMenuItem(item.id);
-      await load();
       success("Item deleted", `${item.name} was removed.`);
+      // Pull the next page's items up when this page empties out.
+      if (snapshot.length === 1 && page > 1) {
+        setPage((p) => Math.max(1, p - 1));
+      }
     } catch {
+      setItems(snapshot);
+      setTotalItems((n) => n + 1);
       errorToast("Couldn't delete item", "Please try again.");
     } finally {
       setBusyId(null);
@@ -264,8 +300,16 @@ function AdminItemsPageInner() {
           onClose={() => setAddStoreTarget(null)}
           onSave={async (payload) => {
             try {
-              await createMenuItem(addStoreTarget.id, payload);
-              await load();
+              const created = await createMenuItem(addStoreTarget.id, payload);
+              const adminItem = toAdminItem(created, addStoreTarget);
+              // Show it immediately when it fits the current view; otherwise
+              // refresh quietly so filters/pagination stay accurate.
+              if (matchesFilters(adminItem)) {
+                setItems((cur) => [adminItem, ...cur]);
+                setTotalItems((n) => n + 1);
+              } else {
+                await load({ silent: true });
+              }
               success(
                 "Item added",
                 addStoreTarget.id === platformStore?.id
@@ -291,8 +335,13 @@ function AdminItemsPageInner() {
           onClose={() => setEditItem(null)}
           onSave={async (payload) => {
             try {
-              await updateMenuItem(editItem.id, payload);
-              await load();
+              const updated = await updateMenuItem(editItem.id, payload);
+              // Patch the card in place — spread keeps storeName/storeIsPlatform.
+              setItems((cur) =>
+                cur.map((i) =>
+                  i.id === editItem.id ? { ...i, ...updated } : i
+                )
+              );
               success("Item updated", "Changes saved.");
             } catch {
               errorToast("Couldn't update item", "Please try again.");
@@ -356,9 +405,9 @@ function AdminItemsPageInner() {
       </section>
 
       {loading || waitingForPlatform ? (
-        <ContentLoader message="Loading items…" />
+        <AdminItemGridSkeleton count={ITEMS_PAGE_SIZE} />
       ) : error ? (
-        <ErrorState message={error} onRetry={load} />
+        <ErrorState message={error} onRetry={() => load()} />
       ) : items.length === 0 ? (
         <div className="rounded-[1.25rem] border border-dashed border-[var(--color-line)] bg-[var(--color-surface)] p-12 text-center shadow-crisp ring-1 ring-black/[0.02]">
           <p className="text-[15px] font-extrabold text-[var(--color-ink)]">
@@ -488,7 +537,7 @@ function AdminItemsPageInner() {
 
 export default function AdminItemsPage() {
   return (
-    <Suspense fallback={<ContentLoader message="Loading items…" />}>
+    <Suspense fallback={<AdminItemGridSkeleton count={ITEMS_PAGE_SIZE} />}>
       <AdminItemsPageInner />
     </Suspense>
   );

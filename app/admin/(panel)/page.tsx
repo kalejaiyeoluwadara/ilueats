@@ -4,11 +4,15 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
   ArrowTrendingUpIcon,
+  BanknotesIcon,
+  BuildingStorefrontIcon,
   ClockIcon,
+  Cog6ToothIcon,
   MagnifyingGlassIcon,
   ShoppingBagIcon,
   UsersIcon,
 } from "@heroicons/react/24/outline";
+import type { ComponentType, SVGProps } from "react";
 import { Pagination } from "@/components/ui/Pagination";
 import { ErrorState } from "@/components/ui/EmptyState";
 import { getDashboardKpis, getActivity } from "@/lib/api/admin";
@@ -28,6 +32,44 @@ const ACTIVITY_SEGMENT_CHIPS: { id: ActivitySegment | "all"; label: string }[] =
   ];
 
 const ACTIVITY_PAGE_SIZE = 6;
+
+/** Per-segment icon + colour for the activity feed's leading badge. */
+const ACTIVITY_SEGMENT_META: Record<
+  ActivitySegment,
+  {
+    label: string;
+    Icon: ComponentType<SVGProps<SVGSVGElement>>;
+    className: string;
+  }
+> = {
+  orders: {
+    label: "Orders",
+    Icon: ShoppingBagIcon,
+    className:
+      "bg-[var(--color-primary-soft)] text-[var(--color-primary)] ring-[var(--color-primary)]/20",
+  },
+  stores: {
+    label: "Stores",
+    Icon: BuildingStorefrontIcon,
+    className: "bg-indigo-50 text-indigo-600 ring-indigo-200/80",
+  },
+  finance: {
+    label: "Finance",
+    Icon: BanknotesIcon,
+    className: "bg-emerald-50 text-emerald-700 ring-emerald-200/80",
+  },
+  platform: {
+    label: "Platform",
+    Icon: Cog6ToothIcon,
+    className: "bg-zinc-100 text-zinc-600 ring-zinc-200/80",
+  },
+};
+
+const ACTIVITY_SEGMENT_FALLBACK = {
+  label: "Activity",
+  Icon: ClockIcon,
+  className: "bg-white text-[var(--color-ink-soft)] ring-[var(--color-line)]",
+} as const;
 
 export default function AdminDashboardPage() {
   const [kpis, setKpis] = useState<DashboardKpis | null>(null);
@@ -287,24 +329,44 @@ export default function AdminDashboardPage() {
             </div>
           ) : (
             <ul className="mt-4 space-y-3">
-              {activityItems.map((a) => (
-                <li
-                  key={a._id}
-                  className="flex gap-3 rounded-2xl border border-[var(--color-line)] bg-[var(--color-bg)]/60 px-3 py-3"
-                >
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-[10.5px] font-bold text-[var(--color-ink-soft)] ring-1 ring-[var(--color-line)]">
-                    {formatPlacedAgo(a.createdAt)}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[13px] font-bold text-[var(--color-ink)]">
-                      {a.message}
-                    </p>
-                    <p className="truncate text-[12px] capitalize text-[var(--color-ink-muted)]">
-                      {a.segment}
-                    </p>
-                  </div>
-                </li>
-              ))}
+              {activityItems.map((a) => {
+                const meta =
+                  ACTIVITY_SEGMENT_META[a.segment] ??
+                  ACTIVITY_SEGMENT_FALLBACK;
+                const Icon = meta.Icon;
+                return (
+                  <li
+                    key={a._id}
+                    className="flex items-start gap-3 rounded-2xl border border-[var(--color-line)] bg-[var(--color-bg)]/60 px-3 py-3"
+                  >
+                    <span
+                      className={cn(
+                        "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ring-1 ring-inset",
+                        meta.className
+                      )}
+                    >
+                      <Icon className="h-[18px] w-[18px]" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[13px] font-bold leading-snug text-[var(--color-ink)]">
+                        {a.message}
+                      </p>
+                      <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-[12px] text-[var(--color-ink-muted)]">
+                        <span className="font-semibold">{meta.label}</span>
+                        <span aria-hidden className="text-[var(--color-ink-soft)]">
+                          ·
+                        </span>
+                        <time
+                          dateTime={a.createdAt}
+                          className="whitespace-nowrap tabular-nums"
+                        >
+                          {formatPlacedAgo(a.createdAt)}
+                        </time>
+                      </p>
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
           )}
           {activityTotal > 0 ? (

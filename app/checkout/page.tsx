@@ -28,7 +28,7 @@ import { useToast } from "@/hooks/useToast";
 import { useCatalog } from "@/context/CatalogContext";
 import { useOrders } from "@/context/OrdersContext";
 import { usePlatformStatus } from "@/context/PlatformStatusContext";
-import { pickupLandmarks } from "@/data/mockData";
+import { fetchLandmarks, type Landmark } from "@/lib/api/landmarks";
 import { createOrder as createBackendOrder } from "@/lib/api/orders";
 import { initializePayment, verifyPayment } from "@/lib/api/payments";
 import { ApiError } from "@/lib/api/client";
@@ -87,6 +87,7 @@ export default function CheckoutPage() {
   const [address, setAddress] = useState("");
   const [deliveryMode, setDeliveryMode] = useState<DeliveryMode>("door");
   const [landmarkId, setLandmarkId] = useState<string | null>(null);
+  const [landmarks, setLandmarks] = useState<Landmark[]>([]);
   const [notes, setNotes] = useState("");
   const [method, setMethod] = useState<PayMethod>("transfer");
   const [orderId, setOrderId] = useState<string>("");
@@ -100,6 +101,13 @@ export default function CheckoutPage() {
       router.replace("/cart");
     }
   }, [count, step, router]);
+
+  // Load the admin-managed delivery landmarks for the pickup picker.
+  useEffect(() => {
+    fetchLandmarks()
+      .then(setLandmarks)
+      .catch(() => setLandmarks([]));
+  }, []);
 
   useEffect(() => {
     if (!authReady || !user) return;
@@ -147,7 +155,7 @@ export default function CheckoutPage() {
   }, [method, walletReady, walletCoversTotal]);
 
   const recordLocalOrder = (finalPaymentLabel: string) => {
-    const landmark = pickupLandmarks.find((l) => l.id === landmarkId);
+    const landmark = landmarks.find((l) => l.id === landmarkId);
     return placeOrder({
       customer: name.trim(),
       customerPhone: phone.trim(),
@@ -155,7 +163,7 @@ export default function CheckoutPage() {
       deliveryAddress:
         deliveryMode === "door"
           ? address.trim()
-          : `Landmark — ${landmark?.label ?? "meet-up point"}`,
+          : `Landmark — ${landmark?.name ?? "meet-up point"}`,
       deliveryNote: notes.trim() || undefined,
       storeId: store?.id,
       store: storeName ?? store?.name ?? "Store",
@@ -179,13 +187,13 @@ export default function CheckoutPage() {
   // Freeze the order contents at success time — the cart is cleared right after,
   // so the success page reads from this instead of live cart state.
   const buildReceipt = (finalTotal: number): OrderReceipt => {
-    const landmark = pickupLandmarks.find((l) => l.id === landmarkId);
+    const landmark = landmarks.find((l) => l.id === landmarkId);
     return {
       storeName: storeName ?? store?.name ?? "Store",
       deliverySummary:
         deliveryMode === "door"
           ? address.trim()
-          : `Landmark — ${landmark?.label ?? "meet-up point"}`,
+          : `Landmark — ${landmark?.name ?? "meet-up point"}`,
       items: items.map((it) => ({
         name: it.name,
         qty: it.quantity,
@@ -452,7 +460,7 @@ export default function CheckoutPage() {
                   Pickup landmark
                 </span>
                 <div className="mt-2 flex flex-wrap gap-2">
-                  {pickupLandmarks.map((lm) => {
+                  {landmarks.map((lm) => {
                     const selected = landmarkId === lm.id;
                     return (
                       <button
@@ -466,7 +474,7 @@ export default function CheckoutPage() {
                             : "bg-[var(--color-bg)] text-[var(--color-ink)] ring-[var(--color-line)] hover:bg-black/[0.03]"
                         )}
                       >
-                        {lm.label}
+                        {lm.name}
                       </button>
                     );
                   })}
@@ -474,8 +482,8 @@ export default function CheckoutPage() {
                 {landmarkId && (
                   <p className="mt-2 text-[12px] text-[var(--color-ink-muted)]">
                     {
-                      pickupLandmarks.find((l) => l.id === landmarkId)
-                        ?.detail
+                      landmarks.find((l) => l.id === landmarkId)
+                        ?.description
                     }
                   </p>
                 )}

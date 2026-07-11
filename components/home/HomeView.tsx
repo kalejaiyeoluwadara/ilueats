@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
+import { ChevronRightIcon } from "@heroicons/react/24/outline";
 import { Navbar } from "@/components/layout/Navbar";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { Footer } from "@/components/layout/Footer";
@@ -100,6 +102,13 @@ export function HomeView({ initialFeatured }: { initialFeatured?: Product[] }) {
                   : "Filtered by your craving"}
               </p>
             </div>
+            <Link
+              href="/stores"
+              className="group inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1.5 text-[13px] font-semibold text-[var(--color-primary)] transition hover:bg-[var(--color-primary-soft)]"
+            >
+              View all
+              <ChevronRightIcon className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+            </Link>
           </div>
 
           {storesLoading ? (

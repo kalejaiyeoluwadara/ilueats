@@ -5,6 +5,7 @@ import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { ImageUploadField } from "@/components/ui/ImageUploadField";
 import { categories } from "@/data/mockData";
+import { ApiError, LOAD_FAILED_FALLBACK } from "@/lib/api/client";
 import { cn } from "@/lib/utils";
 import type { CategoryId, Store } from "@/types";
 import type { StoreUpsertPayload } from "@/lib/api/catalog";
@@ -16,7 +17,8 @@ export interface AdminStoreUpsertModalProps {
   mode: StoreFormMode;
   initialStore?: Store | null;
   onClose: () => void;
-  onSave: (payload: StoreUpsertPayload & { slug?: string }) => void;
+  /** May reject — the modal stays open with the failure inline so nothing typed is lost. */
+  onSave: (payload: StoreUpsertPayload & { slug?: string }) => void | Promise<void>;
 }
 
 type FormState = {
@@ -25,6 +27,8 @@ type FormState = {
   tagline: string;
   description: string;
   location: string;
+  latitude: string;
+  longitude: string;
   image: string;
   cover: string;
   deliveryFrom: string;
@@ -48,6 +52,9 @@ function storeToForm(s: Store): FormState {
     tagline: s.tagline,
     description: s.description,
     location: s.location,
+    // GeoJSON stores [lng, lat].
+    latitude: s.geo ? String(s.geo.coordinates[1]) : "",
+    longitude: s.geo ? String(s.geo.coordinates[0]) : "",
     image: s.image,
     cover: s.cover,
     deliveryFrom: String(s.deliveryTimeMins[0]),
@@ -70,6 +77,8 @@ function defaultForm(): FormState {
     tagline: "",
     description: "",
     location: "Ilisan-Remo",
+    latitude: "",
+    longitude: "",
     image:
       "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&w=800&q=80",
     cover:
@@ -105,12 +114,14 @@ export function AdminStoreUpsertModal({
   const [form, setForm] = useState<FormState>(defaultForm);
   const [catSelection, setCatSelection] = useState<CategoryId[]>(["snacks"]);
   const [err, setErr] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const [imageUploading, setImageUploading] = useState(false);
   const [coverUploading, setCoverUploading] = useState(false);
 
   useEffect(() => {
     if (!open) return;
     setErr(null);
+    setSaving(false);
     if (mode === "edit" && initialStore) {
       setForm(storeToForm(initialStore));
       setCatSelection(
@@ -137,7 +148,7 @@ export function AdminStoreUpsertModal({
   const uploading = imageUploading || coverUploading;
   // Saving mid-upload would persist the previous image URL and silently discard
   // the file the admin just picked.
-  const canSubmit = form.name.trim().length > 0 && !uploading;
+  const canSubmit = form.name.trim().length > 0 && !uploading && !saving;
 
   const footer = useMemo(
     () => (
@@ -153,16 +164,18 @@ export function AdminStoreUpsertModal({
         >
           {uploading
             ? "Uploading…"
-            : mode === "add"
-              ? "Create store"
-              : "Save changes"}
+            : saving
+              ? "Saving…"
+              : mode === "add"
+                ? "Create store"
+                : "Save changes"}
         </Button>
       </div>
     ),
-    [onClose, canSubmit, mode, uploading]
+    [onClose, canSubmit, mode, uploading, saving]
   );
 
-  const onSubmit = (e: React.FormEvent) => {
+  const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!canSubmit) return;
     const cats =
@@ -175,33 +188,68 @@ export function AdminStoreUpsertModal({
       Math.max(5, ti),
       Math.max(Math.max(5, ti), tj),
     ];
+
+    // Coordinates power near-me discovery and distance-based delivery fees;
+    // the backend only sets the geo point when both arrive together.
+    const latRaw = form.latitude.trim();
+    const lngRaw = form.longitude.trim();
+    if (!!latRaw !== !!lngRaw) {
+      setErr("Enter both latitude and longitude, or leave both empty.");
+      return;
+    }
+    let latitude: number | undefined;
+    let longitude: number | undefined;
+    if (latRaw && lngRaw) {
+      latitude = Number(latRaw);
+      longitude = Number(lngRaw);
+      if (
+        !Number.isFinite(latitude) ||
+        !Number.isFinite(longitude) ||
+        Math.abs(latitude) > 90 ||
+        Math.abs(longitude) > 180
+      ) {
+        setErr(
+          "Coordinates look off — latitude runs -90 to 90, longitude -180 to 180."
+        );
+        return;
+      }
+    }
+
+    const payload: StoreUpsertPayload & { slug?: string } = {
+      name: form.name.trim(),
+      slug: form.slug.trim() || undefined,
+      tagline: form.tagline.trim(),
+      description: form.description.trim(),
+      location: form.location.trim() || "Ilisan-Remo",
+      latitude,
+      longitude,
+      image: form.image.trim(),
+      cover: form.cover.trim(),
+      categories: cats as Store["categories"],
+      rating: Math.min(5, Math.max(0, parseNum(form.rating, 4.5))),
+      reviews: Math.max(0, Math.round(parseNum(form.reviews, 0))),
+      deliveryTimeMins,
+      deliveryFee: Math.max(0, Math.round(parseNum(form.deliveryFee, 0))),
+      minOrder: Math.max(0, Math.round(parseNum(form.minOrder, 0))),
+      isOpen: form.isOpen,
+      isFeatured: form.isFeatured,
+      isNew: form.isNew,
+      tags: form.tagsRaw
+        .split(",")
+        .map((t) => t.trim())
+        .filter(Boolean),
+    };
+
+    setErr(null);
+    setSaving(true);
     try {
-      const payload: StoreUpsertPayload & { slug?: string } = {
-        name: form.name.trim(),
-        slug: form.slug.trim() || undefined,
-        tagline: form.tagline.trim(),
-        description: form.description.trim(),
-        location: form.location.trim() || "Ilisan-Remo",
-        image: form.image.trim(),
-        cover: form.cover.trim(),
-        categories: cats as Store["categories"],
-        rating: Number.parseFloat(form.rating) || 4.5,
-        reviews: Math.max(0, Math.round(parseNum(form.reviews, 0))),
-        deliveryTimeMins,
-        deliveryFee: Math.max(0, Math.round(parseNum(form.deliveryFee, 0))),
-        minOrder: Math.max(0, Math.round(parseNum(form.minOrder, 0))),
-        isOpen: form.isOpen,
-        isFeatured: form.isFeatured,
-        isNew: form.isNew,
-        tags: form.tagsRaw
-          .split(",")
-          .map((t) => t.trim())
-          .filter(Boolean),
-      };
-      onSave(payload);
+      await onSave(payload);
       onClose();
-    } catch {
-      setErr("Check numeric fields and try again.");
+    } catch (e) {
+      // Keep the modal open with everything typed; surface what the API said.
+      setErr(e instanceof ApiError ? e.message : LOAD_FAILED_FALLBACK);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -258,6 +306,38 @@ export function AdminStoreUpsertModal({
               onChange={(e) =>
                 setForm((f) => ({ ...f, location: e.target.value }))
               }
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-[var(--color-ink-soft)]">
+              Latitude
+            </label>
+            <input
+              className={field}
+              inputMode="decimal"
+              value={form.latitude}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, latitude: e.target.value }))
+              }
+              placeholder="e.g. 6.8934"
+            />
+            <p className="mt-1 text-[11px] text-[var(--color-ink-muted)]">
+              With longitude, puts the store in “near me” results and prices
+              delivery by distance.
+            </p>
+          </div>
+          <div>
+            <label className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-[var(--color-ink-soft)]">
+              Longitude
+            </label>
+            <input
+              className={field}
+              inputMode="decimal"
+              value={form.longitude}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, longitude: e.target.value }))
+              }
+              placeholder="e.g. 3.7105"
             />
           </div>
           <div className="sm:col-span-2">

@@ -33,6 +33,8 @@ export interface Store {
   isFeatured?: boolean;
   isNew?: boolean;
   location: string;
+  /** GeoJSON point set by the API — coordinates are [lng, lat]. Stores without it are excluded from near-me discovery. */
+  geo?: { type: "Point"; coordinates: [number, number] };
   tags?: string[];
   /** @deprecated Legacy seeded metric — admin now reads real stats from /admin/stores/stats. */
   orders7d?: number;

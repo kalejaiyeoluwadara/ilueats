@@ -299,29 +299,23 @@ function AdminItemsPageInner() {
           store={addStoreTarget}
           onClose={() => setAddStoreTarget(null)}
           onSave={async (payload) => {
-            try {
-              const created = await createMenuItem(addStoreTarget.id, payload);
-              const adminItem = toAdminItem(created, addStoreTarget);
-              // Show it immediately when it fits the current view; otherwise
-              // refresh quietly so filters/pagination stay accurate.
-              if (matchesFilters(adminItem)) {
-                setItems((cur) => [adminItem, ...cur]);
-                setTotalItems((n) => n + 1);
-              } else {
-                await load({ silent: true });
-              }
-              success(
-                "Item added",
-                addStoreTarget.id === platformStore?.id
-                  ? "Independent item is live on ìlúEats."
-                  : `Added to ${addStoreTarget.name}.`
-              );
-            } catch {
-              errorToast(
-                "Couldn't add item",
-                "Please check the details and try again."
-              );
+            // Rejections propagate: the modal stays open with the API error inline.
+            const created = await createMenuItem(addStoreTarget.id, payload);
+            const adminItem = toAdminItem(created, addStoreTarget);
+            // Show it immediately when it fits the current view; otherwise
+            // refresh quietly so filters/pagination stay accurate.
+            if (matchesFilters(adminItem)) {
+              setItems((cur) => [adminItem, ...cur]);
+              setTotalItems((n) => n + 1);
+            } else {
+              await load({ silent: true });
             }
+            success(
+              "Item added",
+              addStoreTarget.id === platformStore?.id
+                ? "Independent item is live on ìlúEats."
+                : `Added to ${addStoreTarget.name}.`
+            );
           }}
         />
       ) : null}
@@ -334,18 +328,14 @@ function AdminItemsPageInner() {
           product={editItem}
           onClose={() => setEditItem(null)}
           onSave={async (payload) => {
-            try {
-              const updated = await updateMenuItem(editItem.id, payload);
-              // Patch the card in place — spread keeps storeName/storeIsPlatform.
-              setItems((cur) =>
-                cur.map((i) =>
-                  i.id === editItem.id ? { ...i, ...updated } : i
-                )
-              );
-              success("Item updated", "Changes saved.");
-            } catch {
-              errorToast("Couldn't update item", "Please try again.");
-            }
+            const updated = await updateMenuItem(editItem.id, payload);
+            // Patch the card in place — spread keeps storeName/storeIsPlatform.
+            setItems((cur) =>
+              cur.map((i) =>
+                i.id === editItem.id ? { ...i, ...updated } : i
+              )
+            );
+            success("Item updated", "Changes saved.");
           }}
         />
       ) : null}

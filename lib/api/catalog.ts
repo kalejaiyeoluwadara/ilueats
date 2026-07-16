@@ -87,7 +87,12 @@ export async function searchCatalog(
 /* Admin mutations                                                            */
 /* -------------------------------------------------------------------------- */
 
-export type StoreUpsertPayload = Omit<Store, "id" | "slug"> & { slug?: string };
+export type StoreUpsertPayload = Omit<Store, "id" | "slug" | "geo"> & {
+  slug?: string;
+  /** Sent as a lat/lng pair — the API builds the GeoJSON `geo` point from them. */
+  latitude?: number;
+  longitude?: number;
+};
 
 export async function createStore(payload: StoreUpsertPayload): Promise<Store> {
   return apiFetch<Store>("/stores", { method: "POST", body: payload });

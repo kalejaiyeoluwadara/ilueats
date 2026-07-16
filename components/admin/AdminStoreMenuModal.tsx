@@ -14,6 +14,7 @@ import { ImageUploadField } from "@/components/ui/ImageUploadField";
 import { ContentLoader } from "@/components/ui/Loaders";
 import { ErrorState } from "@/components/ui/EmptyState";
 import { categories } from "@/data/mockData";
+import { ApiError, LOAD_FAILED_FALLBACK } from "@/lib/api/client";
 import type { MenuItemPayload } from "@/lib/api/catalog";
 import { cn, formatPrice, shortId, slugify } from "@/lib/utils";
 import type {
@@ -215,7 +216,8 @@ export interface AdminMenuItemModalProps {
   store: Store;
   product?: Product | null;
   onClose: () => void;
-  onSave: (payload: MenuItemPayload) => void;
+  /** May reject — the modal stays open with the failure inline so nothing typed is lost. */
+  onSave: (payload: MenuItemPayload) => void | Promise<void>;
 }
 
 export function AdminMenuItemModal({
@@ -246,6 +248,7 @@ export function AdminMenuItemModal({
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [advancedJson, setAdvancedJson] = useState("");
   const [err, setErr] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const prevAdvancedOpen = useRef(false);
 
   const jsonMirror = useMemo(
@@ -258,6 +261,7 @@ export function AdminMenuItemModal({
     if (!open) return;
     setAdvancedOpen(false);
     setErr(null);
+    setSaving(false);
     if (mode === "edit" && product) {
       setName(product.name);
       setSlug(product.slug);
@@ -306,10 +310,15 @@ export function AdminMenuItemModal({
     if (!open) prevAdvancedOpen.current = false;
   }, [open]);
 
+  const priceNum = Number(String(price).replace(/,/g, "").trim());
+  // Number("") is 0, so an untouched price field must not count as valid —
+  // otherwise a ₦0 dish goes live with one click.
   const canSave =
     name.trim().length > 0 &&
-    Number.isFinite(Number(String(price).replace(/,/g, ""))) &&
-    !imageUploading;
+    Number.isFinite(priceNum) &&
+    priceNum > 0 &&
+    !imageUploading &&
+    !saving;
 
   const footer = useMemo(
     () => (
@@ -325,30 +334,53 @@ export function AdminMenuItemModal({
         >
           {imageUploading
             ? "Uploading…"
-            : mode === "add"
-              ? "Add dish"
-              : "Save dish"}
+            : saving
+              ? "Saving…"
+              : mode === "add"
+                ? "Add dish"
+                : "Save dish"}
         </Button>
       </div>
     ),
-    [onClose, canSave, mode, imageUploading]
+    [onClose, canSave, mode, imageUploading, saving]
   );
 
-  const onSubmit = (e: React.FormEvent) => {
+  const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!canSave) return;
+
+    const oldPriceNum =
+      oldPrice.trim() === ""
+        ? undefined
+        : Number(oldPrice.replace(/,/g, "").trim());
+    if (oldPriceNum !== undefined && !Number.isFinite(oldPriceNum)) {
+      setErr("Old price isn't a number — clear it or enter the pre-promo price.");
+      return;
+    }
+    if (oldPriceNum !== undefined && oldPriceNum <= priceNum) {
+      setErr(
+        "Old price should be higher than the current price — it shows struck through as the pre-promo price."
+      );
+      return;
+    }
+
+    let options: ProductOptionGroup[] | undefined;
     try {
-      const options = buildOptionsFromDraft(optionDrafts);
-      const priceNum = Number(String(price).replace(/,/g, ""));
-      onSave({
+      options = buildOptionsFromDraft(optionDrafts);
+    } catch {
+      setErr("Something went wrong — check modifiers and prices.");
+      return;
+    }
+
+    setErr(null);
+    setSaving(true);
+    try {
+      await onSave({
         name: name.trim(),
         slug: slug.trim() || undefined,
         description: desc.trim(),
         price: priceNum,
-        oldPrice:
-          oldPrice.trim() === ""
-            ? undefined
-            : Number(oldPrice.replace(/,/g, "")),
+        oldPrice: oldPriceNum,
         category,
         image: image.trim(),
         isPopular,
@@ -359,8 +391,11 @@ export function AdminMenuItemModal({
         options,
       });
       onClose();
-    } catch {
-      setErr("Something went wrong — check modifiers and prices.");
+    } catch (e) {
+      // Keep the modal open with everything typed; surface what the API said.
+      setErr(e instanceof ApiError ? e.message : LOAD_FAILED_FALLBACK);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -694,7 +729,7 @@ export function AdminMenuItemModal({
                       {g.choices.map((c) => (
                         <li
                           key={c.key}
-                          className="grid gap-2 sm:grid-cols-[1fr_1fr_auto] sm:items-end"
+                          className="grid gap-2 sm:grid-cols-[1.4fr_6.5rem_1fr_auto] sm:items-center"
                         >
                           <input
                             className={cn(field)}
@@ -710,6 +745,32 @@ export function AdminMenuItemModal({
                                         choices: row.choices.map((ch) =>
                                           ch.key === c.key
                                             ? { ...ch, title: e.target.value }
+                                            : ch
+                                        ),
+                                      }
+                                )
+                              )
+                            }
+                          />
+                          <input
+                            className={cn(field, "tabular-nums")}
+                            inputMode="numeric"
+                            placeholder="+₦"
+                            aria-label={`Extra cost for ${c.title.trim() || "choice"}`}
+                            value={c.deltaRaw}
+                            onChange={(e) =>
+                              setOptionDrafts((rows) =>
+                                rows.map((row) =>
+                                  row.key !== g.key
+                                    ? row
+                                    : {
+                                        ...row,
+                                        choices: row.choices.map((ch) =>
+                                          ch.key === c.key
+                                            ? {
+                                                ...ch,
+                                                deltaRaw: e.target.value,
+                                              }
                                             : ch
                                         ),
                                       }
@@ -741,6 +802,30 @@ export function AdminMenuItemModal({
                               )
                             }
                           />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-10 w-10 shrink-0 !px-0 text-red-600 hover:bg-red-50 disabled:opacity-40"
+                            aria-label={`Remove ${c.title.trim() || "choice"}`}
+                            disabled={g.choices.length === 1}
+                            onClick={() =>
+                              setOptionDrafts((rows) =>
+                                rows.map((row) =>
+                                  row.key !== g.key
+                                    ? row
+                                    : {
+                                        ...row,
+                                        choices: row.choices.filter(
+                                          (ch) => ch.key !== c.key
+                                        ),
+                                      }
+                                )
+                              )
+                            }
+                          >
+                            <TrashIcon className="h-4 w-4" />
+                          </Button>
                         </li>
                       ))}
                     </ul>
@@ -851,8 +936,11 @@ export interface AdminStoreMenuModalProps {
   onClose: () => void;
   onRemoveItem?: (productId: string) => void;
   onDuplicateItem?: (productId: string) => void;
-  onUpsertAdd: (payload: MenuItemPayload) => void;
-  onUpsertEdit: (productId: string, payload: Partial<MenuItemPayload>) => void;
+  onUpsertAdd: (payload: MenuItemPayload) => void | Promise<void>;
+  onUpsertEdit: (
+    productId: string,
+    payload: Partial<MenuItemPayload>
+  ) => void | Promise<void>;
 }
 
 export function AdminStoreMenuModal({
@@ -1013,11 +1101,11 @@ export function AdminStoreMenuModal({
           itemFlow && itemFlow !== "add" ? itemFlow.product : undefined
         }
         onClose={() => setItemFlow(null)}
-        onSave={(payload) => {
+        onSave={async (payload) => {
           if (itemFlow === "add") {
-            onUpsertAdd(payload);
+            await onUpsertAdd(payload);
           } else if (itemFlow && itemFlow.mode === "edit") {
-            onUpsertEdit(itemFlow.product.id, payload);
+            await onUpsertEdit(itemFlow.product.id, payload);
           }
         }}
       />

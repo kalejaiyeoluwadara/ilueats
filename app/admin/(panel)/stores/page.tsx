@@ -234,12 +234,9 @@ export default function AdminStoresPage() {
         initialStore={null}
         onClose={() => setAddOpen(false)}
         onSave={async (payload) => {
-          try {
-            const created = await addStore(payload);
-            success("Store created", `${created.name} is live in the catalog.`);
-          } catch {
-            errorToast("Couldn't create store", "Please check the details and try again.");
-          }
+          // Rejections propagate: the modal stays open with the API error inline.
+          const created = await addStore(payload);
+          success("Store created", `${created.name} is live in the catalog.`);
         }}
       />
 
@@ -250,13 +247,8 @@ export default function AdminStoresPage() {
         onClose={() => setEditStore(null)}
         onSave={async (payload) => {
           if (!editStore) return;
-          try {
-            await updateStore(editStore.id, payload);
-            success("Store updated", `${payload.name.trim()} saved.`);
-            setEditStore(null);
-          } catch {
-            errorToast("Couldn't update store", "Please try again.");
-          }
+          await updateStore(editStore.id, payload);
+          success("Store updated", `${payload.name.trim()} saved.`);
         }}
       />
 
@@ -290,24 +282,16 @@ export default function AdminStoresPage() {
         }}
         onUpsertAdd={async (payload) => {
           if (!menuStore) return;
-          try {
-            const created = await addMenuItem(menuStore, payload);
-            setMenuItems((cur) => [created, ...cur]);
-            success("Dish added", "Menu updated — check the live storefront.");
-          } catch {
-            errorToast("Couldn't add dish", "Please check the details and try again.");
-          }
+          const created = await addMenuItem(menuStore, payload);
+          setMenuItems((cur) => [created, ...cur]);
+          success("Dish added", "Menu updated — check the live storefront.");
         }}
         onUpsertEdit={async (productId, payload) => {
-          try {
-            const updated = await updateMenuItem(productId, payload);
-            setMenuItems((cur) =>
-              cur.map((p) => (p.id === productId ? { ...p, ...updated } : p))
-            );
-            success("Dish updated", "Changes saved.");
-          } catch {
-            errorToast("Couldn't update dish", "Please try again.");
-          }
+          const updated = await updateMenuItem(productId, payload);
+          setMenuItems((cur) =>
+            cur.map((p) => (p.id === productId ? { ...p, ...updated } : p))
+          );
+          success("Dish updated", "Changes saved.");
         }}
       />
 

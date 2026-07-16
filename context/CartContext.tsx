@@ -19,7 +19,7 @@ import {
 
 const STORAGE_KEY = "ilueats:cart:v1";
 
-interface AddToCartInput {
+export interface AddToCartInput {
   product: Product;
   storeName: string;
   quantity?: number;
@@ -41,6 +41,16 @@ interface CartContextValue {
   storeName: string | null;
   storeSlug: string | null;
   addItem: (input: AddToCartInput) => { ok: boolean; reason?: string };
+  /**
+   * Adds a whole basket at once — used by reorder. Separate from looping
+   * `addItem` because that reads `storeId` from the render it was created in:
+   * clearing the cart and re-adding in one tick would still see the old store
+   * and reject every item. One dispatch also means one undo and one animation.
+   */
+  addItems: (
+    inputs: AddToCartInput[],
+    opts?: { replace?: boolean },
+  ) => { ok: boolean; reason?: string };
   removeItem: (lineId: string) => void;
   updateQuantity: (lineId: string, qty: number) => void;
   clearCart: () => void;
@@ -59,9 +69,64 @@ type CartState = {
 type CartAction =
   | { type: "HYDRATE"; payload: CartState }
   | { type: "ADD"; payload: { item: CartItem; storeName: string } }
+  | {
+      type: "ADD_MANY";
+      payload: { items: CartItem[]; storeName: string; replace: boolean };
+    }
   | { type: "REMOVE"; payload: { lineId: string } }
   | { type: "SET_QTY"; payload: { lineId: string; qty: number } }
   | { type: "CLEAR" };
+
+/** Prices a line and gives it the id that decides what merges with what. */
+function buildCartItem({
+  product,
+  storeName,
+  quantity = 1,
+  selectedOptions = [],
+  notes,
+}: AddToCartInput): CartItem {
+  const optionDelta = selectedOptions.reduce(
+    (sum, o) => sum + (o.choice.priceDelta ?? 0) * (o.qty ?? 1),
+    0
+  );
+  const lineId = makeCartLineId(
+    product.id,
+    selectedOptions.map((o) => ({
+      groupId: o.groupId,
+      choiceId: o.choice.id,
+      qty: o.qty ?? 1,
+    }))
+  );
+  return {
+    id: lineId,
+    productId: product.id,
+    storeId: product.storeId,
+    storeSlug: product.storeSlug,
+    storeName,
+    name: product.name,
+    image: product.image,
+    price: product.price + optionDelta,
+    quantity,
+    notes,
+    selectedOptions: selectedOptions.map((o) => ({
+      groupId: o.groupId,
+      groupName: o.groupName,
+      choiceId: o.choice.id,
+      name: o.choice.name,
+      qty: o.qty ?? 1,
+      priceDelta: o.choice.priceDelta ?? 0,
+    })),
+  };
+}
+
+/** Merges a line into a list, stacking quantity onto an identical existing line. */
+function mergeLine(items: CartItem[], item: CartItem): CartItem[] {
+  const idx = items.findIndex((i) => i.id === item.id);
+  if (idx < 0) return [...items, item];
+  return items.map((i, at) =>
+    at === idx ? { ...i, quantity: i.quantity + item.quantity } : i
+  );
+}
 
 const initialState: CartState = {
   items: [],
@@ -77,19 +142,23 @@ function reducer(state: CartState, action: CartAction): CartState {
 
     case "ADD": {
       const { item, storeName } = action.payload;
-      const existingIdx = state.items.findIndex((i) => i.id === item.id);
-      let nextItems: CartItem[];
-      if (existingIdx >= 0) {
-        nextItems = state.items.map((i, idx) =>
-          idx === existingIdx ? { ...i, quantity: i.quantity + item.quantity } : i
-        );
-      } else {
-        nextItems = [...state.items, item];
-      }
       return {
-        items: nextItems,
+        items: mergeLine(state.items, item),
         storeId: item.storeId,
         storeSlug: item.storeSlug,
+        storeName,
+      };
+    }
+
+    case "ADD_MANY": {
+      const { items, storeName, replace } = action.payload;
+      if (items.length === 0) return state;
+      const nextItems = items.reduce(mergeLine, replace ? [] : state.items);
+      const [first] = items;
+      return {
+        items: nextItems,
+        storeId: first.storeId,
+        storeSlug: first.storeSlug,
         storeName,
       };
     }
@@ -146,51 +215,39 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, [state, hydrated]);
 
   const addItem = useCallback<CartContextValue["addItem"]>(
-    ({ product, storeName, quantity = 1, selectedOptions = [], notes }) => {
+    (input) => {
       // Single-store cart guard
-      if (state.storeId && state.storeId !== product.storeId) {
+      if (state.storeId && state.storeId !== input.product.storeId) {
         return {
           ok: false,
           reason: "different-store",
         };
       }
 
-      const optionDelta = selectedOptions.reduce(
-        (sum, o) => sum + (o.choice.priceDelta ?? 0) * (o.qty ?? 1),
-        0
-      );
-      const lineId = makeCartLineId(
-        product.id,
-        selectedOptions.map((o) => ({
-          groupId: o.groupId,
-          choiceId: o.choice.id,
-          qty: o.qty ?? 1,
-        }))
-      );
-      const item: CartItem = {
-        id: lineId,
-        productId: product.id,
-        storeId: product.storeId,
-        storeSlug: product.storeSlug,
-        storeName,
-        name: product.name,
-        image: product.image,
-        price: product.price + optionDelta,
-        quantity,
-        notes,
-        selectedOptions: selectedOptions.map((o) => ({
-          groupId: o.groupId,
-          groupName: o.groupName,
-          choiceId: o.choice.id,
-          name: o.choice.name,
-          qty: o.qty ?? 1,
-          priceDelta: o.choice.priceDelta ?? 0,
-        })),
-      };
-
       dispatch({
         type: "ADD",
-        payload: { item, storeName },
+        payload: { item: buildCartItem(input), storeName: input.storeName },
+      });
+      setBump((b) => b + 1);
+      return { ok: true };
+    },
+    [state.storeId]
+  );
+
+  const addItems = useCallback<CartContextValue["addItems"]>(
+    (inputs, { replace = false } = {}) => {
+      if (inputs.length === 0) return { ok: true };
+
+      // `replace` is the caller having already confirmed the swap with the
+      // customer, so the single-store rule only applies when it's absent.
+      const [{ product, storeName }] = inputs;
+      if (!replace && state.storeId && state.storeId !== product.storeId) {
+        return { ok: false, reason: "different-store" };
+      }
+
+      dispatch({
+        type: "ADD_MANY",
+        payload: { items: inputs.map(buildCartItem), storeName, replace },
       });
       setBump((b) => b + 1);
       return { ok: true };
@@ -227,6 +284,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     storeSlug: state.storeSlug,
     storeName: state.storeName,
     addItem,
+    addItems,
     removeItem,
     updateQuantity,
     clearCart,

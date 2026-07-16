@@ -13,6 +13,7 @@ import {
   ShoppingCartIcon,
   LockClosedIcon,
   ArrowRightIcon,
+  ArrowPathIcon,
   TrashIcon,
 } from "@heroicons/react/24/outline";
 import { Navbar } from "@/components/layout/Navbar";
@@ -25,12 +26,15 @@ import { useToast } from "@/hooks/useToast";
 import { useCart } from "@/hooks/useCart";
 import { useCatalog } from "@/context/CatalogContext";
 import { getMyOrders, getOrder } from "@/lib/api/orders";
+import { fetchProductsByIds } from "@/lib/api/catalog";
 import type { OrderSummary, OrderDetail } from "@/lib/api/orders";
+import { Modal } from "@/components/ui/Modal";
 import { formatPlacedAgo, orderStatusBadge } from "@/lib/ordersStore";
 import { stepIndexForStatus } from "@/components/orders/OrderStatusStepper";
 import { cn, formatPrice } from "@/lib/utils";
 import { ApiError } from "@/lib/api/client";
-import type { OrderStatus } from "@/types";
+import type { OrderStatus, Product } from "@/types";
+import type { AddToCartInput } from "@/context/CartContext";
 
 const ONGOING_STATUSES: OrderSummary["status"][] = [
   "new",
@@ -81,7 +85,7 @@ type OrderTab = "cart" | "ongoing" | "completed";
 
 export default function OrdersPage() {
   const { user, ready: authReady } = useAuth();
-  const { error: toastError } = useToast();
+  const { cart: cartToast, error: toastError } = useToast();
 
   const {
     items: cartItems,
@@ -91,6 +95,7 @@ export default function OrdersPage() {
     storeName: cartStoreName,
     updateQuantity: updateCartQuantity,
     removeItem: removeCartItem,
+    addItems,
     clearCart,
   } = useCart();
   const { stores } = useCatalog();
@@ -107,6 +112,13 @@ export default function OrdersPage() {
   const [error, setError] = useState<string | null>(null);
 
   const [tab, setTab] = useState<OrderTab>("ongoing");
+
+  const [reorderingId, setReorderingId] = useState<string | null>(null);
+  /** Set when reorder hits food from another store — drives the confirm sheet. */
+  const [storeConflict, setStoreConflict] = useState<{
+    orderId: string;
+    storeName: string;
+  } | null>(null);
 
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
   const [details, setDetails] = useState<
@@ -192,6 +204,118 @@ export default function OrdersPage() {
         [orderId]: { loading: false, error: errMsg },
       }));
       toastError("Could not load details", errMsg);
+    }
+  };
+
+  /**
+   * Rebuilds a past order's lines against today's menu. A line only survives if
+   * its product and every option it used still exist — a product whose required
+   * group has since been reworked can't be priced the way it was, and guessing
+   * would put a wrong order in the cart. Survivors are reported back so the
+   * customer is told what didn't make it rather than quietly shorted.
+   */
+  const resolveReorderLines = (detail: OrderDetail, products: Product[]) => {
+    const byId = new Map(products.map((p) => [p.id, p]));
+    const inputs: AddToCartInput[] = [];
+    const dropped: string[] = [];
+
+    for (const line of detail.lineItems) {
+      const product = line.productId ? byId.get(line.productId) : undefined;
+      if (!product) {
+        dropped.push(line.name);
+        continue;
+      }
+
+      const selected: NonNullable<AddToCartInput["selectedOptions"]> = [];
+      let optionsIntact = true;
+      for (const opt of line.selectedOptions ?? []) {
+        const group = product.options?.find((g) => g.id === opt.groupId);
+        const choice = group?.choices.find((c) => c.id === opt.choiceId);
+        if (!group || !choice) {
+          optionsIntact = false;
+          break;
+        }
+        selected.push({ groupId: group.id, groupName: group.name, choice });
+      }
+
+      // An order placed before options were stored by id shows its choices in
+      // `modifiers` but can't rebuild them, so it can't be reordered faithfully.
+      const optionsLost =
+        (line.modifiers?.length ?? 0) > 0 && (line.selectedOptions?.length ?? 0) === 0;
+
+      if (!optionsIntact || optionsLost) {
+        dropped.push(line.name);
+        continue;
+      }
+
+      inputs.push({
+        product,
+        storeName: detail.storeName,
+        quantity: line.qty,
+        selectedOptions: selected,
+      });
+    }
+
+    return { inputs, dropped };
+  };
+
+  const runReorder = async (orderId: string, replace = false) => {
+    const detail = details[orderId]?.data;
+    if (!detail) return;
+
+    setReorderingId(orderId);
+    try {
+      const ids = Array.from(
+        new Set(
+          detail.lineItems
+            .map((l) => l.productId)
+            .filter((id): id is string => !!id)
+        )
+      );
+      if (ids.length === 0) {
+        toastError(
+          "Can't reorder this one",
+          "It was placed before we started saving item details."
+        );
+        return;
+      }
+
+      const products = await fetchProductsByIds(ids);
+      const { inputs, dropped } = resolveReorderLines(detail, products);
+
+      if (inputs.length === 0) {
+        toastError(
+          "Nothing could be added",
+          "These items have changed or are no longer on the menu."
+        );
+        return;
+      }
+
+      const res = addItems(inputs, { replace });
+      if (!res.ok) {
+        // Only reachable when the cart holds another store's food; ask before
+        // throwing that away rather than silently replacing it.
+        setStoreConflict({ orderId, storeName: detail.storeName });
+        return;
+      }
+
+      setStoreConflict(null);
+      setTab("cart");
+      if (dropped.length > 0) {
+        cartToast(
+          `Added ${inputs.length} ${inputs.length === 1 ? "item" : "items"}`,
+          `${dropped.join(", ")} couldn't be added — the menu changed.`
+        );
+      } else {
+        cartToast("Added to your cart", `Everything from ${detail.storeName}.`);
+      }
+    } catch (err) {
+      toastError(
+        "Couldn't reorder",
+        err instanceof ApiError ? err.message : "Please try again."
+      );
+    } finally {
+      setReorderingId(null);
     }
   };
 
@@ -614,6 +738,19 @@ export default function OrdersPage() {
                             </div>
                           </div>
 
+                          {/* Order it again — the primary move on a finished
+                              order, so it leads once tracking stops mattering. */}
+                          <Button
+                            size="lg"
+                            fullWidth
+                            variant={o.status === "delivered" ? "primary" : "outline"}
+                            leftIcon={<ArrowPathIcon className="h-4 w-4" />}
+                            loading={reorderingId === o.id}
+                            onClick={() => runReorder(o.id)}
+                          >
+                            Order again
+                          </Button>
+
                           {/* Track order CTA */}
                           <Link href={`/orders/${o.id}`} className="block">
                             <Button
@@ -660,6 +797,47 @@ export default function OrdersPage() {
           </div>
         </div>
       )}
+
+      {/* The cart holds one store at a time, so reordering from another means
+          losing what's in it. That's the customer's call, not ours. */}
+      <Modal
+        open={!!storeConflict}
+        onClose={() => setStoreConflict(null)}
+        title="Start a new cart?"
+        description={
+          cartStoreName
+            ? `Your cart has food from ${cartStoreName}. Ordering from ${storeConflict?.storeName} again will clear it.`
+            : undefined
+        }
+        footer={
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              fullWidth
+              size="md"
+              onClick={() => setStoreConflict(null)}
+            >
+              Keep my cart
+            </Button>
+            <Button
+              type="button"
+              fullWidth
+              size="md"
+              loading={!!reorderingId}
+              onClick={() => {
+                if (storeConflict) void runReorder(storeConflict.orderId, true);
+              }}
+            >
+              Clear and reorder
+            </Button>
+          </div>
+        }
+      >
+        <p className="text-[13px] leading-relaxed text-[var(--color-ink-muted)]">
+          You can only order from one store at a time.
+        </p>
+      </Modal>
 
       <BottomNav />
     </div>

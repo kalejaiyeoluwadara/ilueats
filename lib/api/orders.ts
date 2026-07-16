@@ -17,11 +17,22 @@ export interface OrderSummary {
   placedAt: string;
 }
 
+/** The choice ids behind a line's `modifiers`, so reorder can rebuild the line. */
+export interface OrderLineItemOption {
+  groupId: string;
+  choiceId: string;
+  name: string;
+}
+
 export interface OrderDetailLineItem {
+  /** Absent on orders placed before the API exposed it — those can't be reordered. */
+  productId?: string;
   name: string;
   qty: number;
   unitPrice: number;
   modifiers?: string[];
+  /** Empty for orders placed before options were recorded by id. */
+  selectedOptions?: OrderLineItemOption[];
 }
 
 export interface OrderRider {

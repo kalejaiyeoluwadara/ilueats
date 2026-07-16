@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { MapPinIcon } from "@heroicons/react/24/outline";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { ImageUploadField } from "@/components/ui/ImageUploadField";
 import { categories } from "@/data/mockData";
 import { ApiError, LOAD_FAILED_FALLBACK } from "@/lib/api/client";
-import { cn } from "@/lib/utils";
+import { cn, slugify } from "@/lib/utils";
 import type { CategoryId, Store } from "@/types";
 import type { StoreUpsertPayload } from "@/lib/api/catalog";
 
@@ -104,6 +105,18 @@ function parseNum(raw: string, fallback: number) {
 const field =
   "h-11 w-full rounded-2xl border border-[var(--color-line)] bg-[var(--color-bg)] px-3.5 text-[13px] font-medium text-[var(--color-ink)] outline-none focus:border-[var(--color-primary)]/35 focus:ring-2 focus:ring-[var(--color-primary)]/18";
 
+/** Divider heading that chunks the long form into scannable sections. */
+function SectionHeading({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex items-center gap-3 pt-1.5">
+      <p className="shrink-0 text-[11px] font-extrabold uppercase tracking-wider text-[var(--color-ink-soft)]">
+        {children}
+      </p>
+      <span aria-hidden className="h-px flex-1 bg-[var(--color-line)]" />
+    </div>
+  );
+}
+
 export function AdminStoreUpsertModal({
   open,
   mode,
@@ -115,8 +128,15 @@ export function AdminStoreUpsertModal({
   const [catSelection, setCatSelection] = useState<CategoryId[]>(["snacks"]);
   const [err, setErr] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [locating, setLocating] = useState(false);
   const [imageUploading, setImageUploading] = useState(false);
   const [coverUploading, setCoverUploading] = useState(false);
+  const errRef = useRef<HTMLParagraphElement>(null);
+
+  // Failures land while the admin is at the footer; bring the banner to them.
+  useEffect(() => {
+    if (err) errRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [err]);
 
   useEffect(() => {
     if (!open) return;
@@ -144,6 +164,33 @@ export function AdminStoreUpsertModal({
       return [...prev, id];
     });
   };
+
+  // Fills coordinates when the admin registers the store on-site (common for
+  // vendor onboarding visits); off-site they can still type or paste them.
+  const useMyLocation = () => {
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      setErr("This browser can't share your location — enter coordinates manually.");
+      return;
+    }
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setForm((f) => ({
+          ...f,
+          latitude: pos.coords.latitude.toFixed(6),
+          longitude: pos.coords.longitude.toFixed(6),
+        }));
+        setLocating(false);
+      },
+      () => {
+        setErr("Couldn't read your location — enter coordinates manually.");
+        setLocating(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
+
+  const previewSlug = slugify(form.slug.trim() || form.name.trim());
 
   const uploading = imageUploading || coverUploading;
   // Saving mid-upload would persist the previous image URL and silently discard
@@ -265,7 +312,11 @@ export function AdminStoreUpsertModal({
     >
       <form id="admin-store-form" className="space-y-4" onSubmit={onSubmit}>
         {err && (
-          <p className="rounded-2xl bg-red-50 px-3 py-2 text-[13px] font-medium text-red-700 ring-1 ring-red-200">
+          <p
+            ref={errRef}
+            role="alert"
+            className="rounded-2xl bg-red-50 px-3 py-2 text-[13px] font-medium text-red-700 ring-1 ring-red-200"
+          >
             {err}
           </p>
         )}
@@ -280,10 +331,11 @@ export function AdminStoreUpsertModal({
               value={form.name}
               onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
               placeholder="e.g. Campus Chow"
+              autoFocus
               required
             />
           </div>
-          <div>
+          <div className="sm:col-span-2">
             <label className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-[var(--color-ink-soft)]">
               URL slug
             </label>
@@ -293,52 +345,14 @@ export function AdminStoreUpsertModal({
               onChange={(e) =>
                 setForm((f) => ({ ...f, slug: e.target.value }))
               }
-              placeholder="auto from name if empty"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-[var(--color-ink-soft)]">
-              Location
-            </label>
-            <input
-              className={field}
-              value={form.location}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, location: e.target.value }))
-              }
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-[var(--color-ink-soft)]">
-              Latitude
-            </label>
-            <input
-              className={field}
-              inputMode="decimal"
-              value={form.latitude}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, latitude: e.target.value }))
-              }
-              placeholder="e.g. 6.8934"
+              placeholder={slugify(form.name) || "auto from name if empty"}
             />
             <p className="mt-1 text-[11px] text-[var(--color-ink-muted)]">
-              With longitude, puts the store in “near me” results and prices
-              delivery by distance.
+              Storefront lives at{" "}
+              <span className="font-semibold text-[var(--color-ink)]">
+                ilueats.com/{previewSlug || "…"}
+              </span>
             </p>
-          </div>
-          <div>
-            <label className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-[var(--color-ink-soft)]">
-              Longitude
-            </label>
-            <input
-              className={field}
-              inputMode="decimal"
-              value={form.longitude}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, longitude: e.target.value }))
-              }
-              placeholder="e.g. 3.7105"
-            />
           </div>
           <div className="sm:col-span-2">
             <label className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-[var(--color-ink-soft)]">
@@ -378,6 +392,7 @@ export function AdminStoreUpsertModal({
                 <button
                   key={c.id}
                   type="button"
+                  aria-pressed={sel}
                   onClick={() => toggleCat(c.id)}
                   className={cn(
                     "rounded-full px-3.5 py-2 text-[12px] font-bold transition-colors ring-1 ring-inset",
@@ -393,6 +408,68 @@ export function AdminStoreUpsertModal({
           </div>
         </div>
 
+        <SectionHeading>Location</SectionHeading>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="sm:col-span-2">
+            <label className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-[var(--color-ink-soft)]">
+              Area / neighborhood
+            </label>
+            <input
+              className={field}
+              value={form.location}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, location: e.target.value }))
+              }
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-[var(--color-ink-soft)]">
+              Latitude
+            </label>
+            <input
+              className={field}
+              inputMode="decimal"
+              value={form.latitude}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, latitude: e.target.value }))
+              }
+              placeholder="e.g. 6.8934"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-[var(--color-ink-soft)]">
+              Longitude
+            </label>
+            <input
+              className={field}
+              inputMode="decimal"
+              value={form.longitude}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, longitude: e.target.value }))
+              }
+              placeholder="e.g. 3.7105"
+            />
+          </div>
+          <div className="sm:col-span-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-[11px] text-[var(--color-ink-muted)]">
+              Coordinates put the store in “near me” results and price delivery
+              by distance — without them it only appears in the full list.
+            </p>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-9 shrink-0 gap-1.5"
+              disabled={locating}
+              onClick={useMyLocation}
+            >
+              <MapPinIcon className="h-4 w-4" />
+              {locating ? "Locating…" : "Use my location"}
+            </Button>
+          </div>
+        </div>
+
+        <SectionHeading>Images</SectionHeading>
         <div className="grid gap-3 sm:grid-cols-2">
           <ImageUploadField
             label="Logo / tile image"
@@ -412,6 +489,10 @@ export function AdminStoreUpsertModal({
             onUploadingChange={setCoverUploading}
             hint="Wide banner at the top of the store page."
           />
+        </div>
+
+        <SectionHeading>Delivery &amp; ordering</SectionHeading>
+        <div className="grid gap-3 sm:grid-cols-2">
           <div>
             <label className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-[var(--color-ink-soft)]">
               Delivery ETA (min) · from
@@ -464,6 +545,10 @@ export function AdminStoreUpsertModal({
               }
             />
           </div>
+        </div>
+
+        <SectionHeading>Discovery &amp; reputation</SectionHeading>
+        <div className="grid gap-3 sm:grid-cols-2">
           <div>
             <label className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-[var(--color-ink-soft)]">
               Rating (0–5)

@@ -249,7 +249,14 @@ export function AdminMenuItemModal({
   const [advancedJson, setAdvancedJson] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
   const prevAdvancedOpen = useRef(false);
+  const errRef = useRef<HTMLParagraphElement>(null);
+
+  // Failures land while the admin is at the footer; bring the banner to them.
+  useEffect(() => {
+    if (err) errRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [err]);
 
   const jsonMirror = useMemo(
     () =>
@@ -262,6 +269,13 @@ export function AdminMenuItemModal({
     setAdvancedOpen(false);
     setErr(null);
     setSaving(false);
+    // Surface the tucked-away fields when editing an item that already uses them.
+    setMoreOpen(
+      mode === "edit" &&
+        !!product &&
+        (typeof product.rating === "number" ||
+          typeof product.reviews === "number")
+    );
     if (mode === "edit" && product) {
       setName(product.name);
       setSlug(product.slug);
@@ -411,7 +425,11 @@ export function AdminMenuItemModal({
     >
       <form id="admin-menu-item-form" className="space-y-3.5" onSubmit={onSubmit}>
         {err && (
-          <p className="rounded-2xl bg-red-50 px-3 py-2 text-[13px] font-medium text-red-700 ring-1 ring-red-200">
+          <p
+            ref={errRef}
+            role="alert"
+            className="rounded-2xl bg-red-50 px-3 py-2 text-[13px] font-medium text-red-700 ring-1 ring-red-200"
+          >
             {err}
           </p>
         )}
@@ -422,31 +440,10 @@ export function AdminMenuItemModal({
           <input
             className={field}
             required
+            autoFocus
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="e.g. Pepper soup combo"
-          />
-        </div>
-        <div>
-          <label className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-[var(--color-ink-soft)]">
-            URL slug
-          </label>
-          <input
-            className={field}
-            value={slug}
-            onChange={(e) => setSlug(e.target.value)}
-            placeholder="auto from dish name when empty"
-          />
-        </div>
-        <div>
-          <label className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-[var(--color-ink-soft)]">
-            Description *
-          </label>
-          <textarea
-            className={cn(field, "min-h-[72px] resize-y py-2.5")}
-            required
-            value={desc}
-            onChange={(e) => setDesc(e.target.value)}
           />
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
@@ -460,6 +457,7 @@ export function AdminMenuItemModal({
               inputMode="decimal"
               value={price}
               onChange={(e) => setPrice(e.target.value)}
+              placeholder="e.g. 3500"
             />
           </div>
           <div>
@@ -504,29 +502,17 @@ export function AdminMenuItemModal({
             onUploadingChange={setImageUploading}
           />
         </div>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div>
-            <label className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-[var(--color-ink-soft)]">
-              Rating (optional)
-            </label>
-            <input
-              className={field}
-              inputMode="decimal"
-              value={rating}
-              onChange={(e) => setRating(e.target.value)}
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-[var(--color-ink-soft)]">
-              Reviews count (optional)
-            </label>
-            <input
-              className={field}
-              inputMode="numeric"
-              value={reviews}
-              onChange={(e) => setReviews(e.target.value)}
-            />
-          </div>
+        <div>
+          <label className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-[var(--color-ink-soft)]">
+            Description *
+          </label>
+          <textarea
+            className={cn(field, "min-h-[72px] resize-y py-2.5")}
+            required
+            value={desc}
+            onChange={(e) => setDesc(e.target.value)}
+            placeholder="What's in it, portion size, what it comes with…"
+          />
         </div>
         <div className="flex flex-wrap gap-x-6 gap-y-3">
           <label className="flex items-center gap-2 text-[13px] font-semibold">
@@ -552,16 +538,13 @@ export function AdminMenuItemModal({
         <section className="rounded-2xl border border-[var(--color-line)] bg-[var(--color-bg)]/70 p-3.5 sm:p-4">
           <div className="flex flex-col gap-1">
             <p className="text-[12px] font-extrabold uppercase tracking-wide text-[var(--color-ink-soft)]">
-              Choice steps (optional)
+              Customizations (optional)
             </p>
             <p className="text-[12.5px] leading-relaxed text-[var(--color-ink-muted)]">
-              Mirrors live products — e.g.{" "}
-              <span className="font-semibold text-[var(--color-ink)]">
-                Babrite pepperoni
-              </span>
-              : <strong>Required</strong> single-select tiers (size, crust) with extra ₦
-              on larger sizes / stuffed crust, plus separate{" "}
-              <strong>Optional + multi-select</strong> baskets for toppings or sides.
+              Steps diners walk through before adding to cart — a{" "}
+              <strong>required</strong> pick like Size or Protein, or an{" "}
+              <strong>optional multi-select</strong> like Extras. Each choice
+              can add ₦ on top of the base price.
             </p>
           </div>
 
@@ -582,7 +565,7 @@ export function AdminMenuItemModal({
               className="h-9"
               onClick={() => setOptionDrafts(presetPizzaStyleRows())}
             >
-              Pizza-style preset
+              Size &amp; crust preset
             </Button>
             <Button
               type="button"
@@ -591,7 +574,7 @@ export function AdminMenuItemModal({
               className="h-9"
               onClick={() => setOptionDrafts(presetExtrasAddonRows())}
             >
-              Multi extras preset
+              Extras preset
             </Button>
             <Button
               type="button"
@@ -608,8 +591,8 @@ export function AdminMenuItemModal({
 
           {optionDrafts.length === 0 ? (
             <p className="mt-4 rounded-xl px-3 py-2 text-[13px] text-[var(--color-ink-muted)] ring-1 ring-[var(--color-line)] ring-dashed">
-              No extras — diner only sees quantity (like BBQ Chicken Margherita with no modifiers).
-              Use presets or add your own tiers.
+              No customizations — diners just pick a quantity. Start from a
+              preset or add your own step.
             </p>
           ) : (
             <ul className="mt-4 space-y-4">
@@ -723,7 +706,9 @@ export function AdminMenuItemModal({
                       Choices (+₦ stacks on dish base price)
                     </p>
                     <p className="mb-3 text-[11px] leading-relaxed text-[var(--color-ink-muted)]">
-                      Use <strong>0</strong> for Included; higher sizes/crust premiums match live pepperoni (e.g. +{formatPrice(2500)}, +{formatPrice(4500)}).
+                      Use <strong>0</strong> when a choice is included free;
+                      premium picks add their +₦ (e.g. +{formatPrice(2500)} for
+                      a bigger size).
                     </p>
                     <ul className="space-y-2">
                       {g.choices.map((c) => (

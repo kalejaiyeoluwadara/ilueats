@@ -35,7 +35,9 @@ export default function CartPage() {
     () => (storeSlug ? stores.find((s) => s.slug === storeSlug) : undefined),
     [storeSlug, stores]
   );
-  const deliveryFee = store?.deliveryFee ?? 0;
+  // Delivery depends on where it's going, which we only know at checkout — so
+  // the bag shows the subtotal and says so, rather than quoting a fee here that
+  // checkout would then contradict.
   const minOrder = store?.minOrder ?? 0;
   const belowMin = subtotal < minOrder;
 
@@ -100,7 +102,7 @@ export default function CartPage() {
 
             <div className="lg:sticky lg:top-24">
               <section className="px-4 pt-5 lg:px-0 lg:pt-3">
-                <CartSummary subtotal={subtotal} deliveryFee={deliveryFee} />
+                <CartSummary subtotal={subtotal} total={subtotal} />
               </section>
 
               {storeSlug && (

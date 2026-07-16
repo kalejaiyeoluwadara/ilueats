@@ -26,7 +26,7 @@ import {
   type AdminMenuItem,
   type MenuCategoryId,
 } from "@/lib/api/catalog";
-import { ApiError } from "@/lib/api/client";
+import { ApiError, LOAD_FAILED_FALLBACK } from "@/lib/api/client";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useToast } from "@/hooks/useToast";
 import { cn, formatPrice } from "@/lib/utils";
@@ -106,7 +106,7 @@ function AdminItemsPageInner() {
       setPageCount(result.pageCount);
     } catch (err) {
       setError(
-        err instanceof ApiError ? err.message : "Couldn't load items."
+        err instanceof ApiError ? err.message : LOAD_FAILED_FALLBACK
       );
     } finally {
       setLoading(false);

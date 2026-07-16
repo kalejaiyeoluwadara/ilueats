@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ApiError } from "@/lib/api/client";
+import { ApiError, LOAD_FAILED_FALLBACK } from "@/lib/api/client";
 import {
   fetchFeaturedProducts,
   fetchProduct,
@@ -11,7 +11,7 @@ import {
 } from "@/lib/api/catalog";
 import type { Product, Store } from "@/types";
 
-function messageFor(err: unknown, fallback: string): string {
+function messageFor(err: unknown, fallback: string = LOAD_FAILED_FALLBACK): string {
   return err instanceof ApiError ? err.message : fallback;
 }
 
@@ -32,7 +32,7 @@ export function useStore(slug: string) {
       if (err instanceof ApiError && err.status === 404) {
         setNotFound(true);
       } else {
-        setError(messageFor(err, "Couldn't load this store."));
+        setError(messageFor(err));
       }
     } finally {
       setLoading(false);
@@ -62,7 +62,7 @@ export function useStoreProducts(slug: string | null) {
     try {
       setProducts(await fetchStoreProducts(slug));
     } catch (err) {
-      setError(messageFor(err, "Couldn't load the menu."));
+      setError(messageFor(err));
     } finally {
       setLoading(false);
     }
@@ -94,7 +94,7 @@ export function useProduct(storeSlug: string, productSlug: string) {
       if (err instanceof ApiError && err.status === 404) {
         setNotFound(true);
       } else {
-        setError(messageFor(err, "Couldn't load this dish."));
+        setError(messageFor(err));
       }
     } finally {
       setLoading(false);
@@ -121,7 +121,7 @@ export function useFeaturedProducts(initialProducts?: Product[]) {
     try {
       setProducts(await fetchFeaturedProducts());
     } catch (err) {
-      setError(messageFor(err, "Couldn't load featured dishes."));
+      setError(messageFor(err));
     } finally {
       setLoading(false);
     }
@@ -164,7 +164,7 @@ export function useSearchCatalog(query: string, type: "all" | "stores" | "dishes
         setStores(result.stores);
         setProducts(result.products);
       } catch (err) {
-        if (!cancelled) setError(messageFor(err, "Search failed. Try again."));
+        if (!cancelled) setError(messageFor(err));
       } finally {
         if (!cancelled) setLoading(false);
       }

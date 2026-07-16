@@ -2,6 +2,7 @@
 
 import { useMemo, useState, use } from "react";
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import { motion } from "framer-motion";
 import { Navbar } from "@/components/layout/Navbar";
 import { BottomNav } from "@/components/layout/BottomNav";
@@ -12,6 +13,7 @@ import { EmptyState, ErrorState } from "@/components/ui/EmptyState";
 import { StorePageSkeleton, ProductCardSkeleton } from "@/components/ui/Skeletons";
 import { MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 import { useStore, useStoreProducts } from "@/hooks/useCatalogQueries";
+import { LOAD_FAILED_FALLBACK } from "@/lib/api/client";
 import { categories } from "@/data/mockData";
 import { cn } from "@/lib/utils";
 import type { CategoryId } from "@/types";
@@ -22,12 +24,18 @@ interface PageProps {
 
 export default function StorePage({ params }: PageProps) {
   const { store: storeSlug } = use(params);
-  const { store, loading: storeLoading, error: storeError, notFound: storeNotFound } =
-    useStore(storeSlug);
+  const {
+    store,
+    loading: storeLoading,
+    error: storeError,
+    notFound: storeNotFound,
+    refetch: refetchStore,
+  } = useStore(storeSlug);
   const {
     products: allProducts,
     loading: productsLoading,
     error: productsError,
+    refetch: refetchProducts,
   } = useStoreProducts(storeSlug);
 
   // Build category list from product categories that exist on this store
@@ -71,7 +79,20 @@ export default function StorePage({ params }: PageProps) {
   if (storeError || !store) {
     return (
       <div className="min-h-screen px-4 pt-24">
-        <ErrorState message={storeError ?? "Couldn't load this store."} />
+        <ErrorState
+          variant="page"
+          title="This store didn't load"
+          message={storeError ?? LOAD_FAILED_FALLBACK}
+          onRetry={refetchStore}
+          action={
+            <Link
+              href="/stores"
+              className="text-[13px] font-semibold text-[var(--color-ink-muted)] underline underline-offset-4 transition-colors hover:text-[var(--color-ink)]"
+            >
+              Browse other stores
+            </Link>
+          }
+        />
       </div>
     );
   }
@@ -123,7 +144,11 @@ export default function StorePage({ params }: PageProps) {
             </div>
           ) : productsError ? (
             <div className="px-4">
-              <ErrorState message={productsError} />
+              <ErrorState
+                title="The menu didn't load"
+                message={productsError}
+                onRetry={refetchProducts}
+              />
             </div>
           ) : grouped.length === 0 ? (
             <div className="px-4">

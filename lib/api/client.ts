@@ -11,6 +11,13 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * Message to show when a failure isn't an ApiError (network drop, parse error)
+ * and so carries nothing worth quoting. ErrorState's title already names what
+ * didn't load, so this says what to do about it rather than restating it.
+ */
+export const LOAD_FAILED_FALLBACK = "Check your connection and try again.";
+
 type ApiFetchOptions = {
   method?: "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
   body?: unknown | FormData;

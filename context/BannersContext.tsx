@@ -10,7 +10,7 @@ import {
   useState,
 } from "react";
 import type { AdSlide } from "@/types";
-import { ApiError } from "@/lib/api/client";
+import { ApiError, LOAD_FAILED_FALLBACK } from "@/lib/api/client";
 import {
   createBanner as apiCreateBanner,
   deleteBanner as apiDeleteBanner,
@@ -59,7 +59,7 @@ export function BannerProvider({
       setBanners(await fetchBanners());
     } catch (err) {
       setError(
-        err instanceof ApiError ? err.message : "Couldn't load banners."
+        err instanceof ApiError ? err.message : LOAD_FAILED_FALLBACK
       );
     } finally {
       setLoading(false);

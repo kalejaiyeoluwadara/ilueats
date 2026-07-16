@@ -12,7 +12,7 @@ import { FavoriteButton } from "@/components/favorites/FavoriteButton";
 import { useFavorites } from "@/hooks/useFavorites";
 import { useCatalog } from "@/context/CatalogContext";
 import { fetchProductsByIds } from "@/lib/api/catalog";
-import { ApiError } from "@/lib/api/client";
+import { ApiError, LOAD_FAILED_FALLBACK } from "@/lib/api/client";
 import { formatPrice } from "@/lib/utils";
 import type { Product } from "@/types";
 
@@ -34,7 +34,7 @@ export default function FavoritesPage() {
       })
       .catch((err) => {
         if (!cancelled) {
-          setError(err instanceof ApiError ? err.message : "Couldn't load favourites.");
+          setError(err instanceof ApiError ? err.message : LOAD_FAILED_FALLBACK);
         }
       })
       .finally(() => {

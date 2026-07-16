@@ -10,7 +10,7 @@ import {
   useState,
 } from "react";
 import type { Product, Store } from "@/types";
-import { ApiError } from "@/lib/api/client";
+import { ApiError, LOAD_FAILED_FALLBACK } from "@/lib/api/client";
 import {
   createMenuItem as apiCreateMenuItem,
   createStore as apiCreateStore,
@@ -63,7 +63,7 @@ export function CatalogProvider({
       setStores(await fetchStores());
     } catch (err) {
       setError(
-        err instanceof ApiError ? err.message : "Couldn't load stores."
+        err instanceof ApiError ? err.message : LOAD_FAILED_FALLBACK
       );
     } finally {
       setLoading(false);

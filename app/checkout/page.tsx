@@ -36,7 +36,7 @@ import {
   type QuoteOrderInput,
 } from "@/lib/api/orders";
 import { initializePayment, verifyPayment } from "@/lib/api/payments";
-import { ApiError } from "@/lib/api/client";
+import { ApiError, LOAD_FAILED_FALLBACK } from "@/lib/api/client";
 import { resumePaystackTransaction } from "@/lib/paystack";
 import {
   cn,
@@ -53,6 +53,7 @@ type OrderReceipt = {
   deliverySummary: string;
   items: { name: string; qty: number; lineTotal: number; options: string[] }[];
   subtotal: number;
+  discount: number;
   deliveryFee: number;
   serviceFee: number;
   total: number;
@@ -137,9 +138,7 @@ export default function CheckoutPage() {
         if (controller.signal.aborted) return;
         setQuote(null);
         setQuoteError(
-          err instanceof ApiError
-            ? err.message
-            : "We couldn't price this order. Check your connection and try again."
+          err instanceof ApiError ? err.message : LOAD_FAILED_FALLBACK
         );
       });
     return () => controller.abort();
@@ -213,16 +212,39 @@ export default function CheckoutPage() {
     wallet: "Wallet",
   };
 
-  const walletCoversTotal = (walletBalance ?? 0) >= total;
+  const payLabel =
+    step === "paying"
+      ? "Placing order…"
+      : !quote
+        ? "Getting price…"
+        : method === "cash"
+          ? "Place order"
+          : method === "wallet"
+            ? "Pay from wallet"
+            : "Pay & place order";
+
+  const walletCoversTotal = total !== null && (walletBalance ?? 0) >= total;
 
   // Don't leave wallet selected if the basket grows past the balance.
   useEffect(() => {
-    if (method === "wallet" && walletReady && !walletCoversTotal) {
+    if (method === "wallet" && walletReady && quote && !walletCoversTotal) {
       setMethod("transfer");
     }
-  }, [method, walletReady, walletCoversTotal]);
+  }, [method, walletReady, quote, walletCoversTotal]);
 
-  const recordLocalOrder = (finalPaymentLabel: string) => {
+  /** The priced order as the backend settled it — the only numbers we display. */
+  type SettledTotals = {
+    subtotal: number;
+    discount: number;
+    deliveryFee: number;
+    serviceFee: number;
+    total: number;
+  };
+
+  const recordLocalOrder = (
+    finalPaymentLabel: string,
+    totals: SettledTotals
+  ) => {
     const landmark = landmarks.find((l) => l.id === landmarkId);
     return placeOrder({
       customer: name.trim(),
@@ -237,9 +259,9 @@ export default function CheckoutPage() {
       store: storeName ?? store?.name ?? "Store",
       storeAddress: store?.location ?? "Ilisan-Remo",
       paymentLabel: finalPaymentLabel,
-      deliveryFee,
-      serviceFee,
-      total,
+      deliveryFee: totals.deliveryFee,
+      serviceFee: totals.serviceFee,
+      total: totals.total,
       lineItems: items.map((it) => ({
         name: it.name,
         qty: it.quantity,
@@ -253,8 +275,10 @@ export default function CheckoutPage() {
   };
 
   // Freeze the order contents at success time — the cart is cleared right after,
-  // so the success page reads from this instead of live cart state.
-  const buildReceipt = (finalTotal: number): OrderReceipt => {
+  // so the success page reads from this instead of live cart state. Every money
+  // figure comes from `totals` (the backend's), so the rows always sum to the
+  // total the customer was actually charged.
+  const buildReceipt = (totals: SettledTotals): OrderReceipt => {
     const landmark = landmarks.find((l) => l.id === landmarkId);
     return {
       storeName: storeName ?? store?.name ?? "Store",
@@ -270,17 +294,22 @@ export default function CheckoutPage() {
           ? it.selectedOptions.map(formatCartOption)
           : [],
       })),
-      subtotal,
-      deliveryFee,
-      serviceFee,
-      total: finalTotal,
+      subtotal: totals.subtotal,
+      discount: totals.discount,
+      deliveryFee: totals.deliveryFee,
+      serviceFee: totals.serviceFee,
+      total: totals.total,
     };
   };
 
-  // Signed-in users hit the real Nest backend: create the order there, then
-  // charge it through Paystack. Guests keep the local mock flow below.
   const submitViaBackend = async () => {
-    if (!store || !session?.accessToken) return;
+    if (!store || !session?.accessToken) {
+      toastError(
+        "Not ready yet",
+        "We're still loading this store. Give it a second and try again."
+      );
+      return;
+    }
     setStep("paying");
 
     try {
@@ -305,6 +334,14 @@ export default function CheckoutPage() {
         paymentMethod: method,
       });
 
+      const settled: SettledTotals = {
+        subtotal: backendOrder.subtotal,
+        discount: backendOrder.discount,
+        deliveryFee: backendOrder.deliveryFee,
+        serviceFee: backendOrder.serviceFee,
+        total: backendOrder.total,
+      };
+
       if (backendOrder.paymentRequired) {
         const payment = await initializePayment(backendOrder.orderId);
 
@@ -326,9 +363,9 @@ export default function CheckoutPage() {
                 `Payment is not confirmed yet (status: ${status}). If you were debited, keep your reference ${payment.reference} and check your orders shortly.`,
               );
             }
-            recordLocalOrder(paymentLabels[method]);
+            recordLocalOrder(paymentLabels[method], settled);
             setOrderId(backendOrder.orderId);
-            setReceipt(buildReceipt(backendOrder.total));
+            setReceipt(buildReceipt(settled));
             setStep("done");
             clearCart();
             success("Payment received!", `Order ${backendOrder.orderId} is on its way.`);
@@ -353,9 +390,9 @@ export default function CheckoutPage() {
           },
         });
       } else {
-        recordLocalOrder(paymentLabels[method]);
+        recordLocalOrder(paymentLabels[method], settled);
         setOrderId(backendOrder.orderId);
-        setReceipt(buildReceipt(backendOrder.total));
+        setReceipt(buildReceipt(settled));
         setStep("done");
         clearCart();
         if (method === "wallet") {
@@ -377,25 +414,9 @@ export default function CheckoutPage() {
     }
   };
 
-  const submitLocalDemo = async () => {
-    setStep("paying");
-    // Simulate payment, then record the order where admin & rider can see it
-    await new Promise((r) => setTimeout(r, 2200));
-    const order = recordLocalOrder(paymentLabels[method]);
-    setOrderId(order.id);
-    setReceipt(buildReceipt(total));
-    setStep("done");
-    clearCart();
-    success("Order placed!", `Order ${order.id} is on its way.`);
-  };
-
   const submit = async () => {
     if (!canSubmit) return;
-    if (session?.accessToken) {
-      await submitViaBackend();
-    } else {
-      await submitLocalDemo();
-    }
+    await submitViaBackend();
   };
 
   if (!authReady) {
@@ -641,7 +662,29 @@ export default function CheckoutPage() {
           subtotal={subtotal}
           deliveryFee={deliveryFee}
           serviceFee={serviceFee}
+          discount={discount}
+          total={total}
         />
+
+        {quote?.deliveryDistanceKm != null && (
+          <p className="px-1 text-[12px] text-[var(--color-ink-muted)]">
+            Delivery is about {quote.deliveryDistanceKm}km from{" "}
+            {storeName ?? store?.name ?? "the store"}.
+          </p>
+        )}
+
+        {belowMin && quote && (
+          <p className="rounded-2xl bg-[var(--color-accent-soft)] px-4 py-3 text-[13px] font-semibold text-[#8a4f00]">
+            Add {formatPrice(quote.minOrder - quote.subtotal)} more to meet{" "}
+            {storeName ?? store?.name ?? "this store"}&apos;s minimum order.
+          </p>
+        )}
+
+        {quoteError && (
+          <p className="rounded-2xl bg-red-50 px-4 py-3 text-[13px] font-semibold text-red-700">
+            We couldn&apos;t price this order. {quoteError}
+          </p>
+        )}
 
         {!platformOpen ? (
           <p className="rounded-2xl bg-zinc-900 px-4 py-3 text-[13px] font-semibold text-zinc-100">
@@ -657,7 +700,7 @@ export default function CheckoutPage() {
               You pay
             </p>
             <p className="font-display text-[18px] font-extrabold tracking-tight text-[var(--color-ink)]">
-              {formatPrice(total)}
+              {total !== null ? formatPrice(total) : "—"}
             </p>
           </div>
           <Button
@@ -668,13 +711,7 @@ export default function CheckoutPage() {
             loading={step === "paying"}
             className="flex-1"
           >
-            {step === "paying"
-              ? "Placing order…"
-              : method === "cash"
-              ? "Place order"
-              : method === "wallet"
-              ? "Pay from wallet"
-              : "Pay & place order"}
+            {payLabel}
           </Button>
         </div>
         </div>
@@ -688,7 +725,7 @@ export default function CheckoutPage() {
               You pay
             </p>
             <p className="font-display text-[18px] font-extrabold tracking-tight text-[var(--color-ink)]">
-              {formatPrice(total)}
+              {total !== null ? formatPrice(total) : "—"}
             </p>
           </div>
           <Button
@@ -699,13 +736,7 @@ export default function CheckoutPage() {
             loading={step === "paying"}
             className="flex-1"
           >
-            {step === "paying"
-              ? "Placing order…"
-              : method === "cash"
-              ? "Place order"
-              : method === "wallet"
-              ? "Pay from wallet"
-              : "Pay & place order"}
+            {payLabel}
           </Button>
         </div>
       </div>
@@ -947,6 +978,13 @@ function SuccessView({
 
           <div className="mt-4 space-y-1 border-t border-dashed border-[var(--color-line)] pt-3">
             <Row k="Subtotal" v={formatPrice(receipt.subtotal)} />
+            {receipt.discount > 0 && (
+              <Row
+                k="Discount"
+                v={`− ${formatPrice(receipt.discount)}`}
+                tone="success"
+              />
+            )}
             <Row k="Delivery fee" v={formatPrice(receipt.deliveryFee)} />
             <Row k="Service fee" v={formatPrice(receipt.serviceFee)} />
           </div>

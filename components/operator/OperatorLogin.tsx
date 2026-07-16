@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/Button";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/useToast";
 import { cn } from "@/lib/utils";
+import { ADMIN_URL } from "@/lib/site";
 import type { UserRole } from "@/types";
 
 interface OperatorLoginConfig {
@@ -27,18 +28,12 @@ interface OperatorLoginConfig {
   sibling: { label: string; href: string };
 }
 
-const CONFIGS: Record<"admin" | "rider", OperatorLoginConfig> = {
-  admin: {
-    role: "admin",
-    home: "/admin",
-    title: "Ops console",
-    subtitle: "Orders, stores, riders and payouts — run the whole town from here.",
-    welcomeTitle: "Welcome back",
-    welcomeBody: "Admin console unlocked on this device.",
-    tileClassName: "bg-[var(--color-ink)] text-[var(--color-accent)]",
-    accentGlowClassName: "bg-[var(--color-ink)]/[0.08]",
-    sibling: { label: "Rider console", href: "/rider/login" },
-  },
+/**
+ * The admin console moved to its own subdomain, so its sign-in no longer lives
+ * here — only the rider variant remains. The config shape is kept so a second
+ * operator console can be added back without reworking the component.
+ */
+const CONFIGS: Record<"rider", OperatorLoginConfig> = {
   rider: {
     role: "rider",
     home: "/rider",
@@ -49,11 +44,11 @@ const CONFIGS: Record<"admin" | "rider", OperatorLoginConfig> = {
     tileClassName:
       "bg-gradient-to-br from-[#f96e22] via-[#e64e0e] to-[#c43e04] text-white",
     accentGlowClassName: "bg-[var(--color-primary)]/[0.12]",
-    sibling: { label: "Ops console", href: "/admin/login" },
+    sibling: { label: "Ops console", href: `${ADMIN_URL}/login` },
   },
 };
 
-export function OperatorLogin({ variant }: { variant: "admin" | "rider" }) {
+export function OperatorLogin({ variant }: { variant: "rider" }) {
   const config = CONFIGS[variant];
   const router = useRouter();
   const { user, ready, signIn } = useAuth();
@@ -184,12 +179,12 @@ export function OperatorLogin({ variant }: { variant: "admin" | "rider" }) {
 
               <p className="mt-5 text-center text-[12px] text-[var(--color-ink-muted)]">
                 Looking for the{" "}
-                <Link
+                <a
                   href={config.sibling.href}
                   className="font-bold text-[var(--color-primary)] underline-offset-2 hover:underline"
                 >
                   {config.sibling.label}
-                </Link>
+                </a>
                 ?
               </p>
             </div>

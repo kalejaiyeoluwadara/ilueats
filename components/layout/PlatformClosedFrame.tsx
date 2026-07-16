@@ -6,7 +6,7 @@ import { usePlatformStatus } from "@/context/PlatformStatusContext";
 import { cn } from "@/lib/utils";
 
 /** Console routes keep full color/control even while the storefront is closed. */
-const EXEMPT_PREFIXES = ["/admin", "/rider"];
+const EXEMPT_PREFIXES = ["/rider"];
 
 function formatTime12h(hhmm: string): string {
   const [h, m] = hhmm.split(":").map(Number);

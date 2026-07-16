@@ -845,6 +845,67 @@ export function AdminMenuItemModal({
           <button
             type="button"
             className="flex w-full items-center justify-between gap-2 text-left"
+            aria-expanded={moreOpen}
+            onClick={() => setMoreOpen((x) => !x)}
+          >
+            <span className="text-[13px] font-bold text-[var(--color-ink)]">
+              More details
+              <span className="ml-2 text-[11.5px] font-medium text-[var(--color-ink-muted)]">
+                URL slug · rating · reviews
+              </span>
+            </span>
+            {moreOpen ? (
+              <ChevronDownIcon className="h-5 w-5 shrink-0 text-[var(--color-ink-soft)]" />
+            ) : (
+              <ChevronRightIcon className="h-5 w-5 shrink-0 text-[var(--color-ink-soft)]" />
+            )}
+          </button>
+          {moreOpen ? (
+            <div className="mt-3 space-y-3">
+              <div>
+                <label className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-[var(--color-ink-soft)]">
+                  URL slug
+                </label>
+                <input
+                  className={field}
+                  value={slug}
+                  onChange={(e) => setSlug(e.target.value)}
+                  placeholder={slugify(name) || "auto from dish name when empty"}
+                />
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-[var(--color-ink-soft)]">
+                    Rating (optional)
+                  </label>
+                  <input
+                    className={field}
+                    inputMode="decimal"
+                    value={rating}
+                    onChange={(e) => setRating(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-[var(--color-ink-soft)]">
+                    Reviews count (optional)
+                  </label>
+                  <input
+                    className={field}
+                    inputMode="numeric"
+                    value={reviews}
+                    onChange={(e) => setReviews(e.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
+          ) : null}
+        </div>
+
+        <div className="rounded-2xl border border-[var(--color-line)] bg-[var(--color-surface)] p-3">
+          <button
+            type="button"
+            className="flex w-full items-center justify-between gap-2 text-left"
+            aria-expanded={advancedOpen}
             onClick={() => setAdvancedOpen((x) => !x)}
           >
             <span className="text-[13px] font-bold text-[var(--color-ink)]">

@@ -130,7 +130,12 @@ export default function AdminRidersPage() {
       <div className="rounded-[1.25rem] bg-[var(--color-surface)] shadow-crisp ring-1 ring-[var(--color-line)]">
         {error ? (
           <div className="p-4">
-            <ErrorState message={error} onRetry={fetchRiders} />
+            <ErrorState
+              variant="inline"
+              title="Riders didn't load"
+              message={error}
+              onRetry={fetchRiders}
+            />
           </div>
         ) : !loading && riders.length === 0 ? (
           <div className="p-8">

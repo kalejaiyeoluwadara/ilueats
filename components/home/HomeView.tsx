@@ -118,7 +118,11 @@ export function HomeView({ initialFeatured }: { initialFeatured?: Product[] }) {
               ))}
             </div>
           ) : storesError ? (
-            <ErrorState message={storesError} onRetry={refetch} />
+            <ErrorState
+              title="Stores didn't load"
+              message={storesError}
+              onRetry={refetch}
+            />
           ) : filteredStores.length === 0 ? (
             <EmptyState
               title="Nothing here yet"

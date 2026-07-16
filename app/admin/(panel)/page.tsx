@@ -179,7 +179,7 @@ export default function AdminDashboardPage() {
       </div>
 
       {kpisError ? (
-        <ErrorState message={kpisError} />
+        <ErrorState title="Today's numbers didn't load" message={kpisError} />
       ) : (
         <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {kpiCards.map((k) => {
@@ -304,7 +304,11 @@ export default function AdminDashboardPage() {
 
           {activityError ? (
             <div className="mt-4">
-              <ErrorState message={activityError} />
+              <ErrorState
+                variant="inline"
+                title="Activity didn't load"
+                message={activityError}
+              />
             </div>
           ) : activityLoading ? (
             <ul className="mt-4 space-y-3">

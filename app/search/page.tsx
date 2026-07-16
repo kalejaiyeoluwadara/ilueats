@@ -183,7 +183,7 @@ function SearchPageInner() {
         ) : searchLoading ? (
           <SearchPageSkeleton />
         ) : searchError ? (
-          <ErrorState message={searchError} />
+          <ErrorState title="The search didn't run" message={searchError} />
         ) : totalResults === 0 ? (
           <NoResults query={trimmed} />
         ) : (

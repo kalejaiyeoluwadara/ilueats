@@ -140,7 +140,12 @@ export default function AdminOrdersPage() {
 
         {error ? (
           <div className="p-4">
-            <ErrorState message={error} onRetry={refresh} />
+            <ErrorState
+              variant="inline"
+              title="Orders didn't load"
+              message={error}
+              onRetry={refresh}
+            />
           </div>
         ) : (
           <div className="overflow-x-auto">

@@ -182,7 +182,12 @@ export default function AdminUsersPage() {
       <div className="rounded-[1.25rem] bg-[var(--color-surface)] shadow-crisp ring-1 ring-[var(--color-line)]">
         {error ? (
           <div className="p-4">
-            <ErrorState message={error} onRetry={fetchUsers} />
+            <ErrorState
+              variant="inline"
+              title="Users didn't load"
+              message={error}
+              onRetry={fetchUsers}
+            />
           </div>
         ) : !loading && users.length === 0 ? (
           <div className="p-8">

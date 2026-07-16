@@ -18,7 +18,6 @@ import { BottomNav } from "@/components/layout/BottomNav";
 import { Button } from "@/components/ui/Button";
 import { WalletCard } from "@/components/wallet/WalletCard";
 import { FoodAvatar } from "@/components/account/FoodAvatar";
-import { ErrorState } from "@/components/ui/EmptyState";
 import { useAuth } from "@/hooks/useAuth";
 import { useWallet } from "@/hooks/useWallet";
 import { useToast } from "@/hooks/useToast";

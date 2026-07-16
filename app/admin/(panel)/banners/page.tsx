@@ -93,7 +93,11 @@ export default function AdminBannersPage() {
       {loading ? (
         <ContentLoader message="Loading banners…" />
       ) : error ? (
-        <ErrorState message={error} onRetry={refetch} />
+        <ErrorState
+          title="Banners didn't load"
+          message={error}
+          onRetry={refetch}
+        />
       ) : banners.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-[var(--color-line)] bg-[var(--color-surface)] p-10 text-center">
           <p className="text-[14px] font-semibold text-[var(--color-ink)]">

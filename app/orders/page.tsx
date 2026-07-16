@@ -274,7 +274,11 @@ export default function OrdersPage() {
       <div className="min-h-screen pb-24">
         <Navbar variant="page" title="Your orders" showSearch={false} />
         <main className="mx-auto max-w-2xl px-4 pt-12">
-          <ErrorState message={error} onRetry={fetchOrders} />
+          <ErrorState
+            title="Your orders didn't load"
+            message={error}
+            onRetry={fetchOrders}
+          />
         </main>
         <BottomNav />
       </div>

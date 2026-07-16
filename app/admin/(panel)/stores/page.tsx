@@ -406,7 +406,11 @@ export default function AdminStoresPage() {
       {storesLoading ? (
         <AdminStoreGridSkeleton count={STORES_PAGE_SIZE} />
       ) : storesError ? (
-        <ErrorState message={storesError} onRetry={refetchStores} />
+        <ErrorState
+          title="Stores didn't load"
+          message={storesError}
+          onRetry={refetchStores}
+        />
       ) : storeTotal === 0 ? (
         <div className="rounded-[1.25rem] border border-dashed border-[var(--color-line)] bg-[var(--color-surface)] p-12 text-center shadow-crisp ring-1 ring-black/[0.02]">
           <p className="text-[15px] font-extrabold text-[var(--color-ink)]">

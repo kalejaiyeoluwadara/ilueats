@@ -80,7 +80,7 @@ export default function FavoritesPage() {
             ))}
           </div>
         ) : error ? (
-          <ErrorState message={error} />
+          <ErrorState title="Your favourites didn't load" message={error} />
         ) : items.length === 0 ? (
           <div className="flex flex-col items-center px-4 pt-14 text-center">
             <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[var(--color-primary-soft)]">

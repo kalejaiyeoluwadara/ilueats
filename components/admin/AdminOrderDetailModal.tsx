@@ -149,7 +149,14 @@ export function AdminOrderDetailModal({
       {loading ? (
         <AdminOrderDetailSkeleton />
       ) : error ? (
-        <ErrorState message={error} onRetry={() => orderId && loadOrder(orderId)} />
+        <ErrorState
+          variant="inline"
+          title="This order didn't load"
+          message={error}
+          onRetry={() => {
+            if (orderId) return loadOrder(orderId);
+          }}
+        />
       ) : order && badge ? (
         <AdminOrderDetailBody
           order={order}

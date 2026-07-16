@@ -163,8 +163,18 @@ export default function OrderTrackingPage() {
         <Navbar variant="page" title="Track order" showSearch={false} />
         <main className="mx-auto max-w-2xl px-4 pt-12">
           <ErrorState
-            message={error ?? "Order not found."}
+            variant="page"
+            title="This order didn't load"
+            message={error ?? "No order matches that code. Check it and try again."}
             onRetry={() => fetchOrder()}
+            action={
+              <Link
+                href="/orders"
+                className="text-[13px] font-semibold text-[var(--color-ink-muted)] underline underline-offset-4 transition-colors hover:text-[var(--color-ink)]"
+              >
+                See all your orders
+              </Link>
+            }
           />
         </main>
         <BottomNav />

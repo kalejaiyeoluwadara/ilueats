@@ -181,7 +181,11 @@ export default function StoresPage() {
               ))}
             </div>
           ) : error ? (
-            <ErrorState message={error} onRetry={refetch} />
+            <ErrorState
+              title="Stores didn't load"
+              message={error}
+              onRetry={refetch}
+            />
           ) : visibleStores.length === 0 ? (
             <EmptyState
               title="No stores match"

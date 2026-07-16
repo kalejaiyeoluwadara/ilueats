@@ -910,7 +910,11 @@ export function AdminStoreMenuModal({
         {loading ? (
           <ContentLoader message="Loading menu…" />
         ) : error ? (
-          <ErrorState message={error} />
+          <ErrorState
+            variant="inline"
+            title="The menu didn't load"
+            message={error}
+          />
         ) : sorted.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-[var(--color-line)] bg-[var(--color-bg)] p-8 text-center">
             <p className="text-[14px] font-bold text-[var(--color-ink)]">

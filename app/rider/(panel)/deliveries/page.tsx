@@ -155,7 +155,15 @@ export default function RiderDeliveriesPage() {
   };
 
   if (!ready) return <PageLoader fillScreen={false} />;
-  if (loadError) return <ErrorState message={loadError} onRetry={refresh} />;
+  if (loadError)
+    return (
+      <ErrorState
+        variant="page"
+        title="Your deliveries didn't load"
+        message={loadError}
+        onRetry={refresh}
+      />
+    );
 
   return (
     <div className="space-y-6">

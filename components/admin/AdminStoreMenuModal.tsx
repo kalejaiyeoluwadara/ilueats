@@ -10,6 +10,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
+import { ImageUploadField } from "@/components/ui/ImageUploadField";
 import { ContentLoader } from "@/components/ui/Loaders";
 import { ErrorState } from "@/components/ui/EmptyState";
 import { categories } from "@/data/mockData";
@@ -236,6 +237,7 @@ export function AdminMenuItemModal({
   const [image, setImage] = useState(
     "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&w=1200&q=80"
   );
+  const [imageUploading, setImageUploading] = useState(false);
   const [isPopular, setIsPopular] = useState(false);
   const [isNew, setIsNew] = useState(false);
   const [rating, setRating] = useState("");
@@ -306,7 +308,8 @@ export function AdminMenuItemModal({
 
   const canSave =
     name.trim().length > 0 &&
-    Number.isFinite(Number(String(price).replace(/,/g, "")));
+    Number.isFinite(Number(String(price).replace(/,/g, ""))) &&
+    !imageUploading;
 
   const footer = useMemo(
     () => (
@@ -320,11 +323,15 @@ export function AdminMenuItemModal({
           fullWidth
           disabled={!canSave}
         >
-          {mode === "add" ? "Add dish" : "Save dish"}
+          {imageUploading
+            ? "Uploading…"
+            : mode === "add"
+              ? "Add dish"
+              : "Save dish"}
         </Button>
       </div>
     ),
-    [onClose, canSave, mode]
+    [onClose, canSave, mode, imageUploading]
   );
 
   const onSubmit = (e: React.FormEvent) => {
@@ -452,17 +459,15 @@ export function AdminMenuItemModal({
               ))}
             </select>
           </div>
-          <div>
-            <label className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-[var(--color-ink-soft)]">
-              Image URL *
-            </label>
-            <input
-              className={field}
-              required
-              value={image}
-              onChange={(e) => setImage(e.target.value)}
-            />
-          </div>
+          <ImageUploadField
+            label="Item image"
+            folder="menu-items"
+            aspect="4 / 3"
+            required
+            value={image}
+            onChange={setImage}
+            onUploadingChange={setImageUploading}
+          />
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
           <div>

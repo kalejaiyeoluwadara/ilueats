@@ -63,9 +63,9 @@ export default function AdminBannersPage() {
         mode="add"
         initial={null}
         onClose={() => setAddOpen(false)}
-        onSave={async (payload, file) => {
+        onSave={async (payload) => {
           try {
-            const created = await addBanner(payload, file);
+            const created = await addBanner(payload);
             success("Banner added", `${created.title} will show on the home feed.`);
           } catch {
             errorToast("Couldn't add banner", "Please check the image and try again.");
@@ -78,10 +78,10 @@ export default function AdminBannersPage() {
         mode="edit"
         initial={editSlide}
         onClose={() => setEditSlide(null)}
-        onSave={async (payload, file) => {
+        onSave={async (payload) => {
           if (!editSlide) return;
           try {
-            await updateBanner(editSlide.id, payload, file);
+            await updateBanner(editSlide.id, payload);
             success("Banner updated", `${payload.title.trim()} saved.`);
             setEditSlide(null);
           } catch {

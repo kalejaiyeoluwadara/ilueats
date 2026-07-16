@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
+import { ImageUploadField } from "@/components/ui/ImageUploadField";
 import { categories } from "@/data/mockData";
 import { cn } from "@/lib/utils";
 import type { CategoryId, Store } from "@/types";
@@ -104,6 +105,8 @@ export function AdminStoreUpsertModal({
   const [form, setForm] = useState<FormState>(defaultForm);
   const [catSelection, setCatSelection] = useState<CategoryId[]>(["snacks"]);
   const [err, setErr] = useState<string | null>(null);
+  const [imageUploading, setImageUploading] = useState(false);
+  const [coverUploading, setCoverUploading] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -131,7 +134,10 @@ export function AdminStoreUpsertModal({
     });
   };
 
-  const canSubmit = form.name.trim().length > 0;
+  const uploading = imageUploading || coverUploading;
+  // Saving mid-upload would persist the previous image URL and silently discard
+  // the file the admin just picked.
+  const canSubmit = form.name.trim().length > 0 && !uploading;
 
   const footer = useMemo(
     () => (
@@ -145,11 +151,15 @@ export function AdminStoreUpsertModal({
           fullWidth
           disabled={!canSubmit}
         >
-          {mode === "add" ? "Create store" : "Save changes"}
+          {uploading
+            ? "Uploading…"
+            : mode === "add"
+              ? "Create store"
+              : "Save changes"}
         </Button>
       </div>
     ),
-    [onClose, canSubmit, mode]
+    [onClose, canSubmit, mode, uploading]
   );
 
   const onSubmit = (e: React.FormEvent) => {
@@ -304,26 +314,24 @@ export function AdminStoreUpsertModal({
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2">
-          <div>
-            <label className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-[var(--color-ink-soft)]">
-              Logo / tile image URL
-            </label>
-            <input
-              className={field}
-              value={form.image}
-              onChange={(e) => setForm((f) => ({ ...f, image: e.target.value }))}
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-[var(--color-ink-soft)]">
-              Cover image URL
-            </label>
-            <input
-              className={field}
-              value={form.cover}
-              onChange={(e) => setForm((f) => ({ ...f, cover: e.target.value }))}
-            />
-          </div>
+          <ImageUploadField
+            label="Logo / tile image"
+            folder="stores"
+            aspect="1 / 1"
+            value={form.image}
+            onChange={(url) => setForm((f) => ({ ...f, image: url }))}
+            onUploadingChange={setImageUploading}
+            hint="Square art shown on store cards."
+          />
+          <ImageUploadField
+            label="Cover image"
+            folder="stores"
+            aspect="16 / 9"
+            value={form.cover}
+            onChange={(url) => setForm((f) => ({ ...f, cover: url }))}
+            onUploadingChange={setCoverUploading}
+            hint="Wide banner at the top of the store page."
+          />
           <div>
             <label className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-[var(--color-ink-soft)]">
               Delivery ETA (min) · from

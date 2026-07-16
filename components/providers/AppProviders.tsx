@@ -12,6 +12,7 @@ import { OrdersProvider } from "@/context/OrdersContext";
 import { PlatformStatusProvider } from "@/context/PlatformStatusContext";
 import { SearchProvider } from "@/context/SearchContext";
 import { ToastProvider } from "@/context/ToastContext";
+import { ChunkErrorReloader } from "@/components/layout/ChunkErrorReloader";
 import { PlatformClosedFrame } from "@/components/layout/PlatformClosedFrame";
 import { PWAInstallPrompt } from "@/components/layout/PWAInstallPrompt";
 import type { AdSlide, Store } from "@/types";
@@ -37,13 +38,18 @@ export function AppProviders({
     ) {
       navigator.serviceWorker
         .register("/sw.js")
-        .then((reg) => console.log("[PWA] Service Worker registered with scope:", reg.scope))
+        .then((reg) => {
+          // Browsers can serve sw.js itself from cache for up to 24h, which would
+          // strand users on an old caching strategy. Check for a new one on load.
+          reg.update().catch(() => {});
+        })
         .catch((err) => console.error("[PWA] Service Worker registration failed:", err));
     }
   }, []);
 
   return (
     <SessionProvider>
+    <ChunkErrorReloader />
     <ToastProvider>
       <AuthProvider>
         {/* Catalog must wrap SearchProvider so SearchModal (sibling to pages) sees the same snapshot. */}

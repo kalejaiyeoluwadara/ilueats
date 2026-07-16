@@ -3,6 +3,7 @@
 import { useMemo, useState, use } from "react";
 import { notFound, useRouter } from "next/navigation";
 import Image from "next/image";
+import Link from "next/link";
 import { motion } from "framer-motion";
 import { CheckIcon, StarIcon } from "@heroicons/react/24/solid";
 import { FavoriteButton } from "@/components/favorites/FavoriteButton";
@@ -14,6 +15,7 @@ import { Modal } from "@/components/ui/Modal";
 import { ErrorState } from "@/components/ui/EmptyState";
 import { ProductPageSkeleton } from "@/components/ui/Skeletons";
 import { useProduct, useStore } from "@/hooks/useCatalogQueries";
+import { LOAD_FAILED_FALLBACK } from "@/lib/api/client";
 import { cn, formatPrice } from "@/lib/utils";
 import { useCart } from "@/hooks/useCart";
 import { useToast } from "@/hooks/useToast";
@@ -426,13 +428,19 @@ function ProductPageContent({
 
 export default function ProductPage({ params }: PageProps) {
   const { store: storeSlug, product: productSlug } = use(params);
-  const { store, loading: storeLoading, error: storeError, notFound: storeNotFound } =
-    useStore(storeSlug);
+  const {
+    store,
+    loading: storeLoading,
+    error: storeError,
+    notFound: storeNotFound,
+    refetch: refetchStore,
+  } = useStore(storeSlug);
   const {
     product,
     loading: productLoading,
     error: productError,
     notFound: productNotFound,
+    refetch: refetchProduct,
   } = useProduct(storeSlug, productSlug);
 
   if (storeNotFound || productNotFound) {
@@ -446,7 +454,20 @@ export default function ProductPage({ params }: PageProps) {
   if (storeError || productError || !store || !product) {
     return (
       <div className="min-h-screen px-4 pt-24">
-        <ErrorState message={storeError ?? productError ?? "Couldn't load this dish."} />
+        <ErrorState
+          variant="page"
+          title="This dish didn't load"
+          message={storeError ?? productError ?? LOAD_FAILED_FALLBACK}
+          onRetry={() => Promise.all([refetchStore(), refetchProduct()])}
+          action={
+            <Link
+              href={`/${storeSlug}`}
+              className="text-[13px] font-semibold text-[var(--color-ink-muted)] underline underline-offset-4 transition-colors hover:text-[var(--color-ink)]"
+            >
+              Back to the menu
+            </Link>
+          }
+        />
       </div>
     );
   }

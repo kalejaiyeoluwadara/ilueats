@@ -90,7 +90,14 @@ export default function RiderProfilePage() {
 
   if (!ready) return <PageLoader fillScreen={false} />;
   if (error || !profile) {
-    return <ErrorState message={error ?? undefined} onRetry={load} />;
+    return (
+      <ErrorState
+        variant="page"
+        title="Your profile didn't load"
+        message={error ?? undefined}
+        onRetry={load}
+      />
+    );
   }
 
   return (

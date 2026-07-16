@@ -71,7 +71,15 @@ export default function RiderEarningsPage() {
   };
 
   if (!ready) return <PageLoader fillScreen={false} />;
-  if (error || !summary) return <ErrorState message={error ?? undefined} onRetry={load} />;
+  if (error || !summary)
+    return (
+      <ErrorState
+        variant="page"
+        title="Your earnings didn't load"
+        message={error ?? undefined}
+        onRetry={load}
+      />
+    );
 
   const breakdown = [
     { label: "Base payouts", amount: summary.basePayouts },

@@ -102,7 +102,7 @@ export default function CartPage() {
 
             <div className="lg:sticky lg:top-24">
               <section className="px-4 pt-5 lg:px-0 lg:pt-3">
-                <CartSummary subtotal={subtotal} total={subtotal} />
+                <CartSummary subtotal={subtotal} />
               </section>
 
               {storeSlug && (
@@ -134,7 +134,7 @@ export default function CartPage() {
                     disabled={belowMin}
                     rightIcon={<ArrowRightIcon className="h-4 w-4" />}
                   >
-                    Checkout · {formatPrice(subtotal + deliveryFee)}
+                    Checkout · {formatPrice(subtotal)}
                   </Button>
                 </Link>
               </div>
@@ -158,7 +158,7 @@ export default function CartPage() {
                 disabled={belowMin}
                 rightIcon={<ArrowRightIcon className="h-4 w-4" />}
               >
-                Checkout · {formatPrice(subtotal + deliveryFee)}
+                Checkout · {formatPrice(subtotal)}
               </Button>
             </Link>
           </div>

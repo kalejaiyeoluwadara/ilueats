@@ -67,7 +67,15 @@ export default function RiderTodayPage() {
   };
 
   if (!ready) return <PageLoader fillScreen={false} />;
-  if (error) return <ErrorState message={error} onRetry={refresh} />;
+  if (error)
+    return (
+      <ErrorState
+        variant="page"
+        title="Your shift didn't load"
+        message={error}
+        onRetry={refresh}
+      />
+    );
 
   return (
     <div className="space-y-6">

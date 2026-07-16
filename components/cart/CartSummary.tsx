@@ -4,20 +4,28 @@ import { formatPrice } from "@/lib/utils";
 
 interface CartSummaryProps {
   subtotal: number;
-  deliveryFee: number;
-  serviceFee?: number;
+  /** `null` when the fee isn't known yet (no address/quote) — shown as pending. */
+  deliveryFee?: number | null;
+  serviceFee?: number | null;
   discount?: number;
+  /**
+   * The authoritative total from the backend quote. Always pass this when a
+   * quote exists: fees are the backend's to decide, and re-deriving the total
+   * here is how the displayed price drifts from the charged one.
+   */
+  total?: number | null;
   className?: string;
 }
 
 export function CartSummary({
   subtotal,
-  deliveryFee,
-  serviceFee = 0,
+  deliveryFee = null,
+  serviceFee = null,
   discount = 0,
+  total = null,
   className,
 }: CartSummaryProps) {
-  const total = Math.max(0, subtotal + deliveryFee + serviceFee - discount);
+  const pending = deliveryFee === null;
 
   return (
     <div
@@ -30,8 +38,12 @@ export function CartSummary({
       </h3>
       <dl className="mt-2 space-y-1.5 text-[13.5px]">
         <Row label="Subtotal" value={formatPrice(subtotal)} />
-        <Row label="Delivery fee" value={formatPrice(deliveryFee)} />
-        {serviceFee > 0 && (
+        <Row
+          label="Delivery fee"
+          value={deliveryFee === null ? "—" : formatPrice(deliveryFee)}
+          muted={deliveryFee === null}
+        />
+        {serviceFee !== null && serviceFee > 0 && (
           <Row label="Service fee" value={formatPrice(serviceFee)} />
         )}
         {discount > 0 && (
@@ -47,9 +59,15 @@ export function CartSummary({
           Total
         </span>
         <span className="font-display text-[19px] font-extrabold tracking-tight text-[var(--color-primary)]">
-          {formatPrice(total)}
+          {total !== null ? formatPrice(total) : "—"}
         </span>
       </div>
+      {pending && (
+        <p className="mt-2 text-[12px] text-[var(--color-ink-muted)]">
+          Delivery and fees are calculated at checkout once we know where
+          you&apos;re sending it.
+        </p>
+      )}
     </div>
   );
 }
@@ -58,10 +76,12 @@ function Row({
   label,
   value,
   tone,
+  muted,
 }: {
   label: string;
   value: string;
   tone?: "success";
+  muted?: boolean;
 }) {
   return (
     <div className="flex items-center justify-between">
@@ -70,7 +90,9 @@ function Row({
         className={`font-semibold ${
           tone === "success"
             ? "text-[var(--color-success)]"
-            : "text-[var(--color-ink)]"
+            : muted
+              ? "text-[var(--color-ink-soft)]"
+              : "text-[var(--color-ink)]"
         }`}
       >
         {value}

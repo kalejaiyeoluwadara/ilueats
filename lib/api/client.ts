@@ -25,6 +25,8 @@ type ApiFetchOptions = {
   auth?: boolean;
   /** Seconds to cache the response for when called during a server render. */
   revalidate?: number;
+  /** Aborts the request — e.g. to drop a stale response that a newer one supersedes. */
+  signal?: AbortSignal;
 };
 
 function buildUrl(path: string, query?: ApiFetchOptions["query"]) {
@@ -55,6 +57,7 @@ export async function apiFetch<T>(
 
   const res = await fetch(buildUrl(path, options.query), {
     method: options.method ?? "GET",
+    signal: options.signal,
     headers: {
       ...(!isFormData && { "Content-Type": "application/json" }),
       ...(token && { Authorization: `Bearer ${token}` }),

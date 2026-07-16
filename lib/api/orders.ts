@@ -78,17 +78,51 @@ export interface CreateOrderItemInput {
   notes?: string;
 }
 
-export interface CreateOrderInput {
+/** Everything the backend needs to price a basket. */
+export interface QuoteOrderInput {
   storeId: string;
-  storeSlug: string;
   items: CreateOrderItemInput[];
   deliveryMode: BackendDeliveryMode;
-  address?: string;
   landmarkId?: string;
+  /** Drop-off coordinates. Without these, door delivery falls back to the
+   * store's flat fee instead of being priced by distance. */
+  deliveryLat?: number;
+  deliveryLng?: number;
+  referralCode?: string;
+}
+
+export interface OrderQuote {
+  subtotal: number;
+  referralCode: string | null;
+  discount: number;
+  deliveryFee: number;
+  serviceFee: number;
+  total: number;
+  deliveryDistanceKm: number | null;
+  minOrder: number;
+  meetsMinimum: boolean;
+}
+
+export interface CreateOrderInput extends QuoteOrderInput {
+  storeSlug: string;
+  address?: string;
   contactName: string;
   contactPhone: string;
   notes?: string;
   paymentMethod: BackendPaymentMethod;
+}
+
+/**
+ * Prices a basket for display. The checkout total must always come from here
+ * rather than being recomputed client-side — the backend is the authority on
+ * what the customer will actually be charged.
+ */
+export function quoteOrder(input: QuoteOrderInput, signal?: AbortSignal) {
+  return apiFetch<OrderQuote>("/orders/quote", {
+    method: "POST",
+    body: input,
+    signal,
+  });
 }
 
 export interface CreateOrderResult {
@@ -97,6 +131,8 @@ export interface CreateOrderResult {
   paymentStatus: BackendPaymentStatus;
   paymentRequired: boolean;
   subtotal: number;
+  referralCode: string | null;
+  discount: number;
   deliveryFee: number;
   serviceFee: number;
   total: number;

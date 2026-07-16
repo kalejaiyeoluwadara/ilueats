@@ -29,7 +29,12 @@ import { useCatalog } from "@/context/CatalogContext";
 import { useOrders } from "@/context/OrdersContext";
 import { usePlatformStatus } from "@/context/PlatformStatusContext";
 import { fetchLandmarks, type Landmark } from "@/lib/api/landmarks";
-import { createOrder as createBackendOrder } from "@/lib/api/orders";
+import {
+  createOrder as createBackendOrder,
+  quoteOrder,
+  type OrderQuote,
+  type QuoteOrderInput,
+} from "@/lib/api/orders";
 import { initializePayment, verifyPayment } from "@/lib/api/payments";
 import { ApiError } from "@/lib/api/client";
 import { resumePaystackTransaction } from "@/lib/paystack";
@@ -73,13 +78,6 @@ export default function CheckoutPage() {
     () => (storeSlug ? stores.find((s) => s.slug === storeSlug) : undefined),
     [storeSlug, stores]
   );
-  const deliveryFee = store?.deliveryFee ?? 0;
-  // Platform & handling — 5% of the basket, ₦100 floor / ₦500 cap (demo pricing).
-  const serviceFee =
-    subtotal > 0
-      ? Math.min(500, Math.max(100, Math.round((subtotal * 0.05) / 50) * 50))
-      : 0;
-  const total = subtotal + deliveryFee + serviceFee;
 
   const [step, setStep] = useState<"form" | "paying" | "done">("form");
   const [name, setName] = useState("");
@@ -94,6 +92,64 @@ export default function CheckoutPage() {
   // Snapshot the order (items, fees, delivery) before clearCart() empties it,
   // so the success page can render the full order details.
   const [receipt, setReceipt] = useState<OrderReceipt | null>(null);
+
+  // Fees and total come from the backend, never from arithmetic here. It is the
+  // side that charges the card, so it is the only side allowed to decide the
+  // number we show — computing it locally is how "shown ₦300, charged ₦850"
+  // happens on landmark orders, where delivery is priced by distance.
+  const [quote, setQuote] = useState<OrderQuote | null>(null);
+  const [quoteError, setQuoteError] = useState<string | null>(null);
+
+  const quoteBody = useMemo<QuoteOrderInput | null>(() => {
+    if (!store || items.length === 0) return null;
+    if (deliveryMode === "landmark" && !landmarkId) return null;
+    return {
+      storeId: store.id,
+      items: items.map((it) => ({
+        productId: it.productId,
+        quantity: it.quantity,
+        selectedOptions: it.selectedOptions?.map((o) => ({
+          groupId: o.groupId,
+          choiceId: o.choiceId,
+        })),
+        notes: it.notes,
+      })),
+      deliveryMode,
+      landmarkId:
+        deliveryMode === "landmark" ? (landmarkId ?? undefined) : undefined,
+    };
+  }, [store, items, deliveryMode, landmarkId]);
+
+  // Serialized so this re-runs when the basket's *contents* change rather than
+  // on every render's fresh array identity.
+  const quoteKey = quoteBody ? JSON.stringify(quoteBody) : null;
+
+  useEffect(() => {
+    if (!quoteKey || !session?.accessToken) {
+      setQuote(null);
+      return;
+    }
+    const controller = new AbortController();
+    setQuoteError(null);
+    quoteOrder(JSON.parse(quoteKey) as QuoteOrderInput, controller.signal)
+      .then(setQuote)
+      .catch((err: unknown) => {
+        if (controller.signal.aborted) return;
+        setQuote(null);
+        setQuoteError(
+          err instanceof ApiError
+            ? err.message
+            : "We couldn't price this order. Check your connection and try again."
+        );
+      });
+    return () => controller.abort();
+  }, [quoteKey, session?.accessToken]);
+
+  const deliveryFee = quote?.deliveryFee ?? null;
+  const serviceFee = quote?.serviceFee ?? null;
+  const discount = quote?.discount ?? 0;
+  const total = quote?.total ?? null;
+  const belowMin = quote != null && !quote.meetsMinimum;
 
   // Redirect to cart if there's nothing to checkout
   useEffect(() => {
@@ -129,6 +185,9 @@ export default function CheckoutPage() {
 
   const canSubmit = useMemo(() => {
     if (!platformOpen) return false;
+    // No confirmed price means no confirmed order — never let the customer
+    // authorise a charge whose amount we haven't shown them yet.
+    if (!store || !quote || !quote.meetsMinimum) return false;
     const contactOk =
       name.trim().length > 1 && phone.trim().length >= 7;
     if (!contactOk) return false;
@@ -136,7 +195,16 @@ export default function CheckoutPage() {
       return address.trim().length > 4;
     }
     return landmarkId !== null;
-  }, [platformOpen, name, phone, address, deliveryMode, landmarkId]);
+  }, [
+    platformOpen,
+    store,
+    quote,
+    name,
+    phone,
+    address,
+    deliveryMode,
+    landmarkId,
+  ]);
 
   const paymentLabels: Record<PayMethod, string> = {
     card: "Card (demo)",

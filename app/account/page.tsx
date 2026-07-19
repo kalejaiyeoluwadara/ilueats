@@ -167,7 +167,7 @@ function AccountPageContent() {
                   </label>
                   <label className="block">
                     <span className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-[var(--color-ink-soft)]">
-                      Phone (optional)
+                      Phone 
                     </span>
                     <input
                       inputMode="tel"

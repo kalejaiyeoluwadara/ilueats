@@ -50,11 +50,13 @@ interface AddressesContextValue {
     addressLine: string;
     phone?: string;
     makeDefault?: boolean;
+    geo?: { lat: number; lng: number } | null;
+    inIlisan?: boolean;
   }) => void;
   updateAddress: (
     id: string,
     patch: Partial<
-      Pick<SavedAddress, "label" | "addressLine" | "phone" | "isDefault">
+      Pick<SavedAddress, "label" | "addressLine" | "phone" | "isDefault" | "geo">
     >
   ) => void;
   removeAddress: (id: string) => void;
@@ -104,7 +106,7 @@ export function AddressesProvider({
   }, []);
 
   const addAddress = useCallback<AddressesContextValue["addAddress"]>(
-    ({ label, addressLine, phone, makeDefault }) => {
+    ({ label, addressLine, phone, makeDefault, geo, inIlisan }) => {
       const trimmedLabel = label.trim();
       const trimmedLine = addressLine.trim();
       if (!trimmedLabel || !trimmedLine) return;
@@ -118,6 +120,8 @@ export function AddressesProvider({
           addressLine: trimmedLine,
           phone: phone?.trim() || undefined,
           isDefault: shouldDefault,
+          geo: geo ?? null,
+          inIlisan: inIlisan ?? undefined,
         };
         let merged = [...prev, next];
         if (shouldDefault) {
@@ -148,6 +152,9 @@ export function AddressesProvider({
           }
           if (patch.isDefault !== undefined) {
             updated.isDefault = patch.isDefault;
+          }
+          if (patch.geo !== undefined) {
+            updated.geo = patch.geo;
           }
           return updated;
         });

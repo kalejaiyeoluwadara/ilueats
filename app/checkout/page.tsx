@@ -29,6 +29,8 @@ import { useCatalog } from "@/context/CatalogContext";
 import { useOrders } from "@/context/OrdersContext";
 import { usePlatformStatus } from "@/context/PlatformStatusContext";
 import { fetchLandmarks, type Landmark } from "@/lib/api/landmarks";
+import { useGeolocation, PRICING_ACCURACY_M } from "@/hooks/useGeolocation";
+import { rankByDistance, formatDistance, type Ranked } from "@/lib/geo";
 import {
   createOrder as createBackendOrder,
   quoteOrder,
@@ -87,6 +89,9 @@ export default function CheckoutPage() {
   const [deliveryMode, setDeliveryMode] = useState<DeliveryMode>("door");
   const [landmarkId, setLandmarkId] = useState<string | null>(null);
   const [landmarks, setLandmarks] = useState<Landmark[]>([]);
+  // Device location — a graded hint, never trusted blindly. See useGeolocation.
+  const { status: geoStatus, reading: geo, request: requestGeo } =
+    useGeolocation();
   const [notes, setNotes] = useState("");
   const [method, setMethod] = useState<PayMethod>("transfer");
   const [orderId, setOrderId] = useState<string>("");
@@ -100,6 +105,18 @@ export default function CheckoutPage() {
   // happens on landmark orders, where delivery is priced by distance.
   const [quote, setQuote] = useState<OrderQuote | null>(null);
   const [quoteError, setQuoteError] = useState<string | null>(null);
+
+  // Only feed the pin into pricing on a door order when it's tight enough to
+  // trust — a fuzzy fix would misprice the delivery, so we let the landmark
+  // anchor those instead. Poor fixes still travel with the order as a rider
+  // hint (below), just not as the basis for the fee.
+  const pinForPricing = useMemo(
+    () =>
+      deliveryMode === "door" && geo && geo.accuracy <= PRICING_ACCURACY_M
+        ? { lat: geo.lat, lng: geo.lng }
+        : null,
+    [deliveryMode, geo]
+  );
 
   const quoteBody = useMemo<QuoteOrderInput | null>(() => {
     if (!store || items.length === 0) return null;
@@ -118,8 +135,18 @@ export default function CheckoutPage() {
       deliveryMode,
       landmarkId:
         deliveryMode === "landmark" ? (landmarkId ?? undefined) : undefined,
+      deliveryLat: pinForPricing?.lat,
+      deliveryLng: pinForPricing?.lng,
     };
-  }, [store, items, deliveryMode, landmarkId]);
+  }, [store, items, deliveryMode, landmarkId, pinForPricing]);
+
+  // Curated landmarks sorted by how close they are to the device reading. This
+  // is the accuracy fix for a contained town: even a rough fix reliably floats
+  // the right gate/hall to the top for the customer to confirm.
+  const rankedLandmarks = useMemo<Ranked<Landmark>[]>(() => {
+    if (!geo) return landmarks.map((item) => ({ item, distanceKm: null }));
+    return rankByDistance(landmarks, geo);
+  }, [landmarks, geo]);
 
   // Serialized so this re-runs when the basket's *contents* change rather than
   // on every render's fresh array identity.
@@ -163,6 +190,14 @@ export default function CheckoutPage() {
       .then(setLandmarks)
       .catch(() => setLandmarks([]));
   }, []);
+
+  // Once we have a reading, pre-select the nearest landmark so the common case
+  // is a single tap of confirmation. Never overrides a choice the user made.
+  useEffect(() => {
+    if (deliveryMode !== "landmark" || landmarkId || !geo) return;
+    const nearest = rankedLandmarks[0];
+    if (nearest && nearest.distanceKm !== null) setLandmarkId(nearest.item.id);
+  }, [deliveryMode, landmarkId, geo, rankedLandmarks]);
 
   useEffect(() => {
     if (!authReady || !user) return;
@@ -328,6 +363,8 @@ export default function CheckoutPage() {
         deliveryMode,
         address: deliveryMode === "door" ? address.trim() : undefined,
         landmarkId: deliveryMode === "landmark" ? landmarkId ?? undefined : undefined,
+        deliveryLat: pinForPricing?.lat,
+        deliveryLng: pinForPricing?.lng,
         contactName: name.trim(),
         contactPhone: phone.trim(),
         notes: notes.trim() || undefined,
@@ -488,6 +525,94 @@ export default function CheckoutPage() {
               />
             </div>
 
+            {/* Precise-location capture. GPS is a hint we grade, not the truth:
+                a tight fix prices the door exactly; a fuzzy one just sorts the
+                landmarks so the customer confirms an accurate anchor. */}
+            <div className="rounded-xl border border-dashed border-[var(--color-line)] bg-[var(--color-bg)] p-3">
+              {!geo ? (
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-[13px] font-bold text-[var(--color-ink)]">
+                      Pinpoint your spot
+                    </p>
+                    <p className="mt-0.5 text-[12px] text-[var(--color-ink-muted)]">
+                      Share your location so the rider heads to the right place.
+                    </p>
+                    {(geoStatus === "denied" ||
+                      geoStatus === "unavailable" ||
+                      geoStatus === "timeout") && (
+                      <p className="mt-1.5 text-[12px] font-medium text-[var(--color-ink-soft)]">
+                        {geoStatus === "denied"
+                          ? "Location is off — type your address or pick a landmark below."
+                          : geoStatus === "timeout"
+                            ? "Couldn't get a fix in time. Try again, or pick a landmark below."
+                            : "Location isn't available here. Pick a landmark below."}
+                      </p>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={requestGeo}
+                    disabled={geoStatus === "locating"}
+                    className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-[var(--color-primary)] px-3.5 py-2 text-[12.5px] font-bold text-white transition disabled:opacity-60"
+                  >
+                    <MapPinIcon className="h-4 w-4" />
+                    {geoStatus === "locating" ? "Locating…" : "Use my location"}
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-start gap-2">
+                  <span
+                    className={cn(
+                      "mt-1 inline-flex h-2.5 w-2.5 shrink-0 rounded-full",
+                      geo.quality === "precise"
+                        ? "bg-emerald-500"
+                        : geo.quality === "approx"
+                          ? "bg-amber-500"
+                          : "bg-red-500"
+                    )}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[13px] font-bold text-[var(--color-ink)]">
+                      {geo.quality === "precise"
+                        ? "Location pinpointed"
+                        : geo.quality === "approx"
+                          ? "Got your location"
+                          : "Location is fuzzy"}
+                      <span className="ml-1.5 font-medium text-[var(--color-ink-muted)]">
+                        ±{Math.round(geo.accuracy)}m
+                      </span>
+                    </p>
+                    <p className="mt-0.5 text-[12px] text-[var(--color-ink-muted)]">
+                      {geo.quality === "poor"
+                        ? "Your device gave a rough fix — pick the nearest landmark below for an accurate drop-off."
+                        : deliveryMode === "door"
+                          ? "We'll price delivery to this exact point."
+                          : "Landmarks below are sorted by distance from you."}
+                    </p>
+                    <div className="mt-1.5 flex gap-4">
+                      <button
+                        type="button"
+                        onClick={requestGeo}
+                        className="text-[12px] font-bold text-[var(--color-primary)]"
+                      >
+                        Retry
+                      </button>
+                      {geo.quality === "poor" && deliveryMode === "door" && (
+                        <button
+                          type="button"
+                          onClick={() => setDeliveryMode("landmark")}
+                          className="text-[12px] font-bold text-[var(--color-primary)]"
+                        >
+                          Use a landmark
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
             {addrReady && addresses.length > 0 && deliveryMode === "door" && (
               <div className="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
                 {addresses.map((a) => {
@@ -549,21 +674,32 @@ export default function CheckoutPage() {
                   Pickup landmark
                 </span>
                 <div className="mt-2 flex flex-wrap gap-2">
-                  {landmarks.map((lm) => {
+                  {rankedLandmarks.map(({ item: lm, distanceKm }, idx) => {
                     const selected = landmarkId === lm.id;
+                    const isNearest = geo != null && idx === 0 && distanceKm != null;
                     return (
                       <button
                         key={lm.id}
                         type="button"
                         onClick={() => setLandmarkId(lm.id)}
                         className={cn(
-                          "rounded-full px-3 py-2 text-left text-[12px] font-semibold leading-snug ring-1 transition-colors",
+                          "inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-left text-[12px] font-semibold leading-snug ring-1 transition-colors",
                           selected
                             ? "bg-[var(--color-primary-soft)] text-[var(--color-primary)] ring-[var(--color-primary)]/35"
                             : "bg-[var(--color-bg)] text-[var(--color-ink)] ring-[var(--color-line)] hover:bg-black/[0.03]"
                         )}
                       >
                         {lm.name}
+                        {distanceKm != null && (
+                          <span className="font-medium opacity-70">
+                            · {formatDistance(distanceKm)}
+                          </span>
+                        )}
+                        {isNearest && (
+                          <span className="rounded-full bg-[var(--color-primary)] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white">
+                            Nearest
+                          </span>
+                        )}
                       </button>
                     );
                   })}

@@ -70,6 +70,77 @@ export function FeaturedItemsSkeleton() {
   );
 }
 
+/** Full-page skeleton for the home page — shown until the single `/home`
+ * aggregate endpoint resolves. Mirrors HomeView's section order (hero, category
+ * pills, featured dishes, featured stores, all stores) so the layout doesn't
+ * shift when real data swaps in. */
+export function HomeSkeleton() {
+  return (
+    <div className="min-h-screen pb-24 lg:pb-12">
+      <Navbar variant="home" />
+
+      <main className="mx-auto max-w-2xl lg:max-w-6xl lg:px-6">
+        {/* Hero + ad banner */}
+        <div className="lg:grid lg:grid-cols-[1.05fr_1fr] lg:items-center lg:gap-10 lg:pt-6">
+          <div className="px-4 pt-4 lg:px-0">
+            <div className="h-8 w-3/4 rounded-lg bg-[var(--color-line)] skeleton" />
+            <div className="mt-3 h-4 w-1/2 rounded bg-[var(--color-line)] skeleton" />
+            <div className="mt-5 h-12 w-full rounded-full bg-[var(--color-line)] skeleton" />
+          </div>
+          <div className="px-4 pt-4 lg:px-0">
+            <div className="aspect-[16/7] w-full rounded-2xl bg-[var(--color-line)] skeleton lg:aspect-[16/9]" />
+          </div>
+        </div>
+
+        {/* Category pills */}
+        <div className="no-scrollbar flex gap-2 overflow-x-auto px-4 pt-4 lg:pt-6">
+          {Array.from({ length: 6 }).map((_, idx) => (
+            <div
+              key={idx}
+              className="h-9 w-24 flex-none rounded-full bg-[var(--color-line)] skeleton"
+            />
+          ))}
+        </div>
+
+        {/* Featured dishes */}
+        <div className="pt-5">
+          <FeaturedItemsSkeleton />
+        </div>
+
+        {/* Featured stores (horizontal rail) */}
+        <section className="px-4 pt-5">
+          <div className="mb-3">
+            <div className="h-5 w-40 rounded bg-[var(--color-line)] skeleton" />
+            <div className="mt-1.5 h-3.5 w-28 rounded bg-[var(--color-line)] skeleton" />
+          </div>
+          <div className="no-scrollbar flex gap-3 overflow-x-auto -mx-4 px-4 pb-2">
+            {Array.from({ length: 4 }).map((_, idx) => (
+              <div key={idx} className="flex-none">
+                <StoreCardSkeleton variant="horizontal" />
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* All stores grid */}
+        <section className="px-4 pt-5">
+          <div className="mb-3">
+            <div className="h-5 w-44 rounded bg-[var(--color-line)] skeleton" />
+            <div className="mt-1.5 h-3.5 w-32 rounded bg-[var(--color-line)] skeleton" />
+          </div>
+          <div className="grid grid-cols-1 gap-8 lg:grid-cols-3 lg:gap-x-6 lg:gap-y-9">
+            {Array.from({ length: 6 }).map((_, idx) => (
+              <StoreCardSkeleton key={idx} />
+            ))}
+          </div>
+        </section>
+      </main>
+
+      <BottomNav />
+    </div>
+  );
+}
+
 /** Shimmering skeleton loader for ProductCard. */
 export function ProductCardSkeleton() {
   return (

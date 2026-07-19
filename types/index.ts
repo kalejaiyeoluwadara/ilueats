@@ -235,4 +235,9 @@ export interface SavedAddress {
   addressLine: string;
   phone?: string;
   isDefault: boolean;
+  /** Confirmed drop-off pin from GPS, when the user shared it. Feeds exact
+   * delivery pricing at checkout; null/absent falls back to the flat fee. */
+  geo?: { lat: number; lng: number } | null;
+  /** The customer confirmed this address is inside the Ilisan-Remo service area. */
+  inIlisan?: boolean;
 }

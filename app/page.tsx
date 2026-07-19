@@ -1,17 +1,19 @@
 import { HomeView } from "@/components/home/HomeView";
-import { fetchFeaturedProducts } from "@/lib/api/catalog";
+import { fetchHomepage } from "@/lib/api/home";
 
 /** Public catalog reads are identical for every visitor, so they cache well. */
-const FEATURED_REVALIDATE_SECONDS = 60;
+const HOME_REVALIDATE_SECONDS = 60;
 
 /**
- * Server component so the dishes and store cards ship inside the first HTML
- * response. Stores and banners are seeded higher up, in the root layout.
+ * Server component so the whole home page (stores, featured dishes, banners)
+ * ships inside the first HTML response from a single `/home` request. A failure
+ * here is not fatal: HomeView falls back to fetching on mount behind its
+ * skeleton.
  */
 export default async function HomePage() {
-  const featured = await fetchFeaturedProducts({
-    revalidate: FEATURED_REVALIDATE_SECONDS,
+  const initial = await fetchHomepage({
+    revalidate: HOME_REVALIDATE_SECONDS,
   }).catch(() => undefined);
 
-  return <HomeView initialFeatured={featured} />;
+  return <HomeView initial={initial} />;
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ChevronRightIcon } from "@heroicons/react/24/outline";
 import { Navbar } from "@/components/layout/Navbar";
@@ -12,18 +12,46 @@ import { AdBanner } from "@/components/home/AdBanner";
 import { FeaturedItems } from "@/components/home/FeaturedItems";
 import { StoreCard } from "@/components/home/StoreCard";
 import { EmptyState, ErrorState } from "@/components/ui/EmptyState";
-import { FeaturedItemsSkeleton, StoreCardSkeleton } from "@/components/ui/Skeletons";
-import { useBanners } from "@/context/BannersContext";
-import { useCatalog } from "@/context/CatalogContext";
-import { useFeaturedProducts } from "@/hooks/useCatalogQueries";
-import type { CategoryId, Product } from "@/types";
+import { HomeSkeleton } from "@/components/ui/Skeletons";
+import { useHomepage } from "@/hooks/useHomepage";
+import { useAuth } from "@/hooks/useAuth";
+import { useAddresses } from "@/hooks/useAddresses";
+import { AddressOnboardingModal } from "@/components/home/AddressOnboardingModal";
+import { readLocalStorage, writeLocalStorage } from "@/lib/utils";
+import type { HomepageData } from "@/lib/api/home";
+import type { CategoryId } from "@/types";
 
-export function HomeView({ initialFeatured }: { initialFeatured?: Product[] }) {
-  const { stores, loading: storesLoading, error: storesError, refetch } = useCatalog();
-  const { banners } = useBanners();
-  const { products: featuredProducts, loading: featuredLoading } =
-    useFeaturedProducts(initialFeatured);
+const ONBOARD_DISMISS_KEY = "ilueats:addr-onboard-dismissed:v1";
+
+export function HomeView({ initial }: { initial?: HomepageData }) {
+  const {
+    stores,
+    featured: featuredProducts,
+    banners,
+    loading,
+    error,
+    refetch,
+  } = useHomepage(initial);
   const [category, setCategory] = useState<CategoryId>("all");
+
+  // First-run address capture — only for signed-in customers with no saved
+  // address, and only until they save or dismiss it once on this device.
+  const { user, ready: authReady } = useAuth();
+  const { addresses, ready: addrReady } = useAddresses();
+  const [onboardOpen, setOnboardOpen] = useState(false);
+
+  useEffect(() => {
+    if (!authReady || !user) return;
+    if (!addrReady || addresses.length > 0) return;
+    if (readLocalStorage(ONBOARD_DISMISS_KEY, false)) return;
+    const t = setTimeout(() => setOnboardOpen(true), 900);
+    return () => clearTimeout(t);
+  }, [authReady, user, addrReady, addresses.length]);
+
+  const dismissOnboard = () => {
+    writeLocalStorage(ONBOARD_DISMISS_KEY, true);
+    setOnboardOpen(false);
+  };
 
   const featuredStores = useMemo(
     () => stores.filter((s) => s.isFeatured),
@@ -34,6 +62,13 @@ export function HomeView({ initialFeatured }: { initialFeatured?: Product[] }) {
     if (category === "all") return stores;
     return stores.filter((s) => s.categories.includes(category));
   }, [category, stores]);
+
+  // The whole page hydrates from a single /home request. Until it lands (and
+  // when the server didn't seed us) show one cohesive skeleton rather than
+  // per-section loaders popping in independently.
+  if (loading && stores.length === 0) {
+    return <HomeSkeleton />;
+  }
 
   return (
     <div className="min-h-screen pb-24 lg:pb-12">
@@ -54,11 +89,7 @@ export function HomeView({ initialFeatured }: { initialFeatured?: Product[] }) {
           <CategoryPills active={category} onChange={setCategory} />
         </div>
 
-        {featuredLoading ? (
-          <div className="pt-4">
-            <FeaturedItemsSkeleton />
-          </div>
-        ) : featuredProducts.length > 0 ? (
+        {featuredProducts.length > 0 ? (
           <div className="pt-4">
             <FeaturedItems
               title="Fresh from your ìlú"
@@ -111,16 +142,10 @@ export function HomeView({ initialFeatured }: { initialFeatured?: Product[] }) {
             </Link>
           </div>
 
-          {storesLoading ? (
-            <div className="grid grid-cols-1 gap-8 lg:grid-cols-3 lg:gap-x-6 lg:gap-y-9">
-              {Array.from({ length: 6 }).map((_, idx) => (
-                <StoreCardSkeleton key={idx} />
-              ))}
-            </div>
-          ) : storesError ? (
+          {error ? (
             <ErrorState
               title="Stores didn't load"
-              message={storesError}
+              message={error}
               onRetry={refetch}
             />
           ) : filteredStores.length === 0 ? (
@@ -141,6 +166,8 @@ export function HomeView({ initialFeatured }: { initialFeatured?: Product[] }) {
       </main>
 
       <BottomNav />
+
+      <AddressOnboardingModal open={onboardOpen} onClose={dismissOnboard} />
     </div>
   );
 }

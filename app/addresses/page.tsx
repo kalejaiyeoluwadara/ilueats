@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { MapPinIcon, TrashIcon, PlusIcon } from "@heroicons/react/24/outline";
 import { StarIcon as StarSolid } from "@heroicons/react/24/solid";
@@ -8,6 +8,7 @@ import { Navbar } from "@/components/layout/Navbar";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { Button } from "@/components/ui/Button";
 import { useAddresses } from "@/hooks/useAddresses";
+import { useGeolocation } from "@/hooks/useGeolocation";
 import { useToast } from "@/hooks/useToast";
 import { cn } from "@/lib/utils";
 import type { SavedAddress } from "@/types";
@@ -24,6 +25,12 @@ export default function AddressesPage() {
     setDefaultAddress,
   } = useAddresses();
   const { success, error: showError } = useToast();
+  const {
+    status: geoStatus,
+    reading: geo,
+    request: requestGeo,
+    reset: resetGeo,
+  } = useGeolocation();
 
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -31,12 +38,21 @@ export default function AddressesPage() {
   const [addressLine, setAddressLine] = useState("");
   const [phone, setPhone] = useState("");
   const [makeDefault, setMakeDefault] = useState(true);
+  // The pin the form will save — seeded from the address when editing, then
+  // overwritten by a fresh GPS reading if the user captures one.
+  const [pin, setPin] = useState<{ lat: number; lng: number } | null>(null);
+
+  useEffect(() => {
+    if (geo) setPin({ lat: geo.lat, lng: geo.lng });
+  }, [geo]);
 
   const resetForm = () => {
     setEditingId(null);
     setLabel("");
     setAddressLine("");
     setPhone("");
+    setPin(null);
+    resetGeo();
     setFormOpen(false);
   };
 
@@ -45,6 +61,8 @@ export default function AddressesPage() {
     setLabel("");
     setAddressLine("");
     setPhone("");
+    setPin(null);
+    resetGeo();
     setMakeDefault(addresses.length === 0);
     setFormOpen(true);
   };
@@ -54,6 +72,8 @@ export default function AddressesPage() {
     setLabel(a.label);
     setAddressLine(a.addressLine);
     setPhone(a.phone ?? "");
+    setPin(a.geo ?? null);
+    resetGeo();
     setMakeDefault(a.isDefault);
     setFormOpen(true);
   };
@@ -73,6 +93,7 @@ export default function AddressesPage() {
         addressLine: addressLine.trim(),
         phone: phone.trim() || undefined,
         isDefault: makeDefault,
+        geo: pin,
       });
       success("Address updated");
     } else {
@@ -81,6 +102,7 @@ export default function AddressesPage() {
         addressLine: addressLine.trim(),
         phone: phone.trim() || undefined,
         makeDefault,
+        geo: pin,
       });
       success("Address saved");
     }
@@ -168,7 +190,7 @@ export default function AddressesPage() {
                   </label>
                   <label className="block">
                     <span className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-[var(--color-ink-soft)]">
-                      Phone (optional)
+                      Phone 
                     </span>
                     <input
                       inputMode="tel"
@@ -178,6 +200,56 @@ export default function AddressesPage() {
                       className="w-full rounded-xl border border-[var(--color-line)] bg-[var(--color-bg)] px-3 py-2.5 text-[14px] outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/30"
                     />
                   </label>
+                  {/* Optional GPS pin — sharpens delivery pricing and helps
+                      the rider find the exact spot. */}
+                  <button
+                    type="button"
+                    onClick={requestGeo}
+                    disabled={geoStatus === "locating"}
+                    className={cn(
+                      "flex w-full items-center gap-2.5 rounded-xl border border-dashed px-3 py-2.5 text-left transition disabled:opacity-60",
+                      pin
+                        ? "border-emerald-300 bg-emerald-50"
+                        : "border-[var(--color-line)] bg-[var(--color-bg)] hover:bg-black/[0.02]"
+                    )}
+                  >
+                    <MapPinIcon
+                      className={cn(
+                        "h-5 w-5 shrink-0",
+                        pin ? "text-emerald-600" : "text-[var(--color-primary)]"
+                      )}
+                    />
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-[13px] font-bold text-[var(--color-ink)]">
+                        {pin
+                          ? geo
+                            ? `Pin added · ±${Math.round(geo.accuracy)}m`
+                            : "Pin saved"
+                          : geoStatus === "locating"
+                            ? "Locating…"
+                            : "Add a precise pin (optional)"}
+                      </span>
+                      <span className="block text-[12px] text-[var(--color-ink-muted)]">
+                        {pin
+                          ? `${pin.lat.toFixed(5)}, ${pin.lng.toFixed(5)} · tap to update`
+                          : "Helps the rider find you faster"}
+                      </span>
+                    </span>
+                    {pin && (
+                      <span
+                        role="button"
+                        tabIndex={0}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setPin(null);
+                          resetGeo();
+                        }}
+                        className="shrink-0 rounded-full px-2 py-1 text-[12px] font-bold text-[var(--color-ink-soft)] hover:bg-black/5"
+                      >
+                        Clear
+                      </span>
+                    )}
+                  </button>
                   <label className="flex cursor-pointer items-center gap-2">
                     <input
                       type="checkbox"

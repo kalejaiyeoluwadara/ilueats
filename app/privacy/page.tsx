@@ -85,7 +85,7 @@ export default function PrivacyPage() {
             <p>
               Questions about this policy? Use{" "}
               <Link
-                href="/help"
+                href="/support"
                 className="font-semibold text-[var(--color-primary)] underline-offset-2 hover:underline"
               >
                 Help &amp; support

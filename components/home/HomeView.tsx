@@ -7,7 +7,6 @@ import { Navbar } from "@/components/layout/Navbar";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { Footer } from "@/components/layout/Footer";
 import { HeroBanner } from "@/components/home/HeroBanner";
-import { CategoryPills } from "@/components/home/CategoryPills";
 import { AdBanner } from "@/components/home/AdBanner";
 import { FeaturedItems } from "@/components/home/FeaturedItems";
 import { StoreCard } from "@/components/home/StoreCard";
@@ -19,7 +18,6 @@ import { useAddresses } from "@/hooks/useAddresses";
 import { AddressOnboardingModal } from "@/components/home/AddressOnboardingModal";
 import { readLocalStorage, writeLocalStorage } from "@/lib/utils";
 import type { HomepageData } from "@/lib/api/home";
-import type { CategoryId } from "@/types";
 
 const ONBOARD_DISMISS_KEY = "ilueats:addr-onboard-dismissed:v1";
 
@@ -32,7 +30,6 @@ export function HomeView({ initial }: { initial?: HomepageData }) {
     error,
     refetch,
   } = useHomepage(initial);
-  const [category, setCategory] = useState<CategoryId>("all");
 
   // First-run address capture — only for signed-in customers with no saved
   // address, and only until they save or dismiss it once on this device.
@@ -41,10 +38,13 @@ export function HomeView({ initial }: { initial?: HomepageData }) {
   const [onboardOpen, setOnboardOpen] = useState(false);
 
   useEffect(() => {
-    if (!authReady || !user) return;
-    if (!addrReady || addresses.length > 0) return;
-    if (readLocalStorage(ONBOARD_DISMISS_KEY, false)) return;
-    const t = setTimeout(() => setOnboardOpen(true), 900);
+    // DEV: forcing the onboarding modal open to work on it statically.
+    // Restore the real gating (signed-in customer with no saved address, not
+    // dismissed on this device) by uncommenting the guards below.
+    // if (!authReady || !user) return;
+    // if (!addrReady || addresses.length > 0) return;
+    // if (readLocalStorage(ONBOARD_DISMISS_KEY, false)) return;
+    const t = setTimeout(() => setOnboardOpen(true), 1200);
     return () => clearTimeout(t);
   }, [authReady, user, addrReady, addresses.length]);
 
@@ -57,11 +57,6 @@ export function HomeView({ initial }: { initial?: HomepageData }) {
     () => stores.filter((s) => s.isFeatured),
     [stores]
   );
-
-  const filteredStores = useMemo(() => {
-    if (category === "all") return stores;
-    return stores.filter((s) => s.categories.includes(category));
-  }, [category, stores]);
 
   // The whole page hydrates from a single /home request. Until it lands (and
   // when the server didn't seed us) show one cohesive skeleton rather than
@@ -83,10 +78,6 @@ export function HomeView({ initial }: { initial?: HomepageData }) {
               <AdBanner slides={banners} />
             </div>
           )}
-        </div>
-
-        <div className="pt-2 lg:pt-6">
-          <CategoryPills active={category} onChange={setCategory} />
         </div>
 
         {featuredProducts.length > 0 ? (
@@ -128,9 +119,7 @@ export function HomeView({ initial }: { initial?: HomepageData }) {
                 All stores nearby
               </h2>
               <p className="mt-0.5 text-[12.5px] text-[var(--color-ink-muted)]">
-                {category === "all"
-                  ? "Everywhere worth eating"
-                  : "Filtered by your craving"}
+                Everywhere worth eating
               </p>
             </div>
             <Link
@@ -148,14 +137,14 @@ export function HomeView({ initial }: { initial?: HomepageData }) {
               message={error}
               onRetry={refetch}
             />
-          ) : filteredStores.length === 0 ? (
+          ) : stores.length === 0 ? (
             <EmptyState
               title="Nothing here yet"
-              description={`No stores yet for the ${category} category. Check back soon.`}
+              description="No stores available right now. Check back soon."
             />
           ) : (
             <div className="grid grid-cols-1 gap-8 lg:grid-cols-3 lg:gap-x-6 lg:gap-y-9">
-              {filteredStores.map((s, idx) => (
+              {stores.map((s, idx) => (
                 <StoreCard key={s.id} store={s} index={idx} />
               ))}
             </div>

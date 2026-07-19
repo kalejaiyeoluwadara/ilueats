@@ -552,7 +552,7 @@ export default function CheckoutPage() {
                   </div>
                   <button
                     type="button"
-                    onClick={requestGeo}
+                    onClick={() => requestGeo()}
                     disabled={geoStatus === "locating"}
                     className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-[var(--color-primary)] px-3.5 py-2 text-[12.5px] font-bold text-white transition disabled:opacity-60"
                   >
@@ -593,7 +593,7 @@ export default function CheckoutPage() {
                     <div className="mt-1.5 flex gap-4">
                       <button
                         type="button"
-                        onClick={requestGeo}
+                        onClick={() => requestGeo()}
                         className="text-[12px] font-bold text-[var(--color-primary)]"
                       >
                         Retry

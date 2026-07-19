@@ -45,25 +45,48 @@ export function useGeolocation() {
   const [status, setStatus] = useState<GeoStatus>("idle");
   const [reading, setReading] = useState<GeoReading | null>(null);
 
-  const request = useCallback(() => {
+  const request = useCallback((opts?: { fresh?: boolean }) => {
     if (typeof navigator === "undefined" || !navigator.geolocation) {
       setStatus("unavailable");
       return;
     }
     setStatus("locating");
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const { latitude, longitude, accuracy } = pos.coords;
-        setReading({
-          lat: latitude,
-          lng: longitude,
-          accuracy,
-          quality: classify(accuracy),
-          at: Date.now(),
-        });
-        setStatus("success");
-      },
-      (err) => {
+
+    const onSuccess = (pos: GeolocationPosition) => {
+      const { latitude, longitude, accuracy } = pos.coords;
+      setReading({
+        lat: latitude,
+        lng: longitude,
+        accuracy,
+        quality: classify(accuracy),
+        at: Date.now(),
+      });
+      setStatus("success");
+    };
+
+    // High accuracy asks for GPS over coarse wifi/cell; the timeout keeps a
+    // hung sensor from blocking. A first fix may reuse a recent (≤30s) reading,
+    // but an explicit "re-fetch" (fresh) forces the device to read again —
+    // otherwise the cached position comes back unchanged and looks frozen.
+    const positionOpts: PositionOptions = {
+      enableHighAccuracy: true,
+      timeout: 12000,
+      maximumAge: opts?.fresh ? 0 : 30000,
+    };
+
+    // POSITION_UNAVAILABLE is frequently transient — desktop CoreLocation
+    // (kCLErrorLocationUnknown) and cold GPS often fail once then succeed on a
+    // second try. Retry it a single time before surfacing an error; a fresh
+    // request forbids any cache, so let the retry accept a very recent fix.
+    const attempt = (retriesLeft: number, options: PositionOptions) => {
+      navigator.geolocation.getCurrentPosition(onSuccess, (err) => {
+        if (err.code === err.POSITION_UNAVAILABLE && retriesLeft > 0) {
+          setTimeout(
+            () => attempt(retriesLeft - 1, { ...options, maximumAge: 30000 }),
+            600
+          );
+          return;
+        }
         setStatus(
           err.code === err.PERMISSION_DENIED
             ? "denied"
@@ -71,11 +94,10 @@ export function useGeolocation() {
               ? "timeout"
               : "unavailable"
         );
-      },
-      // High accuracy asks for GPS over coarse wifi/cell; a fresh-ish fix is
-      // fine at checkout, and the timeout keeps a hung sensor from blocking.
-      { enableHighAccuracy: true, timeout: 12000, maximumAge: 30000 }
-    );
+      }, options);
+    };
+
+    attempt(1, positionOpts);
   }, []);
 
   const reset = useCallback(() => {

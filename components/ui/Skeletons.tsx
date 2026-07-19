@@ -92,16 +92,6 @@ export function HomeSkeleton() {
           </div>
         </div>
 
-        {/* Category pills */}
-        <div className="no-scrollbar flex gap-2 overflow-x-auto px-4 pt-4 lg:pt-6">
-          {Array.from({ length: 6 }).map((_, idx) => (
-            <div
-              key={idx}
-              className="h-9 w-24 flex-none rounded-full bg-[var(--color-line)] skeleton"
-            />
-          ))}
-        </div>
-
         {/* Featured dishes */}
         <div className="pt-5">
           <FeaturedItemsSkeleton />

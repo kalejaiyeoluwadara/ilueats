@@ -1,21 +1,28 @@
 "use client";
 
 import { useState } from "react";
-import { MapPinIcon, CheckCircleIcon } from "@heroicons/react/24/outline";
+import { CheckCircleIcon } from "@heroicons/react/24/outline";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
+import {
+  MapPicker,
+  DEFAULT_MAP_CENTER,
+  type LatLng,
+} from "@/components/ui/MapPicker";
+import { AddressAutocomplete } from "@/components/ui/AddressAutocomplete";
 import { useAddresses } from "@/hooks/useAddresses";
-import { useGeolocation } from "@/hooks/useGeolocation";
 import { useToast } from "@/hooks/useToast";
+import type { PlaceDetails } from "@/lib/api/geocoding";
 import { cn } from "@/lib/utils";
 
 const LABEL_PRESETS = ["Home", "Work", "Other"];
 
 /**
  * First-run address capture, shown on the home page to authenticated users who
- * have no saved address yet. Keeps the friction low — one address, an optional
- * GPS pin, and a required tick confirming they're inside the Ilisan-Remo
- * service area so we don't onboard customers we can't yet deliver to.
+ * have no saved address yet. Keeps the friction low — search for the address,
+ * an optional map pin to fine-tune the drop-off, and a required tick confirming
+ * they're inside the Ilisan-Remo service area so we don't onboard customers we
+ * can't yet deliver to.
  */
 export function AddressOnboardingModal({
   open,
@@ -25,14 +32,22 @@ export function AddressOnboardingModal({
   onClose: () => void;
 }) {
   const { addAddress } = useAddresses();
-  const { status: geoStatus, reading: geo, request: requestGeo } =
-    useGeolocation();
   const { success, error: showError } = useToast();
 
   const [label, setLabel] = useState("Home");
   const [addressLine, setAddressLine] = useState("");
   const [phone, setPhone] = useState("");
   const [inIlisan, setInIlisan] = useState(false);
+  // The pin we'll save. Seeded by the picked suggestion, refinable by dragging.
+  const [pin, setPin] = useState<LatLng | null>(null);
+
+  // A picked suggestion fills the editable address line and drops the pin on
+  // its coordinates — the customer can still add room/gate details and nudge
+  // the pin. Selecting inside the service area also confirms the gate for them.
+  const handlePlaceSelect = (place: PlaceDetails) => {
+    setAddressLine(place.address);
+    setPin({ lat: place.lat, lng: place.lng });
+  };
 
   const addressOk = addressLine.trim().length >= 5;
   const canSave = addressOk && inIlisan;
@@ -54,7 +69,7 @@ export function AddressOnboardingModal({
       addressLine: addressLine.trim(),
       phone: phone.trim() || undefined,
       makeDefault: true,
-      geo: geo ? { lat: geo.lat, lng: geo.lng } : null,
+      geo: pin,
       inIlisan: true,
     });
     success("Address saved", "We'll fill it in for you at checkout.");
@@ -87,6 +102,13 @@ export function AddressOnboardingModal({
       <div className="space-y-4">
         <div>
           <span className="mb-1.5 block text-[11px] font-bold uppercase tracking-wide text-[var(--color-ink-soft)]">
+            Find your address
+          </span>
+          <AddressAutocomplete onSelect={handlePlaceSelect} />
+        </div>
+
+        <div>
+          <span className="mb-1.5 block text-[11px] font-bold uppercase tracking-wide text-[var(--color-ink-soft)]">
             Label
           </span>
           <div className="flex flex-wrap gap-1.5">
@@ -115,7 +137,7 @@ export function AddressOnboardingModal({
           <textarea
             value={addressLine}
             onChange={(e) => setAddressLine(e.target.value)}
-            placeholder="Room / house no, hall or street, nearest landmark"
+            placeholder="Pick from search above, or type it — room / house no, hall or street, nearest landmark"
             rows={3}
             className="w-full resize-none rounded-xl border border-[var(--color-line)] bg-[var(--color-bg)] px-3 py-2.5 text-[14px] outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/30"
           />
@@ -134,39 +156,23 @@ export function AddressOnboardingModal({
           />
         </label>
 
-        {/* Optional GPS pin — a bonus for accuracy, never required. */}
-        <button
-          type="button"
-          onClick={requestGeo}
-          disabled={geoStatus === "locating"}
-          className={cn(
-            "flex w-full items-center gap-2.5 rounded-xl border border-dashed px-3 py-2.5 text-left transition disabled:opacity-60",
-            geo
-              ? "border-emerald-300 bg-emerald-50"
-              : "border-[var(--color-line)] bg-[var(--color-bg)] hover:bg-black/[0.02]"
-          )}
-        >
-          <MapPinIcon
-            className={cn(
-              "h-5 w-5 shrink-0",
-              geo ? "text-emerald-600" : "text-[var(--color-primary)]"
-            )}
-          />
-          <span className="min-w-0 flex-1">
-            <span className="block text-[13px] font-bold text-[var(--color-ink)]">
-              {geo
-                ? `Pin added · ±${Math.round(geo.accuracy)}m`
-                : geoStatus === "locating"
-                  ? "Locating…"
-                  : "Add a precise pin (optional)"}
-            </span>
-            <span className="block text-[12px] text-[var(--color-ink-muted)]">
-              {geo
-                ? `${geo.lat.toFixed(5)}, ${geo.lng.toFixed(5)} · tap to update`
-                : "Helps the rider find you faster"}
-            </span>
-          </span>
-        </button>
+        {/* No pin yet? Let the customer drop one and drag it to their door —
+            a fallback when search can't resolve their exact spot. */}
+        {!pin && (
+          <button
+            type="button"
+            onClick={() => setPin(DEFAULT_MAP_CENTER)}
+            className="text-left text-[12px] font-bold text-[var(--color-primary)]"
+          >
+            Drop a pin on the map (optional)
+          </button>
+        )}
+
+        {/* Map view — appears once there's a pin (from search or a manual drop)
+            so the customer can nudge it onto the exact gate/door. */}
+        {pin && (
+          <MapPicker value={pin} center={pin} onChange={setPin} />
+        )}
 
         {/* Service-area gate. */}
         <button

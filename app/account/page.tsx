@@ -27,7 +27,7 @@ const links = [
   { href: "/orders", label: "Order history", icon: ClockIcon },
   { href: "/addresses", label: "Saved addresses", icon: MapPinIcon },
   { href: "/favorites", label: "Favourites", icon: HeartIcon },
-  { href: "/help", label: "Help & support", icon: QuestionMarkCircleIcon },
+  { href: "/support", label: "Help & support", icon: QuestionMarkCircleIcon },
   { href: "/privacy", label: "Privacy & terms", icon: ShieldCheckIcon },
 ];
 

@@ -7,12 +7,14 @@ import {
   HomeIcon as HomeOutline,
   ShoppingBagIcon as BagOutline,
   ClockIcon as ClockOutline,
+  LifebuoyIcon as SupportOutline,
   UserIcon as UserOutline,
 } from "@heroicons/react/24/outline";
 import {
   HomeIcon as HomeSolid,
   ShoppingBagIcon as BagSolid,
   ClockIcon as ClockSolid,
+  LifebuoyIcon as SupportSolid,
   UserIcon as UserSolid,
 } from "@heroicons/react/24/solid";
 import { cn } from "@/lib/utils";
@@ -41,6 +43,13 @@ const items: NavItem[] = [
     Outline: ClockOutline,
     Solid: ClockSolid,
     matchPrefix: "/orders",
+  },
+  {
+    href: "/support",
+    label: "Support",
+    Outline: SupportOutline,
+    Solid: SupportSolid,
+    matchPrefix: "/support",
   },
   {
     href: "/account",

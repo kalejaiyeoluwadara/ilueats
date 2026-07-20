@@ -210,7 +210,7 @@ export function SearchModal({ open, onClose, initialQuery = "" }: SearchModalPro
               </form>
             </div>
 
-            <div className="flex-1 overflow-y-auto px-3 pb-24 sm:px-5 sm:pb-6">
+            <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-24 sm:px-5 sm:pb-6">
               <AnimatePresence mode="wait" initial={false}>
                 {isSearching ? (
                   <motion.div

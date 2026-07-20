@@ -17,6 +17,10 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: "https",
+        hostname: "dodptt9f4zk9h.cloudfront.net",
+      },
+      {
+        protocol: "https",
         hostname: "chatgpt.com",
       },
     ],

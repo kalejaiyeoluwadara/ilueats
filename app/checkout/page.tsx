@@ -528,7 +528,7 @@ export default function CheckoutPage() {
             {/* Precise-location capture. GPS is a hint we grade, not the truth:
                 a tight fix prices the door exactly; a fuzzy one just sorts the
                 landmarks so the customer confirms an accurate anchor. */}
-            <div className="rounded-xl border border-dashed border-[var(--color-line)] bg-[var(--color-bg)] p-3">
+            {/* <div className="rounded-xl border border-dashed border-[var(--color-line)] bg-[var(--color-bg)] p-3">
               {!geo ? (
                 <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
@@ -611,10 +611,10 @@ export default function CheckoutPage() {
                   </div>
                 </div>
               )}
-            </div>
+            </div> */}
 
             {addrReady && addresses.length > 0 && deliveryMode === "door" && (
-              <div className="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+              <div className="no-scrollbar pt-2 mt-3 -mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
                 {addresses.map((a) => {
                   const matches = address.trim() === a.addressLine.trim();
                   return (

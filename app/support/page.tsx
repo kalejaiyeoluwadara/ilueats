@@ -16,9 +16,9 @@ import { BottomNav } from "@/components/layout/BottomNav";
  * Support contact details. Replace these placeholders with the real
  * ìlúEats support line before launch (ideally wired to env/config).
  */
-const SUPPORT_WHATSAPP = "2348000000000"; // digits only, international format
-const SUPPORT_PHONE = "+2348000000000";
-const SUPPORT_EMAIL = "support@ilueats.com";
+const SUPPORT_WHATSAPP = "2349160758322"; // digits only, international format
+const SUPPORT_PHONE = "+2349160758322";
+const SUPPORT_EMAIL = "ilueats@gmai.com";
 
 const waHref = `https://wa.me/${SUPPORT_WHATSAPP}?text=${encodeURIComponent(
   "Hi ìlúEats, I need help with…",

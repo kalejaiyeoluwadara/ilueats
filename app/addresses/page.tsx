@@ -9,6 +9,7 @@ import { BottomNav } from "@/components/layout/BottomNav";
 import { Button } from "@/components/ui/Button";
 import { MapPicker, DEFAULT_MAP_CENTER } from "@/components/ui/MapPicker";
 import { AddressAutocomplete } from "@/components/ui/AddressAutocomplete";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useAddresses } from "@/hooks/useAddresses";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import { useToast } from "@/hooks/useToast";
@@ -31,6 +32,8 @@ export default function AddressesPage() {
   const { reset: resetGeo } = useGeolocation();
 
   const [formOpen, setFormOpen] = useState(false);
+  // The address awaiting delete confirmation (drives the ConfirmDialog).
+  const [pendingRemove, setPendingRemove] = useState<SavedAddress | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [label, setLabel] = useState("");
   const [addressLine, setAddressLine] = useState("");
@@ -110,14 +113,10 @@ export default function AddressesPage() {
     resetForm();
   };
 
-  const onRemove = (a: SavedAddress) => {
-    if (
-      typeof window !== "undefined" &&
-      !window.confirm(`Remove “${a.label}” from saved addresses?`)
-    ) {
-      return;
-    }
-    removeAddress(a.id);
+  const confirmRemove = () => {
+    if (!pendingRemove) return;
+    removeAddress(pendingRemove.id);
+    setPendingRemove(null);
     success("Address removed");
   };
 
@@ -334,7 +333,7 @@ export default function AddressesPage() {
                         size="sm"
                         className="text-red-600 hover:bg-red-50"
                         leftIcon={<TrashIcon className="h-4 w-4" />}
-                        onClick={() => onRemove(a)}
+                        onClick={() => setPendingRemove(a)}
                       >
                         Remove
                       </Button>
@@ -368,6 +367,26 @@ export default function AddressesPage() {
         )}
       </main>
       <BottomNav />
+
+      <ConfirmDialog
+        open={!!pendingRemove}
+        title="Remove address?"
+        message={
+          pendingRemove ? (
+            <>
+              Remove{" "}
+              <span className="font-semibold text-[var(--color-ink)]">
+                {pendingRemove.label}
+              </span>{" "}
+              from your saved addresses? This can&apos;t be undone.
+            </>
+          ) : null
+        }
+        confirmLabel="Remove"
+        destructive
+        onConfirm={confirmRemove}
+        onCancel={() => setPendingRemove(null)}
+      />
     </div>
   );
 }

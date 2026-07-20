@@ -7,6 +7,7 @@ import { motion } from "framer-motion";
 import { Navbar } from "@/components/layout/Navbar";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { StoreHeader } from "@/components/store/StoreHeader";
+import { StoreLocationMap } from "@/components/store/StoreLocationMap";
 import { MenuSection } from "@/components/store/MenuSection";
 import { CartFooter } from "@/components/cart/CartFooter";
 import { EmptyState, ErrorState } from "@/components/ui/EmptyState";
@@ -172,6 +173,8 @@ export default function StorePage({ params }: PageProps) {
             })
           )}
         </motion.div>
+
+        <StoreLocationMap store={store} />
 
         <div className="px-4 pt-8 pb-4 text-center">
           <p className="text-[12px] text-[var(--color-ink-soft)]">

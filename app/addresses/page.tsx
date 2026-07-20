@@ -40,9 +40,8 @@ export default function AddressesPage() {
   // refinable by dropping/dragging it on the map.
   const [pin, setPin] = useState<{ lat: number; lng: number } | null>(null);
 
-  // A picked suggestion (or "use my current location") fills the editable
-  // address line and drops the pin on its coordinates — the customer can still
-  // add room/gate details and nudge the pin.
+  // A picked suggestion fills the editable address line and drops the pin on its
+  // coordinates — the customer can still add room/gate details and nudge the pin.
   const handlePlaceSelect = (place: PlaceDetails) => {
     setAddressLine(place.address);
     setPin({ lat: place.lat, lng: place.lng });

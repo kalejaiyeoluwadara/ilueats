@@ -38,12 +38,11 @@ export function HomeView({ initial }: { initial?: HomepageData }) {
   const [onboardOpen, setOnboardOpen] = useState(false);
 
   useEffect(() => {
-    // DEV: forcing the onboarding modal open to work on it statically.
-    // Restore the real gating (signed-in customer with no saved address, not
-    // dismissed on this device) by uncommenting the guards below.
-    // if (!authReady || !user) return;
-    // if (!addrReady || addresses.length > 0) return;
-    // if (readLocalStorage(ONBOARD_DISMISS_KEY, false)) return;
+    // Only nudge a signed-in customer who has no saved address yet, and only
+    // once per device (respecting an earlier dismissal).
+    if (!authReady || !user) return;
+    if (!addrReady || addresses.length > 0) return;
+    if (readLocalStorage(ONBOARD_DISMISS_KEY, false)) return;
     const t = setTimeout(() => setOnboardOpen(true), 1200);
     return () => clearTimeout(t);
   }, [authReady, user, addrReady, addresses.length]);

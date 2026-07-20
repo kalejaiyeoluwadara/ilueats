@@ -18,10 +18,10 @@ const LABEL_PRESETS = ["Home", "Work", "Other"];
 
 /**
  * First-run address capture, shown on the home page to authenticated users who
- * have no saved address yet. Keeps the friction low — search for the address (or
- * one-tap "use my current location"), with an optional map pin to fine-tune the
- * drop-off. Search is already limited to the Ilisan-Remo service area, so no
- * manual "am I in the area?" tick is needed.
+ * have no saved address yet. Keeps the friction low — search for the address,
+ * with an optional map pin to fine-tune the drop-off. Search is already limited
+ * to the Ilisan-Remo service area, so no manual "am I in the area?" tick is
+ * needed.
  */
 export function AddressOnboardingModal({
   open,
@@ -39,9 +39,8 @@ export function AddressOnboardingModal({
   // The pin we'll save. Seeded by the picked suggestion, refinable by dragging.
   const [pin, setPin] = useState<LatLng | null>(null);
 
-  // A picked suggestion (or "use my current location") fills the editable
-  // address line and drops the pin on its coordinates — the customer can still
-  // add room/gate details and nudge the pin.
+  // A picked suggestion fills the editable address line and drops the pin on its
+  // coordinates — the customer can still add room/gate details and nudge the pin.
   const handlePlaceSelect = (place: PlaceDetails) => {
     setAddressLine(place.address);
     setPin({ lat: place.lat, lng: place.lng });

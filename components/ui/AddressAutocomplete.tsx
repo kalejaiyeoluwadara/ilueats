@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import {
   MagnifyingGlassIcon,
   MapPinIcon,
@@ -8,9 +8,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { InlineLoader } from "@/components/ui/Loaders";
 import { useAddressSearch } from "@/hooks/useAddressSearch";
-import { useGeolocation } from "@/hooks/useGeolocation";
-import { useToast } from "@/hooks/useToast";
-import { reverseGeocode, type PlaceDetails } from "@/lib/api/geocoding";
+import { type PlaceDetails } from "@/lib/api/geocoding";
 import { cn } from "@/lib/utils";
 
 /**
@@ -30,77 +28,10 @@ export function AddressAutocomplete({
 }) {
   const { query, setQuery, suggestions, status, error, selectPlace, reset } =
     useAddressSearch();
-  const {
-    status: geoStatus,
-    reading: geo,
-    request: requestGeo,
-    reset: resetGeo,
-  } = useGeolocation();
-  const { error: showError } = useToast();
   // Which suggestion is being resolved to coordinates (spinner on that row).
   const [resolvingId, setResolvingId] = useState<string | null>(null);
-  const [resolvingLocation, setResolvingLocation] = useState(false);
   const [active, setActive] = useState(-1);
   const inputRef = useRef<HTMLInputElement>(null);
-  // True only between tapping "use my location" and consuming the fix — guards
-  // the effect from firing on a stale reading.
-  const awaitingFix = useRef(false);
-
-  const useCurrentLocation = () => {
-    awaitingFix.current = true;
-    requestGeo({ fresh: true });
-  };
-
-  // A fresh GPS fix arrived → reverse-geocode it into an address + pin.
-  useEffect(() => {
-    if (!awaitingFix.current || !geo) return;
-    awaitingFix.current = false;
-    const { lat, lng } = geo;
-    setResolvingLocation(true);
-    reverseGeocode(lat, lng)
-      .then((res) => {
-        // Keep the device's own coordinates for the pin (its exact spot); use
-        // the reverse-geocoded text for the address line.
-        onSelect({ ...res, lat, lng });
-        reset();
-        setActive(-1);
-        if (!res.inServiceArea) {
-          showError(
-            "Outside delivery area",
-            "We currently deliver around Ilishan-Remo only."
-          );
-        }
-      })
-      .catch(() =>
-        showError(
-          "Couldn't get your address",
-          "Search for it above instead."
-        )
-      )
-      .finally(() => {
-        setResolvingLocation(false);
-        resetGeo();
-      });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [geo]);
-
-  // Surface geolocation failures (denied / unavailable / timeout).
-  useEffect(() => {
-    if (!awaitingFix.current) return;
-    if (geoStatus === "denied") {
-      awaitingFix.current = false;
-      showError(
-        "Location blocked",
-        "Allow location access in your browser, or search above."
-      );
-    } else if (geoStatus === "unavailable" || geoStatus === "timeout") {
-      awaitingFix.current = false;
-      showError("Couldn't get your location", "Search for your address above.");
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [geoStatus]);
-
-  const locating = geoStatus === "locating" || resolvingLocation;
 
   const choose = async (placeId: string) => {
     if (resolvingId) return;
@@ -169,25 +100,6 @@ export function AddressAutocomplete({
           </button>
         )}
       </div>
-
-      {/* One-tap GPS: reverse-geocodes the device location into an address. */}
-      <button
-        type="button"
-        onClick={useCurrentLocation}
-        disabled={locating}
-        className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--color-line)] bg-[var(--color-bg)] px-3 py-2.5 text-[13px] font-bold text-[var(--color-primary)] transition hover:bg-black/[0.02] disabled:cursor-not-allowed disabled:opacity-70"
-      >
-        {locating ? (
-          <InlineLoader size="xs" tone="brand" />
-        ) : (
-          <MapPinIcon className="h-4.5 w-4.5" />
-        )}
-        {geoStatus === "locating"
-          ? "Locating…"
-          : resolvingLocation
-            ? "Getting your address…"
-            : "Use my current location"}
-      </button>
 
       {/* Results / states — in-flow so the sheet's scroll never clips them. */}
       {status === "results" && suggestions.length > 0 && (

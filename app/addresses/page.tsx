@@ -8,9 +8,11 @@ import { Navbar } from "@/components/layout/Navbar";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { Button } from "@/components/ui/Button";
 import { MapPicker, DEFAULT_MAP_CENTER } from "@/components/ui/MapPicker";
+import { AddressAutocomplete } from "@/components/ui/AddressAutocomplete";
 import { useAddresses } from "@/hooks/useAddresses";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import { useToast } from "@/hooks/useToast";
+import type { PlaceDetails } from "@/lib/api/geocoding";
 import { cn } from "@/lib/utils";
 import type { SavedAddress } from "@/types";
 
@@ -37,6 +39,14 @@ export default function AddressesPage() {
   // The pin the form will save — seeded from the address when editing, then
   // refinable by dropping/dragging it on the map.
   const [pin, setPin] = useState<{ lat: number; lng: number } | null>(null);
+
+  // A picked suggestion (or "use my current location") fills the editable
+  // address line and drops the pin on its coordinates — the customer can still
+  // add room/gate details and nudge the pin.
+  const handlePlaceSelect = (place: PlaceDetails) => {
+    setAddressLine(place.address);
+    setPin({ lat: place.lat, lng: place.lng });
+  };
 
   const resetForm = () => {
     setEditingId(null);
@@ -142,6 +152,12 @@ export default function AddressesPage() {
                 <div className="mt-3 space-y-3">
                   <div>
                     <span className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-[var(--color-ink-soft)]">
+                      Find your address
+                    </span>
+                    <AddressAutocomplete onSelect={handlePlaceSelect} />
+                  </div>
+                  <div>
+                    <span className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-[var(--color-ink-soft)]">
                       Label
                     </span>
                     <div className="mb-2 flex flex-wrap gap-1.5">
@@ -175,7 +191,7 @@ export default function AddressesPage() {
                     <textarea
                       value={addressLine}
                       onChange={(e) => setAddressLine(e.target.value)}
-                      placeholder="House no, street, landmark, Ilisan"
+                      placeholder="Pick from search above, or type it — room / house no, hall or street, nearest landmark"
                       rows={3}
                       className="w-full resize-none rounded-xl border border-[var(--color-line)] bg-[var(--color-bg)] px-3 py-2.5 text-[14px] outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/30"
                     />

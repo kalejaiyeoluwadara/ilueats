@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { CheckCircleIcon } from "@heroicons/react/24/outline";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import {
@@ -19,10 +18,10 @@ const LABEL_PRESETS = ["Home", "Work", "Other"];
 
 /**
  * First-run address capture, shown on the home page to authenticated users who
- * have no saved address yet. Keeps the friction low — search for the address,
- * an optional map pin to fine-tune the drop-off, and a required tick confirming
- * they're inside the Ilisan-Remo service area so we don't onboard customers we
- * can't yet deliver to.
+ * have no saved address yet. Keeps the friction low — search for the address (or
+ * one-tap "use my current location"), with an optional map pin to fine-tune the
+ * drop-off. Search is already limited to the Ilisan-Remo service area, so no
+ * manual "am I in the area?" tick is needed.
  */
 export function AddressOnboardingModal({
   open,
@@ -37,31 +36,23 @@ export function AddressOnboardingModal({
   const [label, setLabel] = useState("Home");
   const [addressLine, setAddressLine] = useState("");
   const [phone, setPhone] = useState("");
-  const [inIlisan, setInIlisan] = useState(false);
   // The pin we'll save. Seeded by the picked suggestion, refinable by dragging.
   const [pin, setPin] = useState<LatLng | null>(null);
 
-  // A picked suggestion fills the editable address line and drops the pin on
-  // its coordinates — the customer can still add room/gate details and nudge
-  // the pin. Selecting inside the service area also confirms the gate for them.
+  // A picked suggestion (or "use my current location") fills the editable
+  // address line and drops the pin on its coordinates — the customer can still
+  // add room/gate details and nudge the pin.
   const handlePlaceSelect = (place: PlaceDetails) => {
     setAddressLine(place.address);
     setPin({ lat: place.lat, lng: place.lng });
   };
 
   const addressOk = addressLine.trim().length >= 5;
-  const canSave = addressOk && inIlisan;
+  const canSave = addressOk;
 
   const save = () => {
     if (!addressOk) {
       showError("Address too short", "Add house/room, street and a landmark.");
-      return;
-    }
-    if (!inIlisan) {
-      showError(
-        "Confirm your area",
-        "Tick the box to confirm you're in Ilisan-Remo."
-      );
       return;
     }
     addAddress({
@@ -70,7 +61,6 @@ export function AddressOnboardingModal({
       phone: phone.trim() || undefined,
       makeDefault: true,
       geo: pin,
-      inIlisan: true,
     });
     success("Address saved", "We'll fill it in for you at checkout.");
     onClose();
@@ -170,34 +160,7 @@ export function AddressOnboardingModal({
 
         {/* Map view — appears once there's a pin (from search or a manual drop)
             so the customer can nudge it onto the exact gate/door. */}
-        {pin && (
-          <MapPicker value={pin} center={pin} onChange={setPin} />
-        )}
-
-        {/* Service-area gate. */}
-        <button
-          type="button"
-          onClick={() => setInIlisan((v) => !v)}
-          className={cn(
-            "flex w-full items-start gap-2.5 rounded-xl border px-3 py-3 text-left transition",
-            inIlisan
-              ? "border-[var(--color-primary)]/40 bg-[var(--color-primary-soft)]"
-              : "border-[var(--color-line)] bg-[var(--color-bg)]"
-          )}
-        >
-          <CheckCircleIcon
-            className={cn(
-              "h-5 w-5 shrink-0",
-              inIlisan ? "text-[var(--color-primary)]" : "text-[var(--color-ink-soft)]"
-            )}
-          />
-          <span className="text-[13px] font-semibold leading-snug text-[var(--color-ink)]">
-            I stay in Ilisan-Remo
-            <span className="mt-0.5 block text-[12px] font-medium text-[var(--color-ink-muted)]">
-              We currently deliver around Ilisan-Remo only.
-            </span>
-          </span>
-        </button>
+        {pin && <MapPicker value={pin} center={pin} onChange={setPin} />}
       </div>
     </Modal>
   );

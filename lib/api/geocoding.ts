@@ -19,6 +19,11 @@ export interface PlaceDetails {
   lng: number;
 }
 
+/** Reverse-geocoded address, plus whether the spot is inside the delivery area. */
+export interface ReverseGeocodeResult extends PlaceDetails {
+  inServiceArea: boolean;
+}
+
 /**
  * Address autocomplete. `sessionToken` must stay stable across a single search
  * and be passed on to `fetchPlaceDetails` so Google bills the pair as one
@@ -46,4 +51,16 @@ export function fetchPlaceDetails(
     `/geocoding/places/${encodeURIComponent(placeId)}`,
     { query: { sessionToken }, signal }
   );
+}
+
+/** Turn the device's GPS coordinates into an address (for "use my location"). */
+export function reverseGeocode(
+  lat: number,
+  lng: number,
+  signal?: AbortSignal
+): Promise<ReverseGeocodeResult> {
+  return apiFetch<ReverseGeocodeResult>("/geocoding/reverse", {
+    query: { lat, lng },
+    signal,
+  });
 }

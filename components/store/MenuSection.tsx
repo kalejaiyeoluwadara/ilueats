@@ -8,9 +8,16 @@ interface MenuSectionProps {
   subtitle?: string;
   products: Product[];
   store: Store;
+  onSelectProduct?: (product: Product) => void;
 }
 
-export function MenuSection({ title, subtitle, products, store }: MenuSectionProps) {
+export function MenuSection({
+  title,
+  subtitle,
+  products,
+  store,
+  onSelectProduct,
+}: MenuSectionProps) {
   if (products.length === 0) return null;
 
   return (
@@ -32,7 +39,13 @@ export function MenuSection({ title, subtitle, products, store }: MenuSectionPro
       </div>
       <div className="space-y-2.5 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0">
         {products.map((p, idx) => (
-          <ProductCard key={p.id} product={p} store={store} index={idx} />
+          <ProductCard
+            key={p.id}
+            product={p}
+            store={store}
+            index={idx}
+            onSelect={onSelectProduct}
+          />
         ))}
       </div>
     </section>

@@ -15,18 +15,38 @@ interface ProductCardProps {
   product: Product;
   store: Store;
   index?: number;
+  /**
+   * When provided, the card opens the product in a bottom sheet instead of
+   * navigating to the product page — no route transition, no second load.
+   */
+  onSelect?: (product: Product) => void;
 }
 
-export function ProductCard({ product, store, index = 0 }: ProductCardProps) {
+export function ProductCard({
+  product,
+  store,
+  index = 0,
+  onSelect,
+}: ProductCardProps) {
   const { addItem, storeId, count } = useCart();
   const { cart: cartToast, error: errorToast } = useToast();
 
   const hasOptions = (product.options?.length ?? 0) > 0;
 
+  const handleOpen = (e: React.MouseEvent) => {
+    if (!onSelect) return; // fall through to the Link
+    e.preventDefault();
+    onSelect(product);
+  };
+
   const handleQuickAdd = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (hasOptions) return; // routed via Link
+    if (hasOptions) {
+      // Needs customizing — open the sheet (or let the Link route through).
+      if (onSelect) onSelect(product);
+      return;
+    }
 
     if (storeId && storeId !== product.storeId) {
       errorToast(
@@ -54,6 +74,8 @@ export function ProductCard({ product, store, index = 0 }: ProductCardProps) {
     >
       <Link
         href={`/${product.storeSlug}/${product.slug}`}
+        onClick={handleOpen}
+        prefetch={onSelect ? false : undefined}
         className="group flex items-stretch gap-3 rounded-2xl bg-white p-3 ring-1 ring-[var(--color-line)] transition-shadow hover:shadow-[0_4px_18px_rgba(0,0,0,0.06)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/40"
       >
         <div className="min-w-0 flex-1 py-1">

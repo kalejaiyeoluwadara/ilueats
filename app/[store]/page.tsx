@@ -9,6 +9,7 @@ import { BottomNav } from "@/components/layout/BottomNav";
 import { StoreHeader } from "@/components/store/StoreHeader";
 import { StoreLocationMap } from "@/components/store/StoreLocationMap";
 import { MenuSection } from "@/components/store/MenuSection";
+import { ProductSheet, useProductSheet } from "@/components/store/ProductSheet";
 import { CartFooter } from "@/components/cart/CartFooter";
 import { EmptyState, ErrorState } from "@/components/ui/EmptyState";
 import { StorePageSkeleton, ProductCardSkeleton } from "@/components/ui/Skeletons";
@@ -68,6 +69,8 @@ export default function StorePage({ params }: PageProps) {
     });
     return Array.from(map.entries());
   }, [visible]);
+
+  const sheet = useProductSheet();
 
   if (storeNotFound) {
     notFound();
@@ -168,6 +171,7 @@ export default function StorePage({ params }: PageProps) {
                   title={`${cat?.emoji ?? ""} ${cat?.name ?? "More"}`}
                   products={items}
                   store={store}
+                  onSelectProduct={sheet.openProduct}
                 />
               );
             })
@@ -182,6 +186,13 @@ export default function StorePage({ params }: PageProps) {
           </p>
         </div>
       </main>
+
+      <ProductSheet
+        store={store}
+        product={sheet.product}
+        open={sheet.open}
+        onClose={sheet.close}
+      />
 
       <CartFooter />
       <BottomNav />

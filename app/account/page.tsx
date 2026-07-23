@@ -10,6 +10,7 @@ import {
   ClockIcon,
   MapPinIcon,
   ShieldCheckIcon,
+  DocumentTextIcon,
   QuestionMarkCircleIcon,
   ArrowRightOnRectangleIcon,
 } from "@heroicons/react/24/outline";
@@ -28,7 +29,8 @@ const links = [
   { href: "/addresses", label: "Saved addresses", icon: MapPinIcon },
   { href: "/favorites", label: "Favourites", icon: HeartIcon },
   { href: "/support", label: "Help & support", icon: QuestionMarkCircleIcon },
-  { href: "/privacy", label: "Privacy & terms", icon: ShieldCheckIcon },
+  { href: "/privacy", label: "Privacy notice", icon: ShieldCheckIcon },
+  { href: "/terms", label: "Terms & conditions", icon: DocumentTextIcon },
 ];
 
 type AuthMode = "signin" | "signup";

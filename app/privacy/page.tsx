@@ -69,6 +69,17 @@ export default function PrivacyPage() {
 
           <ProseSection title="Terms of use">
             <p>
+              Your use of ìlúEats is governed by our{" "}
+              <Link
+                href="/terms"
+                className="font-semibold text-[var(--color-primary)] underline-offset-2 hover:underline"
+              >
+                Terms &amp; conditions
+              </Link>
+              , which cover ordering, payment, delivery, and your
+              responsibilities as a customer.
+            </p>
+            <p>
               The service is provided &quot;as is&quot; for testing and feedback.
               Do not rely on it for real food orders, payments, or deliveries until
               an official launch is announced.

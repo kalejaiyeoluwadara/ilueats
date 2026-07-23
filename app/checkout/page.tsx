@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   CheckCircleIcon,
+  ClockIcon,
   CreditCardIcon,
   BanknotesIcon,
   DevicePhoneMobileIcon,
@@ -828,6 +829,36 @@ export default function CheckoutPage() {
               "We're currently closed — ordering will resume shortly."}
           </p>
         ) : null}
+
+        {/* Delivery availability reminder — food is time-sensitive, so the
+            customer must stay reachable while the rider is on the way. */}
+        <div className="flex items-start gap-2.5 rounded-2xl bg-[var(--color-accent-soft)] px-4 py-3">
+          <ClockIcon className="mt-0.5 h-4 w-4 shrink-0 text-[#8a4f00]" />
+          <p className="text-[12.5px] leading-relaxed text-[#8a4f00]">
+            <span className="font-bold">Please stay reachable.</span> Your food
+            is on the way within about an hour. Keep your phone on, charged, and
+            nearby, and answer your rider&apos;s call so you don&apos;t miss the
+            handoff. If we can&apos;t reach you, the order may not be delivered.
+          </p>
+        </div>
+
+        <p className="px-1 text-[11.5px] leading-relaxed text-[var(--color-ink-soft)]">
+          By placing your order you agree to ìlúEats&apos;{" "}
+          <Link
+            href="/terms"
+            className="font-semibold text-[var(--color-primary)] underline-offset-2 hover:underline"
+          >
+            Terms &amp; conditions
+          </Link>{" "}
+          and{" "}
+          <Link
+            href="/privacy"
+            className="font-semibold text-[var(--color-primary)] underline-offset-2 hover:underline"
+          >
+            Privacy notice
+          </Link>
+          .
+        </p>
 
         {/* Desktop inline pay */}
         <div className="hidden lg:flex lg:items-center lg:gap-3 lg:rounded-2xl lg:bg-white lg:p-4 lg:ring-1 lg:ring-[var(--color-line)]">

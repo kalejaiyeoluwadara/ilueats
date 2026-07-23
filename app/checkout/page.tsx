@@ -107,17 +107,30 @@ export default function CheckoutPage() {
   const [quote, setQuote] = useState<OrderQuote | null>(null);
   const [quoteError, setQuoteError] = useState<string | null>(null);
 
-  // Only feed the pin into pricing on a door order when it's tight enough to
-  // trust — a fuzzy fix would misprice the delivery, so we let the landmark
-  // anchor those instead. Poor fixes still travel with the order as a rider
-  // hint (below), just not as the basis for the fee.
-  const pinForPricing = useMemo(
+  // The saved address the customer currently has selected (its line matches the
+  // address field). Its `geo` is the precise pin captured from Google Places
+  // autocomplete when the address was saved — so it's both accurate for pricing
+  // and exactly the spot the rider needs to navigate to.
+  const matchedAddress = useMemo(
     () =>
-      deliveryMode === "door" && geo && geo.accuracy <= PRICING_ACCURACY_M
-        ? { lat: geo.lat, lng: geo.lng }
-        : null,
-    [deliveryMode, geo]
+      deliveryMode === "door"
+        ? addresses.find((a) => a.addressLine.trim() === address.trim())
+        : undefined,
+    [deliveryMode, addresses, address]
   );
+
+  // The drop-off pin that travels with a door order — used for both pricing and
+  // (once on the order) the rider's map. Prefer the autocomplete pin of the
+  // chosen saved address, since it matches the address the rider delivers to;
+  // otherwise fall back to a device fix, but only when it's tight enough to
+  // trust — a fuzzy GPS reading would misprice the delivery.
+  const deliveryPin = useMemo(() => {
+    if (deliveryMode !== "door") return null;
+    if (matchedAddress?.geo) return matchedAddress.geo;
+    if (geo && geo.accuracy <= PRICING_ACCURACY_M)
+      return { lat: geo.lat, lng: geo.lng };
+    return null;
+  }, [deliveryMode, matchedAddress, geo]);
 
   const quoteBody = useMemo<QuoteOrderInput | null>(() => {
     if (!store || items.length === 0) return null;
@@ -136,10 +149,10 @@ export default function CheckoutPage() {
       deliveryMode,
       landmarkId:
         deliveryMode === "landmark" ? (landmarkId ?? undefined) : undefined,
-      deliveryLat: pinForPricing?.lat,
-      deliveryLng: pinForPricing?.lng,
+      deliveryLat: deliveryPin?.lat,
+      deliveryLng: deliveryPin?.lng,
     };
-  }, [store, items, deliveryMode, landmarkId, pinForPricing]);
+  }, [store, items, deliveryMode, landmarkId, deliveryPin]);
 
   // Curated landmarks sorted by how close they are to the device reading. This
   // is the accuracy fix for a contained town: even a rough fix reliably floats
@@ -364,8 +377,8 @@ export default function CheckoutPage() {
         deliveryMode,
         address: deliveryMode === "door" ? address.trim() : undefined,
         landmarkId: deliveryMode === "landmark" ? landmarkId ?? undefined : undefined,
-        deliveryLat: pinForPricing?.lat,
-        deliveryLng: pinForPricing?.lng,
+        deliveryLat: deliveryPin?.lat,
+        deliveryLng: deliveryPin?.lng,
         contactName: name.trim(),
         contactPhone: phone.trim(),
         notes: notes.trim() || undefined,

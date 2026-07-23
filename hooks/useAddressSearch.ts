@@ -14,6 +14,16 @@ import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 const MIN_QUERY = 2;
 const DEBOUNCE_MS = 300;
 
+/**
+ * We only deliver in the Ilisan-Remo area, so drop any suggestion that doesn't
+ * reference it. Google spells the town "Ilishan-Remo" (with an "h"), while our
+ * own UI uses "Ilisan" — accept either so we don't filter out valid matches.
+ */
+function inServiceArea(s: PlaceSuggestion): boolean {
+  const haystack = `${s.primary} ${s.secondary} ${s.full}`.toLowerCase();
+  return haystack.includes("ilisan") || haystack.includes("ilishan");
+}
+
 export type AddressSearchStatus =
   | "idle"
   | "loading"
@@ -64,8 +74,9 @@ export function useAddressSearch() {
     fetchAddressSuggestions(q, sessionToken.current, ac.signal)
       .then((results) => {
         if (ac.signal.aborted) return;
-        setSuggestions(results);
-        setStatus(results.length ? "results" : "empty");
+        const filtered = results.filter(inServiceArea);
+        setSuggestions(filtered);
+        setStatus(filtered.length ? "results" : "empty");
       })
       .catch((err: unknown) => {
         // A superseded request aborts — that's not a user-facing error.

@@ -36,6 +36,10 @@ export function ProductCard({
   const handleOpen = (e: React.MouseEvent) => {
     if (!onSelect) return; // fall through to the Link
     e.preventDefault();
+    // Stop the click before it bubbles to document, where nextjs-toploader's
+    // listener would otherwise fire the top progress bar off the anchor's href
+    // (it ignores preventDefault) — we're opening a sheet, not navigating.
+    e.stopPropagation();
     onSelect(product);
   };
 

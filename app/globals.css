@@ -58,6 +58,9 @@
 
 html,
 body {
+  /* Force the light canvas so the WebView never paints its dark default
+     (the "black screen" flash) before this stylesheet loads. */
+  color-scheme: light;
   background: var(--color-bg);
   color: var(--color-ink);
 }

@@ -74,6 +74,7 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: "#e64e0e",
+  colorScheme: "light",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -87,7 +88,11 @@ export default async function RootLayout({
   const { stores, banners } = await loadCatalogSnapshot();
 
   return (
-    <html lang="en" className={`${jakarta.variable} ${bricolage.variable}`}>
+    <html
+      lang="en"
+      className={`${jakarta.variable} ${bricolage.variable}`}
+      style={{ backgroundColor: "#fcfaf7", colorScheme: "light" }}
+    >
       <body className="min-h-screen bg-[var(--color-bg)] text-[var(--color-ink)] antialiased">
         <NextTopLoader
           color="#e8541a"
